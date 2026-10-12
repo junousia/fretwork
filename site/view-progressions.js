@@ -101,8 +101,9 @@ export function mount(root){
     if(pCur!=='all'){
       const idxs=(Array.isArray(pCur)?pCur:[pCur]).map(n=>positions.findIndex(p=>p.n===n));
       boardOpts.dimRange={s:Math.min(...idxs.map(i=>positions[i].s)),e:Math.max(...idxs.map(i=>positions[i].e))};
-      boardOpts.brightSets=positions.map((p,j)=>{ const set=new Set();
-        for(const i of idxs) positionFrets(positions,i,cur.s.iv,c.root,inst.tuning)[j].forEach(f=>set.add(f));
+      const sets=idxs.map(i=>positionFrets(positions,i,cur.s.iv,c.root,inst.tuning));
+      boardOpts.brightSets=inst.tuning.map((_,j)=>{ const set=new Set();
+        for(const s of sets) s[j].forEach(f=>set.add(f));
         return set;
       });
     }
