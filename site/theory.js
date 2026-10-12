@@ -355,14 +355,17 @@ export function note(freq,t,dur,vol){
   o.connect(f);f.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+0.05);
 }
 export const mtof=m=>440*Math.pow(2,(m-69)/12);
-export function play(chord,scale,offset=0){
+export function play(chord,scale,offset=0,run=null){
   try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); ac.resume(); }catch(e){return;}
   const base=40+offset+((chord.root-4+12)%12); let t=ac.currentTime+0.05;
   const voicing=[...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
   voicing.forEach((m,i)=>note(mtof(m),t+i*0.03,1.8,0.11));
   t+=1.3;
-  const run=[...scale.iv].sort((a,b)=>a-b).map(x=>base+12+x).concat([base+24]);
-  run.forEach((m,i)=>note(mtof(m),t+i*0.2,0.45,0.15));
+  // `run`: optional explicit list of MIDI notes (the actual fretted notes of
+  // a selected position). Falls back to the abstract scale run when absent.
+  const seq=run?[...new Set(run)].sort((a,b)=>a-b):[...scale.iv].sort((a,b)=>a-b).map(x=>base+12+x).concat([base+24]);
+  const step=seq.length>16?0.15:0.2;
+  seq.forEach((m,i)=>note(mtof(m),t+i*step,0.45,0.15));
 }
 
 /* Roman-numeral progressions: a degree token (e.g. 'I', 'ii7', 'bVII',

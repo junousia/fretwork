@@ -98,6 +98,7 @@ export function mount(root){
     let pCur=state.pos[posKey]??'all';
     if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
     const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths};
+    let runNotes=null; // MIDI list: the actual notes of the selected position(s)
     if(pCur!=='all'){
       const idxs=(Array.isArray(pCur)?pCur:[pCur]).map(n=>positions.findIndex(p=>p.n===n));
       boardOpts.dimRange={s:Math.min(...idxs.map(i=>positions[i].s)),e:Math.max(...idxs.map(i=>positions[i].e))};
@@ -106,6 +107,7 @@ export function mount(root){
         for(const s of sets) s[j].forEach(f=>set.add(f));
         return set;
       });
+      runNotes=inst.midi.flatMap((open,j)=>[...boardOpts.brightSets[j]].map(f=>open+f));
     }
     h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
@@ -139,7 +141,7 @@ export function mount(root){
       }
       save();renderDetail();
     });
-    detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset);
+    detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset,runNotes);
   }
 
   let deb;

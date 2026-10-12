@@ -8,9 +8,12 @@ const STORE_KEY = 'gtr-instrument';
 // means the G string is NOT the lowest-pitched string, but that only matters
 // for absolute octave/audio playback, not for the pitch-class math board()
 // does - so it doesn't need special-casing here.
+// `midi` is the open-string MIDI note for each entry of `tuning`, same
+// order. The ukulele's is NOT derived from its pitch classes - the re-entrant
+// G string sits above C, so it must be given explicitly.
 export const INSTRUMENTS = {
-  guitar:  { id:'guitar',  name:'Guitar',  tuning: TUNING, stringWidths: STRING_WIDTHS, audioOffset: 0 },
-  ukulele: { id:'ukulele', name:'Ukulele', tuning: [9,4,0,7], stringWidths: [1.4,1.7,2.0,2.3], audioOffset: 12 }
+  guitar:  { id:'guitar',  name:'Guitar',  tuning: TUNING, stringWidths: STRING_WIDTHS, audioOffset: 0,  midi: [64,59,55,50,45,40] },
+  ukulele: { id:'ukulele', name:'Ukulele', tuning: [9,4,0,7], stringWidths: [1.4,1.7,2.0,2.3], audioOffset: 12, midi: [69,64,60,67] }
 };
 
 let current = 'guitar';
