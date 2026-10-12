@@ -96,12 +96,15 @@ export function mount(root){
     const positions=getPositions(cur.s.iv,c.root,inst.tuning);
     const posKey=`${c.name}|${cur.s.id}`;
     let pCur=state.pos[posKey]??'all';
-    if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
+    if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
     const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths};
     if(pCur!=='all'){
-      const idx=positions.findIndex(p=>p.n===pCur);
-      boardOpts.dimRange={s:positions[idx].s,e:positions[idx].e};
-      boardOpts.brightSets=positionFrets(positions,idx,cur.s.iv,c.root,inst.tuning);
+      const idxs=(Array.isArray(pCur)?pCur:[pCur]).map(n=>positions.findIndex(p=>p.n===n));
+      boardOpts.dimRange={s:Math.min(...idxs.map(i=>positions[i].s)),e:Math.max(...idxs.map(i=>positions[i].e))};
+      boardOpts.brightSets=positions.map((p,j)=>{ const set=new Set();
+        for(const i of idxs) positionFrets(positions,i,cur.s.iv,c.root,inst.tuning)[j].forEach(f=>set.add(f));
+        return set;
+      });
     }
     h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
@@ -109,7 +112,7 @@ export function mount(root){
         <button type="button" data-l="intervals" aria-pressed="${state.labels==='intervals'}">Intervals</button></div>
         <button type="button" class="play" id="pr-play">Play chord and scale</button></div></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="pr-posseg" role="group" aria-label="Fretboard position">${['all',...positions.map(p=>p.n)].map(p=>
-        `<button type="button" data-pos="${p}" aria-pressed="${pCur===p}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
+        `<button type="button" data-pos="${p}" title="${p==='all'?'Whole neck':'Toggle this position'}" aria-pressed="${p==='all'?pCur==='all':(Array.isArray(pCur)?pCur.includes(p):pCur===p)}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(c,cur,state.labels,flats,boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone, safe landing note</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
       <h3>Scales that fit ${esc(c.name)}</h3><div class="scales">`;
@@ -123,7 +126,18 @@ export function mount(root){
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
     detail.querySelectorAll('.seg button').forEach(b=>{ if(b.dataset.l) b.onclick=()=>{state.labels=b.dataset.l;save();renderDetail();};});
-    detail.querySelectorAll('#pr-posseg button').forEach(b=>b.onclick=()=>{const v=b.dataset.pos;state.pos[posKey]=v==='all'?'all':+v;save();renderDetail();});
+    detail.querySelectorAll('#pr-posseg button').forEach(b=>b.onclick=()=>{
+      const v=b.dataset.pos;
+      if(v==='all'){ state.pos[posKey]='all'; }
+      else{
+        const list=Array.isArray(pCur)?[...pCur]:(pCur==='all'?[]:[pCur]);
+        const n=+v, at=list.indexOf(n);
+        if(at>=0) list.splice(at,1); else list.push(n);
+        list.sort((a,b)=>a-b);
+        state.pos[posKey]=list.length?list:'all';
+      }
+      save();renderDetail();
+    });
     detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset);
   }
 
