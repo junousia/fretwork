@@ -1,4 +1,4 @@
-import { parseChord, detectKey, suggest, keyName, spell, chordFlats, board, play, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
+import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, play, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
@@ -40,9 +40,9 @@ export function mount(root){
         detail=root.querySelector('#pr-detail'), err=root.querySelector('#pr-err'), ex=root.querySelector('#pr-examples'),
         libProgSel=root.querySelector('#pr-libprog'), libKeySel=root.querySelector('#pr-libkey');
 
-  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{}};
-  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes'});}catch(e){}
-  function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels}));}catch(e){}}
+  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{}};
+  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{}});}catch(e){}
+  function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos}));}catch(e){}}
 
   prog.value=state.text;
   EXAMPLES.forEach(([label,text])=>{const b=document.createElement('button');b.type='button';b.textContent=label;
@@ -92,12 +92,25 @@ export function mount(root){
     const tones=c.iv.map(x=>spell(c.root+x,flats)).join(' ');
     let h=`<div class="chordhead"><h2>${esc(c.name)}</h2><p>Chord tones ${esc(tones)}, in ${esc(keyName(key))}</p></div>`;
     if(!cur){detail.innerHTML=h+'<p class="empty">No scale in the list fits this chord cleanly.</p>';return;}
+    const inst=getInstrument();
+    const positions=getPositions(cur.s.iv,c.root,inst.tuning);
+    const posKey=`${c.name}|${cur.s.id}`;
+    let pCur=state.pos[posKey]??'all';
+    if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
+    const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths};
+    if(pCur!=='all'){
+      const idx=positions.findIndex(p=>p.n===pCur);
+      boardOpts.dimRange={s:positions[idx].s,e:positions[idx].e};
+      boardOpts.brightSets=positionFrets(positions,idx,cur.s.iv,c.root,inst.tuning);
+    }
     h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
         <button type="button" data-l="notes" aria-pressed="${state.labels==='notes'}">Note names</button>
         <button type="button" data-l="intervals" aria-pressed="${state.labels==='intervals'}">Intervals</button></div>
         <button type="button" class="play" id="pr-play">Play chord and scale</button></div></div>
-      <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(c,cur,state.labels,flats,{tuning:getInstrument().tuning,stringWidths:getInstrument().stringWidths})}</div>
+      <div class="row"><label class="keylab">Position <div class="seg" id="pr-posseg" role="group" aria-label="Fretboard position">${['all',...positions.map(p=>p.n)].map(p=>
+        `<button type="button" data-pos="${p}" aria-pressed="${pCur===p}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
+      <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(c,cur,state.labels,flats,boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone, safe landing note</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
       <h3>Scales that fit ${esc(c.name)}</h3><div class="scales">`;
     list.forEach(x=>{
@@ -109,7 +122,8 @@ export function mount(root){
     h+='</div>';
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
-    detail.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{state.labels=b.dataset.l;save();renderDetail();});
+    detail.querySelectorAll('.seg button').forEach(b=>{ if(b.dataset.l) b.onclick=()=>{state.labels=b.dataset.l;save();renderDetail();};});
+    detail.querySelectorAll('#pr-posseg button').forEach(b=>b.onclick=()=>{const v=b.dataset.pos;state.pos[posKey]=v==='all'?'all':+v;save();renderDetail();});
     detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset);
   }
 
