@@ -55,6 +55,8 @@ export function mount(root){
       boardOpts.dimRange = { s: p.s, e: p.e };
       boardOpts.brightSets = positionFrets(positions, idx, scale.iv, state.root, inst.tuning);
     }
+    let runNotes = null; // MIDI list: the actual notes of the selected position
+    if(boardOpts.brightSets) runNotes = inst.midi.flatMap((open, j) => [...boardOpts.brightSets[j]].map(f => open + f));
     const posButtons = ['all', ...positions.map(p => p.n)].map(p =>
       `<button type="button" data-pos="${p}" aria-pressed="${state.position === p}">${p === 'all' ? 'All' : p}</button>`
     ).join('');
@@ -80,7 +82,7 @@ export function mount(root){
     detail.querySelector('#sc-posseg').querySelectorAll('button').forEach(b => b.onclick = () => {
       const v = b.dataset.pos; state.position = v === 'all' ? 'all' : +v; save(); render();
     });
-    detail.querySelector('#sc-play').onclick = () => play(chord, scale, inst.audioOffset);
+    detail.querySelector('#sc-play').onclick = () => play(chord, scale, inst.audioOffset, runNotes);
   }
 
   render();
