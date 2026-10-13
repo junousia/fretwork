@@ -19,7 +19,8 @@
     "site/audio.js",
     "site/identify.js",
     "site/tab.js",
-    "site/tab-view.js"
+    "site/tab-view.js",
+    "site/solo.js"
   ],
   "exclude": []
 }

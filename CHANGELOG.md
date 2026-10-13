@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Tab: chords can be placed at any step of a bar (several per bar), and every chord used is gathered
+  above the tab with a fingering you can step through; the chosen fingerings are the ones played back.
+  (Old saved tabs with one chord per bar still load.)
+- Tab: **solo generator** - load a progression's chords (or name your own), pick a style (follow the
+  chords / pentatonic / blues) and how busy it is, and generate. It plays inside one position per chord,
+  starts each chord on a chord tone, lands chord tones on strong beats, moves mostly by step, approaches
+  chord changes, repeats a rhythm so it sounds intentional, and ends on the root. The same seed always
+  gives the same solo; "Another one" tries a new seed; Undo restores what was there.
+
 - New **Tab** tab: a tab editor. Notes sit on a sixteenth-note grid in 4/4 bars; click a cell and type
   a fret, choose note lengths, add/delete bars, set a chord per bar, undo/redo, play it back (with the
   chords and a click) and copy it as ASCII tab. One tab per instrument, saved in the browser. This is

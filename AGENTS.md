@@ -19,6 +19,7 @@ All plain ES modules in `site/` (no build). Dependencies point one way (`music.j
 | `arpeggio.js` | degree chords, arpeggios in positions / around fingerings |
 | `identify.js` | chord identification from marked notes (pure): `identifyChord`, `marksToNotes` |
 | `tab.js` / `tab-view.js` | tab data model + editing rules (pure) / the tab SVG and its geometry |
+| `solo.js` | seeded solo generator: scale/position per chord stretch, chord-tone targets, approach notes (pure) |
 | `board.js` | the fretboard SVG (positions, fingerings, capo, left-handed mirror) |
 | `voicings.js` | chord fingering data lookup (incl. reuse in other tunings) and chord boxes |
 | `instrument.js` | setup: instrument, tuning, capo, handedness |
@@ -237,10 +238,26 @@ is a stack of snapshots (`createHistory`). A string rings one note at a time: `p
 earlier note and clips the new one. Never trust stored/shared data: run it through `normalizeTab`.
 Pitch is `inst.midi[s] + f`, so tuning and capo come for free. `tab-view.js` draws the SVG (CSS
 classes `tab*`, so dark mode and printing work) and exports the geometry (`stepPos`) the editor uses
-for the cursor and playhead. Typing: a digit places a note at the cursor, a second digit within
+for the cursor and playhead. Chords are markers `{at, name}` per bar (`putChord`, up to 8),
+`chordTimeline`/`chordsUsed` feed playback and the chord overview; the chosen fingering per chord name
+is `tab.voicings` (so exports can match what is played). Typing: a digit places a note at the cursor, a second digit within
 700 ms extends it (1 then 2 = fret 12, one undo step), then the cursor advances by the note length.
 Tests: `test/tab.test.mjs` (model, validation, exact text export, rendering), the `tab-riff` golden,
 and the Tab section of the e2e test.
+
+## Solo generator (Tab tab)
+
+`solo.js` (pure, seeded: same seed = same solo) walks the pitches of one position per chord
+**stretch** (a bar split at its chord markers). Rules: scale per style (`follow` = the scale the
+Progressions tab ranks first, `pent` = major/minor pentatonic on each plain chord, `blues` = the
+key's blues scale throughout, tonic = the first chord); first note of a stretch and strong beats are
+chord tones (the nearest other one); other notes step (58%), skip (22%), repeat, or leap (answered
+by a step back); no leap over a major sixth and no triple repeats; the last onset before a chord
+change is a scale step from a chord tone of the NEXT chord; bar-0 rhythm and shape come back in
+bars 1 and 3 of each 4; the last note is the last chord's root, held. `test/solo.test.mjs` checks
+these on ~3,700 solos across all tunings, capos, styles and densities (notes in scale and position,
+>=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
+generator, not a performer: no bends, slides or feel yet.
 
 ## Chord identifier (Identify tab)
 

@@ -154,5 +154,6 @@ export {};
  * @property {number} f    fret, 0 = open
  */
 
-/** @typedef {{chord:string, notes:TabNote[]}} TabBar */
-/** @typedef {{title:string, bpm:number, bars:TabBar[]}} Tab */
+/** A chord name placed at a step of a bar; it holds until the next marker. @typedef {{at:number, name:string}} TabChord */
+/** @typedef {{chords:TabChord[], notes:TabNote[]}} TabBar */
+/** @typedef {{title:string, bpm:number, bars:TabBar[], voicings?:Record<string, number>}} Tab  voicings: which stored fingering (0-based) is shown/played for each chord name */

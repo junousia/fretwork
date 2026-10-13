@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node tools/serve.mjs",
-    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/setup.test.mjs && node test/arpeggio.test.mjs && node test/identify.test.mjs && node test/tab.test.mjs && node test/golden.test.mjs && node test/site.test.mjs",
+    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/setup.test.mjs && node test/arpeggio.test.mjs && node test/identify.test.mjs && node test/tab.test.mjs && node test/solo.test.mjs && node test/golden.test.mjs && node test/site.test.mjs",
     "build:voicings": "node tools/build-voicings.mjs",
     "test:e2e": "node test/e2e.test.mjs",
     "test:a11y": "node test/a11y.test.mjs",

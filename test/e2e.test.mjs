@@ -113,6 +113,34 @@ async function run(browser, origin, label) {
   assert((await page.$$eval('#tb-surface svg:first-child .tabline', e => e.length)) % 4 === 0 && (await page.$$eval('#tb-surface .tabname', e => [...new Set(e.map(x => x.textContent))].join(''))) === 'AECG' && (await frets()) === '', `${label}: the ukulele has its own four-string tab`);
   await page.click('button[data-inst="guitar"]');
   assert((await frets()) === before, `${label}: switching back restores the guitar tab`);
+  // chords can sit at any step; the chords used are gathered above the tab with a fingering
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="8"][data-s="2"]');
+  await page.fill('#tb-chord', 'D7'); await page.press('#tb-chord', 'Tab');
+  assert((await page.textContent('#tb-beat')) === '3', `${label}: the chord field names the beat of the cursor`);
+  const chordXs = await page.$$eval('#tb-surface .tabchord', e => e.map(x => `${x.textContent}@${Math.round(+x.getAttribute('x'))}`));
+  assert(chordXs.length >= 2 && chordXs.some(c => c.startsWith('D7@')), `${label}: a second chord is placed inside the bar (${chordXs})`);
+  const used = await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent));
+  assert(used.includes('D7') && used.includes('Em7') && new Set(used).size === used.length, `${label}: the chords used are gathered on top once each (${used})`);
+  assert((await page.$$('#tb-chords .chip .vdiag')).length === used.length, `${label}: every chord shows a fingering diagram`);
+  const cap = () => page.textContent('#tb-chords .chip[data-name="D7"] span');
+  const c1 = await cap(); await page.click('#tb-chords .chip[data-name="D7"]');
+  assert((await cap()) !== c1, `${label}: tapping a chord steps to its next fingering (${c1} -> ${await cap()})`);
+  // solo generator: load a 12-bar blues, generate, same seed twice is identical, Another one differs, Undo restores
+  await page.selectOption('#tb-prog', '6'); await page.selectOption('#tb-progkey', '9:major'); await page.click('#tb-useprog');
+  assert((await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent))).join() === 'A7,D7,E7', `${label}: the progression's chords are gathered (A7 D7 E7)`);
+  await page.selectOption('#tb-style', 'blues'); await page.fill('#tb-seed', '4242'); await page.dispatchEvent('#tb-seed', 'change');
+  const beforeGen = await frets();
+  await page.click('#tb-gen-go');
+  const g1 = await frets();
+  assert((g1.match(/ /g) || []).length > 20, `${label}: generate fills the tab (${g1.split(' ').length} notes)`);
+  await page.click('#tb-gen-go');
+  assert((await frets()) === g1, `${label}: the same seed gives the same solo`);
+  await page.click('#tb-gen-new');
+  assert((await frets()) !== g1 && (await page.inputValue('#tb-seed')) !== '4242', `${label}: Another one gives a different solo and a new seed`);
+  assert((await page.textContent('#tb-genmsg')).includes('Seed'), `${label}: the seed is shown`);
+  await page.click('#tb-undo'); await page.click('#tb-undo');
+  assert((await frets()) !== '' , `${label}: undo steps back through generated solos`);
+  await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
 
   // scales tab: position selector
   await page.click('a[data-tab="scales"]');

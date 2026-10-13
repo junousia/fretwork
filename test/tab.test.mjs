@@ -1,6 +1,6 @@
 // The tab model: editing rules, pitch, validation of untrusted data, undo/redo,
 // and the plain-text export.
-import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, setChord, setBpm, clearNotes, noteAt, noteCovering,
+import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering,
   tabEvents, stepSeconds, normalizeTab, createHistory, stringNames, tabToText, STEPS, MAX_BARS } from '../site/tab.js';
 
 import { tabSvg, barsPerRowFor, stepPos, BAR_W, STEP_W } from '../site/tab-view.js';
@@ -43,9 +43,28 @@ b = addBar(b, 1); assert(b.bars.length === 4 && b.bars[1].notes.length === 0, 'b
 b = removeBar(b, 1); assert(b.bars.length === 3, 'bar removed');
 assert(removeBar(emptyTab(1), 0).bars.length === 1, 'the last bar cannot be removed');
 let many = emptyTab(MAX_BARS); assert(addBar(many) === many, 'bar count is capped');
-assert(setChord(t, 0, '  Am7  ').bars[0].chord === 'Am7', 'chord names are trimmed');
+assert(putChord(t, 0, 0, '  Am7  ').bars[0].chords[0].name === 'Am7', 'chord names are trimmed');
+{ // chords can sit anywhere in a bar, several per bar
+  let c = putChord(putChord(putChord(emptyTab(2), 0, 8, 'D7'), 0, 0, 'Am7'), 1, 4, 'G');
+  assert(c.bars[0].chords.map(x => x.at + x.name).join() === '0Am7,8D7', 'chord markers stay in time order');
+  assert(chordAt(c, 0, 8)?.name === 'D7' && !chordAt(c, 0, 4), 'chordAt finds a marker only at its exact step');
+  assert(chordTimeline(c).map(x => `${x.step}:${x.name}`).join() === '0:Am7,8:D7,20:G', 'the timeline counts steps across bars');
+  assert(chordsUsed(putChord(c, 1, 12, 'Am7')).join() === 'Am7,D7,G', 'chordsUsed lists each chord once, in order of first appearance');
+  assert(putChord(c, 0, 8, '').bars[0].chords.length === 1 && putChord(c, 0, 5, '') === c, 'an empty name removes the marker (or does nothing)');
+  assert(putChord(c, 0, 8, 'E7').bars[0].chords[1].name === 'E7', 'placing a chord at the same step replaces it');
+  assert(putChord(c, 0, 16, 'C') === c && putChord(c, 9, 0, 'C') === c, 'out-of-range chord placement is ignored');
+  let many = emptyTab(1); for (let i = 0; i < 12; i++) many = putChord(many, 0, i, 'C' + i);
+  assert(many.bars[0].chords.length === 8, 'a bar holds at most 8 chord markers');
+  assert(setVoicing(c, 'Am7', 2).voicings?.Am7 === 2 && !('Am7' in (setVoicing(setVoicing(c, 'Am7', 2), 'Am7', 0).voicings || {})) && setVoicing(c, 'Am7', -1) === c, 'chosen fingerings are stored by chord name (0 = the default)');
+  const old = normalizeTab({ bars: [{ chord: 'Em', notes: [] }, { chord: '', notes: [] }] });
+  assert(old?.bars[0].chords.length === 1 && old.bars[0].chords[0].at === 0 && old.bars[1].chords.length === 0, 'the old one-chord-per-bar shape is still read');
+  const rt = normalizeTab(JSON.parse(JSON.stringify(setVoicing(c, 'G', 3))));
+  assert(JSON.stringify(rt) === JSON.stringify(setVoicing(c, 'G', 3)), 'chords and fingerings survive a JSON round trip');
+  const junk = normalizeTab({ bars: [{ chords: [{ at: 99, name: 'C' }, { at: 1, name: 5 }, null, { at: 2, name: 'Dm' }], notes: [] }], voicings: { C: 'x', G: 2, [`${'x'.repeat(40)}`]: 1 } });
+  assert(junk?.bars[0].chords.length === 1 && junk.bars[0].chords[0].name === 'Dm' && junk.voicings?.G === 2, 'bad chord markers and fingerings are dropped');
+}
 assert(setBpm(t, 9999).bpm === 220 && setBpm(t, 1).bpm === 40 && setBpm(t, 'x').bpm === 90, 'tempo is clamped');
-assert(clearNotes(setChord(t, 0, 'C')).bars[0].notes.length === 0 && clearNotes(setChord(t, 0, 'C')).bars[0].chord === 'C', 'clear keeps the chords');
+assert(clearNotes(putChord(t, 0, 0, 'C')).bars[0].notes.length === 0 && clearNotes(putChord(t, 0, 0, 'C')).bars[0].chords[0].name === 'C', 'clear keeps the chords');
 
 // --- pitch: low E fret 3 is G2 (43); open top string is E4 (64); capo shifts everything
 let p = putNote(emptyTab(1), 0, 0, 5, 3, 2);
@@ -65,7 +84,7 @@ const dirty = normalizeTab({ title: 'x'.repeat(500), bpm: 5000, bars: [{ chord: 
   { at: 0, len: 2, s: 0, f: 3 }, { at: 0, len: 2, s: 0, f: 5 },       // overlap -> the later wins
   { at: 99, len: 1, s: 0, f: 1 }, { at: 1, len: 0, s: 0, f: 1 }, { at: 1, len: 1, s: -1, f: 1 }, { at: 1, len: 1, s: 0, f: 99 },
   { at: 2, len: 1.5, s: 0, f: 1 }, null, 'x', { at: 3, len: 99, s: 0, f: 1 }] }, 'nope'] });
-assert(dirty && dirty.title.length === 80 && dirty.bpm === 220 && dirty.bars[0].chord === '', 'title, tempo and chord are repaired');
+assert(dirty && dirty.title.length === 80 && dirty.bpm === 220 && dirty.bars[0].chords.length === 0, 'title, tempo and chord are repaired');
 assert(dirty.bars[0].notes.length === 1 + 0 || dirty.bars[0].notes.every(n => n.at >= 0 && n.at < STEPS && n.len >= 1 && n.f >= 0 && n.f <= 24), 'only valid notes survive');
 assert(dirty.bars[0].notes.filter(n => n.s === 0 && n.at === 0).length === 1 && noteAt(dirty, 0, 0, 0).f === 5, 'overlaps are resolved');
 assert(dirty.bars[1].notes.length === 0, 'a malformed bar becomes empty');
@@ -84,17 +103,20 @@ h.replace(a2); assert(h.current === a2, 'replace rewrites the current state');
 
 // --- text export (exact layout)
 assert(stringNames(GUITAR.midi).join('') === 'eBGDAE' && stringNames(UKE.midi).join('') === 'AECG', 'string names (top string lower case when it repeats)');
-let x = putNote(emptyTab(1), 0, 0, 5, 3, 2); x = putNote(x, 0, 4, 0, 12, 2); x = setChord(x, 0, 'G');
+let x = putNote(emptyTab(1), 0, 0, 5, 3, 2); x = putNote(x, 0, 4, 0, 12, 2); x = putChord(x, 0, 0, 'G');
 const text = tabToText({ ...x, title: 'Lick' }, GUITAR.midi);
 const want = ['Lick', '', '  G', 'e|--------12----------------------|', 'B|--------------------------------|',
   'G|--------------------------------|', 'D|--------------------------------|', 'A|--------------------------------|', 'E|3-------------------------------|'].join('\n') + '\n';
 assert(text === want, `text export differs:\n${text}\nwanted:\n${want}`);
+{ let m = putNote(emptyTab(1), 0, 0, 5, 3, 2); m = putChord(putChord(m, 0, 0, 'Am7'), 0, 8, 'D7');
+  const l = tabToText(m, GUITAR.midi).split('\n')[0];
+  assert(l === '  Am7' + ' '.repeat(2 * 8 - 3) + 'D7', `two chords in one bar are placed above their steps: "${l}"`); }
 assert(tabToText(emptyTab(5), GUITAR.midi).split('\n').filter(l => l.startsWith('e|')).length === 3, 'bars wrap onto lines (2 per line -> 3 lines for 5 bars)');
 assert(tabToText(x, UKE.midi).split('\n').filter(l => /\|$/.test(l)).length === 4, 'ukulele tab has four lines');
 
 // --- rendering
 {
-  let r = putNote(emptyTab(3), 0, 0, 5, 3, 2); r = putNote(r, 0, 4, 0, 12, 4); r = putNote(r, 1, 0, 2, 0, 1); r = setChord(r, 1, 'Am7');
+  let r = putNote(emptyTab(3), 0, 0, 5, 3, 2); r = putNote(r, 0, 4, 0, 12, 4); r = putNote(r, 1, 0, 2, 0, 1); r = putChord(r, 1, 0, 'Am7');
   const svg = tabSvg(r, GUITAR, { perRow: 2, editable: true });
   const frets = [...svg.matchAll(/class="fret" data-bar="(\d+)" data-at="(\d+)" data-s="(\d+)" x="([\d.]+)" y="([\d.]+)"[^>]*>(\d+)</g)].map(m => ({ bar: +m[1], at: +m[2], s: +m[3], x: +m[4], y: +m[5], f: m[6] }));
   assert(frets.length === 3 && frets.map(f => f.f).join() === '3,12,0', `fret numbers are drawn: ${frets.map(f => f.f)}`);
@@ -109,7 +131,7 @@ assert(tabToText(x, UKE.midi).split('\n').filter(l => /\|$/.test(l)).length === 
   assert(barsPerRowFor(360) === 1 && barsPerRowFor(1000) === 3 && barsPerRowFor(10) === 1, 'bars per row follow the available width');
   assert((tabSvg(r, UKE, { perRow: 2 }).match(/class="tabline"/g) || []).length === 4 * 2, 'a ukulele tab has four lines per row');
   assert(!/class="fret"[^>]*data-s="5"/.test(tabSvg(r, UKE, { perRow: 2 })), 'notes on strings the instrument lacks are not drawn');
-  assert(/<script|onerror/i.test(tabSvg(setChord(emptyTab(1), 0, '<script>'), GUITAR, { perRow: 1 })) === false, 'chord names are escaped');
+  assert(/<script|onerror/i.test(tabSvg(putChord(emptyTab(1), 0, 0, '<script>'), GUITAR, { perRow: 1 })) === false, 'chord names are escaped');
 }
 
 console.log(failures ? `${failures} FAILED` : 'tab: all passed');

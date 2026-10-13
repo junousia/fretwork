@@ -41,7 +41,7 @@ export function tabSvg(tab, inst, { perRow, cursor = null, editable = false }) {
   tab.bars.forEach((bar, bi) => {
     const { x: bx, y: y0 } = stepPos(n, perRow, bi, 0);
     for (let beat = 1; beat < 4; beat++) g += `<line class="tabbeat" x1="${bx + beat * 4 * STEP_W}" y1="${y0 - 4}" x2="${bx + beat * 4 * STEP_W}" y2="${y0 + (n - 1) * SG + 4}"/>`;
-    if (bar.chord) g += `<text class="tabchord" x="${bx - PAD + 4}" y="${y0 - 8}" font-size="13" font-weight="700">${esc(bar.chord)}</text>`;
+    bar.chords.forEach(c => { g += `<text class="tabchord" x="${bx + c.at * STEP_W}" y="${y0 - 8}" font-size="13" font-weight="700">${esc(c.name)}</text>`; });
     if (cursor && cursor.bar === bi) g += `<rect class="tabcursor" x="${bx + cursor.at * STEP_W}" y="${y0 + cursor.s * SG - SG / 2}" width="${STEP_W}" height="${SG}" rx="3"/>`;
     // note lengths: one stem per start, shortest note wins; flags for 16ths / 8ths, a dot for dotted, a ring for halves and wholes
     /** @type {Map<number, number>} */ const stems = new Map();
