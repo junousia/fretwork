@@ -148,8 +148,8 @@ export {};
  * how long it lasts, and the string / fret it is played on. String 0 is the
  * top string (as everywhere else); the fret counts from the capo.
  * @typedef {object} TabNote
- * @property {number} at   0..15
- * @property {number} len  1..16 steps, never past the end of the bar
+ * @property {number} at   start step in the bar, 0..47 (48 steps per bar: a sixteenth is 3, a triplet eighth 4)
+ * @property {number} len  length in steps, never past the end of the bar
  * @property {number} s    string index, top string = 0
  * @property {number} f    fret, 0 = open
  */
@@ -161,4 +161,4 @@ export {};
  * @typedef {{at:number, name:string, scale?:string, positions?:number[]}} TabChord
  */
 /** @typedef {{chords:TabChord[], notes:TabNote[]}} TabBar */
-/** @typedef {{title:string, bpm:number, bars:TabBar[], voicings?:Record<string, number>}} Tab  voicings: which stored fingering (0-based) is shown/played for each chord name */
+/** @typedef {{title:string, bpm:number, bars:TabBar[], voicings?:Record<string, number>, res?:number}} Tab  voicings: which stored fingering (0-based) is shown/played for each chord name */

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Tab: **triplets**. The grid is now 48 steps per bar (a quarter is 12), so straight and triplet notes
+  fit exactly: a Triplet box next to the note lengths (1/16, 1/8, 1/4, 1/2 triplets), brackets with a 3
+  in the tab, and the cursor snaps to the triplet grid. Tabs saved before this are converted automatically
+  (nothing moves). Plain-text export approximates triplets on a 24-cell bar.
+- Tab: **feel** for the solo generator - Straight eighths, Shuffle / swing (long-short pairs written as
+  triplets), Triplets (12/8) and Sixteenths (funk), each with sparse/medium/busy rhythms and its own
+  ending. A separate **Swing** playback option (Straight / Light swing / Shuffle) plays straight eighths
+  long-short without changing the written notes.
+- Tab: **Export PDF** - prints the tab as a sheet with the title, tuning/capo/tempo, a box with the
+  fingering of every chord used, and the tab in numbered rows that are never split across pages. Use
+  "Save as PDF" in the print dialog (Ctrl+P on the Tab page prints the same sheet).
+
 - Tab: choose the scale and positions the solo generator uses for each chord occurrence (like the
   Progressions tab): put the cursor in a bar and pick a scale and one or more positions for the chord
   there, with a fretboard preview. The choice is stored on that chord marker, so the same chord later in
