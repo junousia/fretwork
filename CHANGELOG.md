@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Tab: choose the scale and positions the solo generator uses for each chord occurrence (like the
+  Progressions tab): put the cursor in a bar and pick a scale and one or more positions for the chord
+  there, with a fretboard preview. The choice is stored on that chord marker, so the same chord later in
+  the song can be played in a different position and the solo can move up the neck.
+
 - Tab: chords can be placed at any step of a bar (several per bar), and every chord used is gathered
   above the tab with a fingering you can step through; the chosen fingerings are the ones played back.
   (Old saved tabs with one chord per bar still load.)

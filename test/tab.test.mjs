@@ -1,6 +1,6 @@
 // The tab model: editing rules, pitch, validation of untrusted data, undo/redo,
 // and the plain-text export.
-import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering,
+import { setChordPlan, emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering,
   tabEvents, stepSeconds, normalizeTab, createHistory, stringNames, tabToText, STEPS, MAX_BARS } from '../site/tab.js';
 
 import { tabSvg, barsPerRowFor, stepPos, BAR_W, STEP_W } from '../site/tab-view.js';
@@ -56,6 +56,24 @@ assert(putChord(t, 0, 0, '  Am7  ').bars[0].chords[0].name === 'Am7', 'chord nam
   let many = emptyTab(1); for (let i = 0; i < 12; i++) many = putChord(many, 0, i, 'C' + i);
   assert(many.bars[0].chords.length === 8, 'a bar holds at most 8 chord markers');
   assert(setVoicing(c, 'Am7', 2).voicings?.Am7 === 2 && !('Am7' in (setVoicing(setVoicing(c, 'Am7', 2), 'Am7', 0).voicings || {})) && setVoicing(c, 'Am7', -1) === c, 'chosen fingerings are stored by chord name (0 = the default)');
+  { // generator choices live on the chord marker: one occurrence, not the chord name
+    let a = putChord(putChord(emptyTab(2), 0, 0, 'A7'), 1, 0, 'A7');
+    a = setChordPlan(a, 0, 0, { scale: 'minpent' }); a = setChordPlan(a, 0, 0, { positions: [3, 1, 3] });
+    assert(a.bars[0].chords[0].scale === 'minpent' && a.bars[0].chords[0].positions.join() === '1,3', 'scale and positions are stored (sorted, de-duplicated)');
+    assert(!a.bars[1].chords[0].scale && !a.bars[1].chords[0].positions, 'the same chord elsewhere keeps its own (automatic) choices');
+    assert(setChordPlan(a, 0, 0, { scale: 'dorian' }).bars[0].chords[0].positions === undefined, 'changing the scale clears the positions (they are numbered per scale)');
+    assert(setChordPlan(a, 0, 0, { scale: '' }).bars[0].chords[0].scale === undefined, 'an empty scale goes back to automatic');
+    assert(setChordPlan(a, 0, 0, { positions: [] }).bars[0].chords[0].positions === undefined && setChordPlan(a, 0, 0, { positions: [] }).bars[0].chords[0].scale === 'minpent', 'no positions means every position, scale kept');
+    assert(setChordPlan(a, 0, 0, { scale: 'nope' }).bars[0].chords[0].scale === undefined, 'an unknown scale is ignored');
+    assert(setChordPlan(a, 0, 0, { positions: [0, 13, 1.5, 2] }).bars[0].chords[0].positions.join() === '2', 'out-of-range positions are dropped');
+    assert(setChordPlan(a, 0, 9, { scale: 'dorian' }) === a && setChordPlan(a, 5, 0, { scale: 'dorian' }) === a, 'no marker there, nothing changes');
+    assert(setChordPlan(a, 0, 0, { scale: 'minpent' }) === a, 'setting the same choice changes nothing');
+    assert(putChord(a, 0, 0, 'A7').bars[0].chords[0].scale === 'minpent' && putChord(a, 0, 0, 'Dm').bars[0].chords[0].scale === undefined, 'retyping the same chord keeps its choices; a different chord drops them');
+    const rt = normalizeTab(JSON.parse(JSON.stringify(a)));
+    assert(JSON.stringify(rt) === JSON.stringify(a), 'choices survive a JSON round trip');
+    const bad = normalizeTab({ bars: [{ chords: [{ at: 0, name: 'A7', scale: 'zzz', positions: [1, 'x', 99, 2] }], notes: [] }] });
+    assert(bad.bars[0].chords[0].scale === undefined && bad.bars[0].chords[0].positions.join() === '1,2', 'stored choices are validated');
+  }
   const old = normalizeTab({ bars: [{ chord: 'Em', notes: [] }, { chord: '', notes: [] }] });
   assert(old?.bars[0].chords.length === 1 && old.bars[0].chords[0].at === 0 && old.bars[1].chords.length === 0, 'the old one-chord-per-bar shape is still read');
   const rt = normalizeTab(JSON.parse(JSON.stringify(setVoicing(c, 'G', 3))));

@@ -154,6 +154,11 @@ export {};
  * @property {number} f    fret, 0 = open
  */
 
-/** A chord name placed at a step of a bar; it holds until the next marker. @typedef {{at:number, name:string}} TabChord */
+/**
+ * A chord name placed at a step of a bar; it holds until the next marker. The optional choices are for the
+ * solo generator and belong to this one occurrence (so a repeated chord can be played differently later in the
+ * song): the scale to play over it, and which positions (1-based, as numbered on the Scales tab) to stay in.
+ * @typedef {{at:number, name:string, scale?:string, positions?:number[]}} TabChord
+ */
 /** @typedef {{chords:TabChord[], notes:TabNote[]}} TabBar */
 /** @typedef {{title:string, bpm:number, bars:TabBar[], voicings?:Record<string, number>}} Tab  voicings: which stored fingering (0-based) is shown/played for each chord name */

@@ -2,11 +2,13 @@ import { esc, parseChord } from './music.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
-import { generateSolo, STYLES, DENSITIES } from './solo.js';
-import { keyName } from './music.js';
+import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES } from './solo.js';
+import { keyName, spell, suggest, SC } from './music.js';
+import { getPositions, positionFrets } from './positions.js';
+import { board, fitBoard } from './board.js';
 import { chordMidiNotes } from './audio.js';
 import { startTab } from './player.js';
-import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering, tabEvents,
+import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, setChordPlan, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering, tabEvents,
   stepSeconds, normalizeTab, createHistory, tabToText, STEPS, MAX_FRET, LENGTHS, LENGTH_NAMES } from './tab.js';
 import { tabSvg, barsPerRowFor, stepPos } from './tab-view.js';
 
@@ -33,6 +35,7 @@ export function mount(root){
       <button type="button" class="share" id="tb-delbar">Delete bar</button>
     </div>
     <div id="tb-chords" class="chordsum"></div>
+    <div id="tb-plan" class="plansum"></div>
     <div class="tabwrap" id="tb-surface" tabindex="0" role="group" aria-label="Tab editor. Arrow keys move the cursor, digits set a fret, Delete removes a note, Space plays."></div>
     <div class="numpad" id="tb-pad" role="group" aria-label="Number pad">
       ${[0,1,2,3,4,5,6,7,8,9].map(d => `<button type="button" data-d="${d}">${d}</button>`).join('')}
@@ -190,6 +193,7 @@ export function mount(root){
     if (document.activeElement !== chordIn) chordIn.value = c;
     chordIn.setAttribute('aria-invalid', String(!!chordIn.value && !parseChord(chordIn.value)));
     renderChords(inst);
+    renderPlan(inst);
     $('#tb-delbar').disabled = tab().bars.length <= 1;
     $('#tb-addbar').disabled = tab().bars.length >= 64;
     if (reveal) surface.querySelector('.tabcursor')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -210,6 +214,59 @@ export function mount(root){
       const label = v ? `${voicingLabel(v)}${v.b ? ' \u00b7 barre' : ''}${list.length > 1 ? ` \u00b7 ${k + 1}/${list.length}` : ''}` : parseChord(name) ? 'no fingering' : 'unknown chord';
       return `<button type="button" class="chip vobtn" data-name="${esc(name)}"${list.length > 1 ? ` title="Tap for the next fingering"` : ''}><b>${esc(name)}</b>${v ? voicingDiagram(v, { label: false, mirror: inst.leftHanded }) : ''}<span>${esc(label)}</span></button>`;
     }).join('')}</div>`;
+  }
+  // The scale and positions the solo generator uses over the chord in effect at the cursor
+  // (that one occurrence: a chord that comes back later can be played differently).
+  const planEl = $('#tb-plan');
+  let planOpen = matchMedia('(min-width:760px)').matches, planSig = '';
+  function chordInEffect(){
+    const step = cursor.bar * STEPS + cursor.at;
+    return chordTimeline(tab()).filter(c => c.step <= step).pop() || null;
+  }
+  function renderPlan(inst){
+    const m = chordInEffect(), chord = m && parseChord(m.name);
+    const marker = m ? tab().bars[m.bar].chords.find(c => c.at === m.at) : undefined;
+    if (!m || !chord || !marker) { planEl.innerHTML = ''; planSig = ''; return; }
+    const sig = JSON.stringify([m, marker, opts.style, opts.key, inst.id, inst.tuning, inst.capo, inst.leftHanded, chordsUsed(tab())]);
+    if (sig === planSig) return;
+    planSig = sig;
+    const [kt, kmode] = opts.key === 'auto' ? [] : opts.key.split(':');
+    const ctx = soloContext(tab().bars, opts.style, opts.key === 'auto' ? undefined : { t: +kt, mode: /** @type {'major'|'minor'} */ (kmode) });
+    const eff = scaleFor(opts.style, chord, marker, ctx.key, ctx.dominants), auto = scaleFor(opts.style, chord, undefined, ctx.key, ctx.dominants);
+    const scale = SC[eff.scaleId], positions = getPositions(scale.iv, eff.root, inst.tuning);
+    const chosen = (marker.positions || []).filter(n => n <= positions.length);
+    const ids = suggest(chord, ctx.key).map(x => x.s.id);
+    for (const x of ['minpent', 'majpent', 'blues']) if (!ids.includes(x)) ids.push(x);
+    const nameOf = (/** @type {string} */ id) => `${spell(chord.root, false)} ${SC[id].name}`;
+    const where = `${m.name} (bar ${m.bar + 1}, beat ${1 + m.at / 4})`;
+    const summary = `Scale and position \u00b7 ${esc(where)}: ${esc(scale.short || scale.name)}${chosen.length ? ', position ' + chosen.join(' + ') : ''}`;
+    const chordPcs = chord.iv.map(x => (chord.root + x) % 12);
+    const bchord = { root: eff.root, iv: chordPcs.map(pc => (pc - eff.root + 12) % 12), name: m.name };
+    /** @type {import('./types.js').BoardOptions} */
+    const bo = { tuning: inst.tuning, stringWidths: inst.stringWidths, leftHanded: inst.leftHanded, capo: inst.capo };
+    if (chosen.length) {
+      const idxs = chosen.map(n => n - 1), sets = idxs.map(k => positionFrets(positions, k, scale.iv, eff.root, inst.tuning, inst.midi));
+      bo.dimRange = { s: Math.min(...idxs.map(k => positions[k].s)), e: Math.max(...idxs.map(k => positions[k].e)) };
+      bo.brightSets = inst.tuning.map((_, j) => new Set(sets.flatMap(st => [...st[j]])));
+    }
+    planEl.innerHTML = `<details class="fold" id="tb-planfold"${planOpen ? ' open' : ''}><summary>${summary}</summary>
+      <div class="row">
+        <label class="keylab">Scale <select id="tb-planscale" aria-label="Scale for ${esc(m.name)}"><option value="">Auto: ${esc(spell(auto.root, false))} ${esc(SC[auto.scaleId].name)}</option>${ids.map(id => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label>
+        <label class="keylab">Position <div class="seg" id="tb-planpos" role="group" aria-label="Positions to play in">
+          <button type="button" data-pos="all" aria-pressed="${!chosen.length}">All</button>${positions.map(p => `<button type="button" data-pos="${p.n}" title="Toggle this position" aria-pressed="${chosen.includes(p.n)}">${p.n}</button>`).join('')}</div></label>
+      </div>
+      <p class="hint">Used the next time you generate. It applies to this chord only - the same chord later in the song can have its own scale and position.</p>
+      <div class="board" id="tb-planboard" tabindex="0" aria-label="Fretboard showing the scale and position, scroll sideways">${board(bchord, { s: { iv: scale.iv, name: scale.name } }, 'notes', false, bo)}</div>
+    </details>`;
+    const sel = /** @type {HTMLSelectElement} */ (planEl.querySelector('#tb-planscale')); sel.value = marker.scale || '';
+    sel.onchange = () => { commit(setChordPlan(tab(), m.bar, m.at, { scale: sel.value })); render(); };
+    planEl.querySelectorAll('#tb-planpos button').forEach(b => b.onclick = () => {
+      const v = b.dataset.pos;
+      const next = v === 'all' ? [] : chosen.includes(+v) ? chosen.filter(n => n !== +v) : [...chosen, +v];
+      commit(setChordPlan(tab(), m.bar, m.at, { positions: next })); render();
+    });
+    const fold = /** @type {HTMLDetailsElement} */ (planEl.querySelector('#tb-planfold')); fold.addEventListener('toggle', () => { planOpen = fold.open; });
+    fitBoard(planEl.querySelector('#tb-planboard'), bo.dimRange, inst.leftHanded);
   }
   chordsEl.addEventListener('click', e => {
     const b = e.target instanceof Element && e.target.closest('button[data-name]'); if (!b) return;
@@ -296,9 +353,9 @@ export function mount(root){
   progKey.innerHTML = keyHtml; progKey.value = '9:minor';
   keySel.innerHTML = `<option value="auto">Auto (from the chords)</option>${keyHtml}`;
   styleSel.value = opts.style; densSel.value = opts.density; keySel.value = opts.key; seedIn.value = String(opts.seed);
-  styleSel.onchange = () => { opts.style = styleSel.value; persist(); };
+  styleSel.onchange = () => { opts.style = styleSel.value; persist(); render(); };
   densSel.onchange = () => { opts.density = densSel.value; persist(); };
-  keySel.onchange = () => { opts.key = keySel.value; persist(); };
+  keySel.onchange = () => { opts.key = keySel.value; persist(); render(); };
   seedIn.onchange = () => { const v = Math.round(+seedIn.value); opts.seed = v >= 1 && v <= 999999 ? v : opts.seed; seedIn.value = String(opts.seed); persist(); };
   $('#tb-useprog').onclick = () => {
     cancelPending(); stopPlay();
@@ -329,7 +386,7 @@ export function mount(root){
   $('#tb-gen').open = matchMedia('(min-width:760px)').matches;
   $('#tb-more').open = matchMedia('(min-width:760px)').matches;
 
-  root.addEventListener('fw-shown', () => render());
+  root.addEventListener('fw-shown', () => { planSig = ''; render(); });
   let resizeTimer = /** @type {any} */ (0);
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!root.hidden && barsPerRowFor(surface.clientWidth || 360) !== perRow) render(); }, 150); });
   onInstrumentChange(inst => { stopPlay(); cancelPending(); hist = historyFor(inst.id); render(); });
