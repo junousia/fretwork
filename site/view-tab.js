@@ -1,5 +1,7 @@
 import { esc, parseChord } from './music.js';
-import { getInstrument, onInstrumentChange } from './instrument.js';
+import { getInstrument, getSetup, applySetup, onInstrumentChange } from './instrument.js';
+import { encodeTabLink, decodeTabLink } from './tab-share.js';
+import { tabOf } from './share.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
 import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES } from './solo.js';
@@ -27,6 +29,7 @@ export function mount(root){
       <button type="button" class="share" id="tb-undo">Undo</button>
       <button type="button" class="share" id="tb-redo">Redo</button>
       <label class="keylab">Tempo <input id="tb-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
+      <button type="button" class="share" id="tb-share" title="A link that opens this tab (notes, chords, settings and seed) for someone else">Copy link</button>
       <button type="button" class="share" id="tb-pdf" title="Print the tab with its chord boxes - choose Save as PDF in the print dialog">Export PDF</button>
     </div>
     <div class="row">
@@ -378,6 +381,37 @@ export function mount(root){
   window.addEventListener('afterprint', () => { document.body.classList.remove('printing'); sheet?.remove(); sheet = null; });
   $('#tb-pdf').onclick = () => { cancelPending(); stopPlay(); window.print(); };
 
+  // --- share link: the whole tab, the instrument setup and the generator settings (seed included) ---
+  function genSettings(){ return { style: opts.style, density: opts.density, feel: opts.feel, tech: opts.tech, evolve: opts.evolve, key: opts.key, seed: opts.seed }; }
+  $('#tb-share').onclick = async () => {
+    cancelPending();
+    const url = `${location.origin}${location.pathname}#tab?${encodeTabLink({ tab: tab(), setup: getSetup(), gen: genSettings() })}`;
+    try {
+      if (navigator.share && matchMedia('(pointer:coarse)').matches) { await navigator.share({ title: tab().title || 'Fretwork tab', url }); msg.textContent = ''; return; }
+      await navigator.clipboard.writeText(url); msg.textContent = 'Link copied';
+    } catch (e) { if (e && e.name === 'AbortError') return; window.prompt('Copy this link', url); }
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+  };
+  /** Open a shared tab: it becomes the current tab, and Undo brings back what was there. */
+  function openShared(hash){
+    if (tabOf(hash) !== 'tab') return false;
+    const link = decodeTabLink(hash); if (!link) return false;
+    stopPlay(); cancelPending();
+    applySetup({ instrument: link.setup.instrument || 'guitar', tuning: link.setup.tuning || 'standard', capo: link.setup.capo || 0, leftHanded: link.setup.leftHanded === true });
+    hist = historyFor(getInstrument().id);
+    hist.push(link.tab);
+    if (link.gen) {
+      Object.assign(opts, { style: link.gen.style, density: link.gen.density, feel: link.gen.feel, tech: link.gen.tech, evolve: link.gen.evolve, key: link.gen.key, seed: link.gen.seed });
+      styleSel.value = opts.style; densSel.value = opts.density; feelSel.value = opts.feel; gtSel.value = opts.tech; evSel.value = opts.evolve; keySel.value = opts.key; seedIn.value = String(opts.seed);
+    }
+    persist();
+    cursor.bar = 0; cursor.at = 0; planSig = '';
+    try { history.replaceState(null, '', `${location.pathname}${location.search}#tab`); } catch (e) { /* keep the long hash */ }
+    genMsg.textContent = 'Opened a shared tab - Undo brings back yours.';
+    render(); return true;
+  }
+  window.addEventListener('hashchange', () => { if (!root.hidden || tabOf(location.hash) === 'tab') openShared(location.hash); });
+
   // --- wiring ------------------------------------------------------------------
   surface.addEventListener('click', e => {
     const hit = e.target instanceof Element && e.target.closest('.tabhit'); if (!hit) return;
@@ -476,4 +510,5 @@ export function mount(root){
   onInstrumentChange(inst => { stopPlay(); cancelPending(); hist = historyFor(inst.id); render(); });
   loadVoicings().then(() => render());
   render();
+  openShared(location.hash);
 }

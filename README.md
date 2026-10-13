@@ -34,7 +34,8 @@ no build step, no accounts, no tracking.
   chords and a click, keeps a separate tab per instrument, saves in the browser, and copies as plain
   ASCII tab. Chords can sit anywhere in a bar and are gathered at the top with fingerings. A **solo
   generator** writes a melodic line over the chords (follow the chords, pentatonic or blues) in a
-  straight, shuffle, triplet or funk feel. Triplets are supported, and the tab prints to **PDF** with
+  straight, shuffle, triplet or funk feel, optionally building up over the song, with hammer-ons, slides,
+  bends and vibrato. **Copy link** shares the tab and its settings. Triplets are supported, and the tab prints to **PDF** with
   the chord boxes on top.
 - **Arpeggios** - on any seven-note scale pick a chord stacked on a degree (I, ii ... vii, with
   optional 7ths) and see its arpeggio inside the chosen position; on a chord fingering, switch on the

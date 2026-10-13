@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Tab: **Copy link** shares the whole tab - notes, techniques, triplets, chords, chosen fingerings,
+  scale/position choices, title and tempo - plus the instrument setup (tuning, capo, left-handed) and the
+  generator settings with the seed, in one link (about 1.7 KB for a busy 12-bar solo). Opening a link makes
+  it the current tab and Undo brings back the one that was there. Damaged or hostile links are repaired or
+  ignored.
+
 - Tab: **Evolve** for the solo generator (Steady / Build up / Arc). The solo develops over the song: it
   starts lower and calmer, climbs up the neck one position at a time, gets busier (up to the density you
   asked for) and uses more techniques towards the peak, then settles for the ending. Positions you choose

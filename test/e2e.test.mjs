@@ -210,6 +210,37 @@ async function run(browser, origin, label) {
   await page.click('#tb-undo'); await page.click('#tb-undo');
   assert((await frets()) !== '' , `${label}: undo steps back through generated solos`);
   await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
+  // share link: copy it, open it in a fresh browser, get the same tab, setup and generator settings; Undo brings back what was there
+  await page.fill('#tb-title', 'Shared lick'); await page.press('#tb-title', 'Tab');
+  await page.fill('#tb-seed', '31337'); await page.dispatchEvent('#tb-seed', 'change');
+  const sharedFrets = await frets(), sharedChords = await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent).join());
+  await page.evaluate(() => { const w = /** @type {any} */ (window); w.__copied = ''; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async t => { w.__copied = t; } } }); });
+  await page.click('#tb-share');
+  const sharedUrl = await page.evaluate(() => /** @type {any} */ (window).__copied);
+  assert(/#tab\?.*d=/.test(sharedUrl) && sharedUrl.length < 4000, `${label}: Copy link makes a #tab link (${sharedUrl.length} characters)`);
+  assert((await page.textContent('#tb-msg')) === 'Link copied', `${label}: it says the link was copied`);
+  const friend = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const fp = await friend.newPage();
+  await fp.goto(origin, { waitUntil: 'networkidle' }); await fp.click('a[data-tab="tab"]'); await fp.waitForSelector('#tb-surface .tabhit');
+  await fp.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="3"]'); await fp.keyboard.press('9'); await fp.waitForTimeout(800); // the friend has a tab of their own
+  const own = await fp.$$eval('#tb-surface .fret', e => e.map(x => x.textContent).join());
+  await fp.goto(origin + new URL(sharedUrl).hash, { waitUntil: 'networkidle' });
+  await fp.waitForSelector('#tb-surface .tabhit');
+  assert((await fp.$$eval('#tb-surface .fret', e => e.map(x => `${x.textContent}@${x.dataset.bar}.${x.dataset.at}.${x.dataset.s}`).join(' '))) === sharedFrets, `${label}: the link opens the same notes`);
+  assert((await fp.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent).join())) === sharedChords && (await fp.inputValue('#tb-title')) === 'Shared lick', `${label}: and the same chords and title`);
+  assert((await fp.inputValue('#tb-seed')) === '31337' && (await fp.inputValue('#tb-style')) === (await page.inputValue('#tb-style')), `${label}: and the generator settings and seed`);
+  assert(!(await fp.evaluate(() => location.hash)).includes('d='), `${label}: the long hash is tidied away after opening`);
+  assert((await fp.textContent('#tb-genmsg')).includes('Undo brings back yours'), `${label}: it says what happened`);
+  await fp.click('#tb-undo');
+  assert((await fp.$$eval('#tb-surface .fret', e => e.map(x => x.textContent).join())) === own, `${label}: Undo brings back the friend's own tab`);
+  await friend.close();
+  // a damaged link opens nothing and breaks nothing
+  const bad = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const bp = await bad.newPage(); const badErrors = []; bp.on('pageerror', e => badErrors.push(e.message));
+  await bp.goto(origin + '#tab?d=%%%garbage', { waitUntil: 'networkidle' });
+  await bp.waitForSelector('#tb-surface .tabhit');
+  assert(badErrors.length === 0 && (await bp.$$('#tb-surface .fret')).length === 0, `${label}: a damaged link opens an empty tab without errors`);
+  await bad.close();
   // PDF export: the print sheet has the title, every chord box once, and the tab in rows that are not split
   assert(await page.isVisible('#tb-pdf'), `${label}: there is an Export PDF button`);
   await page.fill('#tb-title', 'Blues in A'); await page.press('#tb-title', 'Tab');

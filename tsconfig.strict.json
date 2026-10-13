@@ -20,7 +20,8 @@
     "site/identify.js",
     "site/tab.js",
     "site/tab-view.js",
-    "site/solo.js"
+    "site/solo.js",
+    "site/tab-share.js"
   ],
   "exclude": []
 }
