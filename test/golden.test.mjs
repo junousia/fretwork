@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getPositions, positionFrets } from '../site/positions.js';
-import { emptyTab, putNote, putChord } from '../site/tab.js';
+import { emptyTab, putNote, putChord, setTechnique } from '../site/tab.js';
 import { tabSvg } from '../site/tab-view.js';
 import { board } from '../site/board.js';
 import { SCALES, CHORDS, TUNING, spell } from '../site/music.js';
@@ -66,7 +66,7 @@ const cases = {
   'c-major-chord-box-barre-left-handed': () => voicingDiagram(getVoicings(G, 0, '')[1], { mirror: true }),
   'identify-open-c': () => board({ root: 0, iv: CHORDS[''], name: 'C' }, { s: { iv: [0], name: 'the marked notes' } }, 'notes', false,
     { tuning: G.tuning, hitAreas: true, voicing: { f: [0, 1, 0, 2, 3, -1], g: [0, 0, 0, 0, 0, 0], b: null } }),
-  'tab-riff': () => { let t = emptyTab(2); for (const [bar, at, st, f, len] of [[0, 0, 5, 0, 6], [0, 6, 5, 3, 6], [0, 12, 4, 0, 12], [0, 24, 3, 2, 9], [0, 33, 2, 0, 3], [0, 36, 0, 12, 12], [1, 0, 1, 3, 24], [1, 24, 2, 5, 4], [1, 28, 2, 7, 4], [1, 32, 2, 8, 4], [1, 36, 3, 7, 12]]) t = putNote(t, bar, at, st, f, len); t = putChord(t, 0, 0, 'Em'); t = putChord(t, 0, 24, 'D'); t = putChord(t, 1, 0, 'C'); return tabSvg(t, G, { perRow: 2, cursor: { bar: 1, at: 24, s: 1 } }); },
+  'tab-riff': () => { let t = emptyTab(2); for (const [bar, at, st, f, len] of [[0, 0, 5, 0, 6], [0, 6, 5, 3, 6], [0, 12, 4, 0, 12], [0, 24, 3, 2, 6], [0, 30, 3, 4, 6], [0, 33, 2, 0, 3], [0, 36, 0, 12, 12], [1, 0, 1, 3, 24], [1, 24, 2, 5, 4], [1, 28, 2, 7, 4], [1, 32, 2, 8, 4], [1, 36, 3, 7, 12]]) t = putNote(t, bar, at, st, f, len); t = setTechnique(t, 0, 0, 5, { link: 'h' }); t = setTechnique(t, 0, 24, 3, { link: 's' }); t = setTechnique(t, 0, 36, 0, { bend: 2 }); t = setTechnique(t, 1, 36, 3, { vib: true }); t = putChord(t, 0, 0, 'Em'); t = putChord(t, 0, 24, 'D'); t = putChord(t, 1, 0, 'C'); return tabSvg(t, G, { perRow: 2, cursor: { bar: 1, at: 24, s: 1 } }); },
   'am7-chord-box-open': () => voicingDiagram(getVoicings(G, 9, 'm7')[0], { label: false }),
 };
 

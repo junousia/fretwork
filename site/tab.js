@@ -37,6 +37,9 @@ export function emptyTab(nBars = 4) {
 /** @param {TabNote[]} notes @returns {TabNote[]} notes in time order (then top string first) */
 const ordered = notes => [...notes].sort((a, b) => a.at - b.at || a.s - b.s);
 
+/** The technique fields of a note (link, bend, vib), nothing else. @param {TabNote} n @returns {Partial<TabNote>} */
+const extras = n => ({ ...(n.link ? { link: n.link } : {}), ...(n.bend ? { bend: n.bend } : {}), ...(n.vib ? { vib: n.vib } : {}) });
+
 /** Replace one bar. @param {Tab} tab @param {number} bar @param {(b:TabBar) => TabBar} fn @returns {Tab} */
 function withBar(tab, bar, fn) {
   if (!tab.bars[bar]) return tab;
@@ -60,15 +63,16 @@ export function putNote(tab, bar, at, s, f, len) {
   if (!Number.isInteger(at) || at < 0 || at >= STEPS || !Number.isInteger(s) || s < 0 || !Number.isInteger(f) || f < 0 || f > MAX_FRET) return tab;
   return withBar(tab, bar, b => {
     const keep = [];
+    /** @type {TabNote|undefined} */ let replaced;
     for (const n of b.notes) {
       if (n.s !== s) { keep.push(n); continue; }
-      if (n.at === at) continue;                                  // replaced
+      if (n.at === at) { replaced = n; continue; }                // replaced (it keeps its techniques)
       if (n.at < at && n.at + n.len > at) keep.push({ ...n, len: at - n.at }); // cut short
       else keep.push(n);
     }
     const next = Math.min(STEPS, ...keep.filter(n => n.s === s && n.at > at).map(n => n.at));
     const l = Math.max(1, Math.min(len, next - at));
-    return { ...b, notes: ordered([...keep, { at, len: l, s, f }]) };
+    return { ...b, notes: ordered([...keep, { at, len: l, s, f, ...(replaced ? extras(replaced) : {}) }]) };
   });
 }
 
@@ -83,6 +87,41 @@ export function removeNote(tab, bar, at, s) {
 export function setLength(tab, bar, at, s, len) {
   const n = noteAt(tab, bar, at, s);
   return n ? putNote(tab, bar, at, s, n.f, len) : tab;
+}
+
+/**
+ * The note a linked (hammer / pull / slide) note runs into: the next note on the same string in the bar,
+ * if it starts at most a sixteenth after this one ends. Otherwise the link has nothing to link to.
+ * @param {TabNote[]} notes @param {TabNote} n @returns {TabNote|undefined}
+ */
+export function linkedNext(notes, n) {
+  const next = notes.filter(m => m.s === n.s && m.at > n.at).sort((a, b) => a.at - b.at)[0];
+  return next && next.at - (n.at + n.len) <= SIXTEENTH ? next : undefined;
+}
+
+/** The semitones a bend can go up, and what each is called. */
+export const BENDS = [1, 2, 3, 4];
+export const BEND_NAMES = ['1/2', 'full', '1 1/2', '2'];
+
+/**
+ * Set or clear the techniques of the note starting at this step. Each field is optional: `link: ''` clears the
+ * link, `bend: 0` clears the bend, `vib: false` clears vibrato. Bending and vibrato are not combined with a slide.
+ * @param {Tab} tab @param {number} bar @param {number} at @param {number} s
+ * @param {{link?:''|'h'|'s', bend?:number, vib?:boolean}} patch @returns {Tab}
+ */
+export function setTechnique(tab, bar, at, s, patch) {
+  return withBar(tab, bar, b => {
+    const n = b.notes.find(x => x.at === at && x.s === s); if (!n) return b;
+    /** @type {TabNote} */ const next = { at: n.at, len: n.len, s: n.s, f: n.f };
+    let link = n.link, bend = n.bend, vib = n.vib;
+    if (patch.link !== undefined) link = patch.link === 'h' || patch.link === 's' ? patch.link : undefined;
+    if (patch.bend !== undefined) bend = patch.bend === 1 || patch.bend === 2 || patch.bend === 3 || patch.bend === 4 ? patch.bend : undefined;
+    if (patch.vib !== undefined) vib = patch.vib ? true : undefined;
+    if (link === 's') { bend = undefined; vib = undefined; }
+    if (link) next.link = link; if (bend) next.bend = bend; if (vib) next.vib = vib;
+    if (next.link === n.link && next.bend === n.bend && next.vib === n.vib) return b;
+    return { ...b, notes: b.notes.map(x => (x === n ? next : x)) };
+  });
 }
 
 /** @param {Tab} tab @param {number} [index] insert before this bar (default: at the end) @returns {Tab} */
@@ -162,17 +201,39 @@ export const setBpm = (tab, bpm) => ({ ...tab, bpm: Math.min(220, Math.max(40, M
 export const clearNotes = tab => ({ ...tab, bars: tab.bars.map(b => ({ ...b, notes: [] })) });
 
 /**
+ * @typedef {object} TabEvent
+ * @property {number} step @property {number} dur @property {number} midi @property {number} bar @property {number} at @property {number} s
+ * @property {number} [bend] semitones @property {boolean} [vib]
+ * @property {boolean} [soft] the second note of a hammer-on / pull-off: no pick
+ * @property {number} [slideTo] MIDI note a slide arrives at, @property {number} [slideAt] steps after the start the glide begins, @property {number} [slideEnd] steps after the start it arrives
+ * @property {boolean} [skip] already sounded by the slide before it
+ */
+/**
  * Every note as a playable event, in time order.
  * @param {Tab} tab @param {{midi:number[]}} inst open-string MIDI notes, top string first (capo included)
- * @returns {{step:number, dur:number, midi:number, bar:number, at:number, s:number}[]} step counts sixteenths from the start
+ * @returns {TabEvent[]} step counts 48ths of a bar from the start
  */
 export function tabEvents(tab, inst) {
-  /** @type {{step:number, dur:number, midi:number, bar:number, at:number, s:number}[]} */
+  /** @type {TabEvent[]} */
   const out = [];
-  tab.bars.forEach((b, bar) => b.notes.forEach(n => {
-    if (n.s >= inst.midi.length) return; // a string this instrument does not have
-    out.push({ step: bar * STEPS + n.at, dur: n.len, midi: inst.midi[n.s] + n.f, bar, at: n.at, s: n.s });
-  }));
+  tab.bars.forEach((b, bar) => {
+    /** @type {Map<TabNote, TabEvent>} */ const made = new Map();
+    b.notes.forEach(n => {
+      if (n.s >= inst.midi.length) return; // a string this instrument does not have
+      /** @type {TabEvent} */
+      const e = { step: bar * STEPS + n.at, dur: n.len, midi: inst.midi[n.s] + n.f, bar, at: n.at, s: n.s };
+      if (n.bend) e.bend = n.bend;
+      if (n.vib) e.vib = true;
+      made.set(n, e); out.push(e);
+    });
+    // links: a hammer-on / pull-off plays the next note softly (no pick); a slide is one glide that runs on into the next note
+    b.notes.forEach(n => {
+      const e = made.get(n), next = n.link ? linkedNext(b.notes, n) : undefined, e2 = next && made.get(next);
+      if (!e || !next || !e2) return;
+      if (n.link === 'h') e2.soft = true;
+      else { e.slideTo = e2.midi; e.slideAt = (next.at - n.at) * 0.6; e.slideEnd = next.at - n.at; e.dur = next.at + next.len - n.at; e2.skip = true; }
+    });
+  });
   return out.sort((a, b) => a.step - b.step || a.s - b.s);
 }
 
@@ -204,6 +265,7 @@ export function normalizeTab(raw) {
     for (const n of notes) {
       if (!n || typeof n !== 'object' || !Number.isInteger(n.len) || n.len < 1 || n.len * k > STEPS || !Number.isInteger(n.at)) continue;
       tab = putNote(tab, i, n.at * k, n.s, n.f, n.len * k);
+      if (n.link || n.bend || n.vib) tab = setTechnique(tab, i, n.at * k, n.s, { link: n.link, bend: n.bend, vib: n.vib === true });
     }
   });
   if (raw.voicings && typeof raw.voicings === 'object') {

@@ -113,6 +113,26 @@ async function run(browser, origin, label) {
   assert((await page.$$eval('#tb-surface svg:first-child .tabline', e => e.length)) % 4 === 0 && (await page.$$eval('#tb-surface .tabname', e => [...new Set(e.map(x => x.textContent))].join(''))) === 'AECG' && (await frets()) === '', `${label}: the ukulele has its own four-string tab`);
   await page.click('button[data-inst="guitar"]');
   assert((await frets()) === before, `${label}: switching back restores the guitar tab`);
+  // techniques on the note under the cursor: hammer-on, slide, bend, vibrato
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="5"]');
+  assert(await page.isEnabled('#tb-tech button[data-tech="h"]') && await page.isEnabled('#tb-tech button[data-tech="b"]'), `${label}: techniques are available on a note`);
+  await page.click('#tb-tech button[data-tech="h"]');
+  assert((await page.$$('#tb-surface .tablink')).length === 1 && (await page.textContent('#tb-surface .tablinkletter')) === 'h' && (await page.getAttribute('#tb-tech button[data-tech="h"]', 'aria-pressed')) === 'true', `${label}: a hammer-on is drawn as a slur marked h`);
+  await page.click('#tb-tech button[data-tech="s"]');
+  assert((await page.$$('#tb-surface line.tablink')).length === 1 && (await page.$$('#tb-surface .tablinkletter')).length === 0, `${label}: switching to a slide draws a slanted line`);
+  await page.click('#tb-tech button[data-tech="s"]');
+  assert((await page.$$('#tb-surface .tablink')).length === 0, `${label}: tapping again clears it`);
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="12"][data-s="5"]');
+  assert(await page.isDisabled('#tb-tech button[data-tech="h"]'), `${label}: a hammer-on needs a following note on the same string`);
+  await page.click('#tb-tech button[data-tech="b"]');
+  assert((await page.textContent('#tb-tech button[data-tech="b"]')) === 'Bend 1/2' && (await page.$$('#tb-surface .tabbend')).length === 1, `${label}: Bend starts at a half step`);
+  await page.click('#tb-tech button[data-tech="b"]');
+  assert((await page.textContent('#tb-surface .tablinkletter')) === 'full', `${label}: tapping Bend again makes it a full bend`);
+  await page.keyboard.press('v');
+  assert((await page.$$('#tb-surface .tabbend')).length === 2, `${label}: the v key adds vibrato`);
+  await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
+  await page.click('#tb-undo'); await page.click('#tb-undo'); await page.click('#tb-undo');
+  assert((await page.$$('#tb-surface .tabbend, #tb-surface .tablink')).length === 0, `${label}: undo takes the techniques back off`);
   // triplets: three eighth triplets fill one beat, with a bracket; the cursor snaps to the triplet grid
   await page.click('#tb-len button[data-len="1"]');                  // eighths
   await page.check('#tb-trip');
@@ -146,6 +166,10 @@ async function run(browser, origin, label) {
   assert((g1.match(/ /g) || []).length > 20, `${label}: generate fills the tab (${g1.split(' ').length} notes)`);
   await page.click('#tb-gen-go');
   assert((await frets()) === g1, `${label}: the same seed gives the same solo`);
+  await page.selectOption('#tb-gentech', 'lots'); await page.click('#tb-gen-go');
+  assert((await page.$$('#tb-surface .tablink, #tb-surface .tabbend')).length > 3, `${label}: generating with techniques on adds hammer-ons, slides, bends or vibrato`);
+  await page.selectOption('#tb-gentech', 'off'); await page.click('#tb-gen-go');
+  assert((await page.$$('#tb-surface .tablink, #tb-surface .tabbend')).length === 0, `${label}: with techniques off the solo has none`);
   await page.selectOption('#tb-feel', 'shuffle'); await page.click('#tb-gen-go');
   const offs = await page.$$eval('#tb-surface .fret', e => e.map(x => +x.dataset.at % 12));
   assert(offs.filter(x => x === 8).length >= 4 && offs.every(x => x % 4 === 0), `${label}: the shuffle feel writes long-short pairs on the triplet grid`);

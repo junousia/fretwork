@@ -73,7 +73,7 @@ export function startTab(opts) {
   const ac = audioContext();
   if (!ac || !opts.totalSteps) return { stop() {} };
   const { stepSec, totalSteps } = opts, beat = opts.beat || 12, long = opts.swing || 0.5;
-  /** @type {Map<number, {dur:number, midi:number}[]>} */
+  /** @type {Map<number, {dur:number, midi:number, bend?:number, vib?:boolean, soft?:boolean, skip?:boolean, slideTo?:number, slideAt?:number, slideEnd?:number}[]>} */
   const byStep = new Map();
   for (const e of opts.events) byStep.set(e.step, [...(byStep.get(e.step) || []), e]);
   const chordAt = new Map(opts.chords.map(c => [c.step, c.midi]));
@@ -93,8 +93,14 @@ export function startTab(opts) {
       const chord = chordAt.get(step);
       if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.03, Math.min(3, 4 * beat * stepSec), 0.07));
       for (const e of byStep.get(step) || []) {
+        if (e.skip) continue; // already sounded by the slide that ran into it
         const start = (swung(step, beat, long) - step) * stepSec, dur = (swung(step + e.dur, beat, long) - swung(step, beat, long)) * stepSec;
-        note(mtof(e.midi), at + start, Math.max(0.12, Math.min(3, dur)), 0.16);
+        /** @type {{bend?:number, vib?:boolean, slideTo?:number, slideStart?:number, slideEnd?:number}} */
+        const fx = {};
+        if (e.bend) fx.bend = e.bend;
+        if (e.vib) fx.vib = true;
+        if (e.slideTo !== undefined) { fx.slideTo = mtof(e.slideTo); fx.slideStart = (e.slideAt || 0) * stepSec; fx.slideEnd = (e.slideEnd || 0) * stepSec; }
+        note(mtof(e.midi), at + start, Math.max(0.12, Math.min(3, dur)), e.soft ? 0.1 : 0.16, fx);
       }
       setTimeout(() => { if (!stopped) opts.onStep(step); }, Math.max(0, (at - ac.currentTime) * 1000));
       next++;
