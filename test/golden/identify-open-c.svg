@@ -1,0 +1,166 @@
+<svg width="898" height="228" viewBox="0 0 898 228" role="img" aria-label="Fretboard showing the marked notes over C">
+<rect x="44" y="10" width="840" height="182" fill="#4A2B1F"/>
+<circle cx="184" cy="101" r="6" fill="#7A5A48"/>
+<circle cx="296" cy="101" r="6" fill="#7A5A48"/>
+<circle cx="408" cy="101" r="6" fill="#7A5A48"/>
+<circle cx="520" cy="101" r="6" fill="#7A5A48"/>
+<circle cx="856" cy="101" r="6" fill="#7A5A48"/>
+<circle cx="688" cy="71" r="6" fill="#7A5A48"/>
+<circle cx="688" cy="131" r="6" fill="#7A5A48"/>
+<line x1="100" y1="10" x2="100" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="156" y1="10" x2="156" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="212" y1="10" x2="212" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="268" y1="10" x2="268" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="324" y1="10" x2="324" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="380" y1="10" x2="380" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="436" y1="10" x2="436" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="492" y1="10" x2="492" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="548" y1="10" x2="548" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="604" y1="10" x2="604" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="660" y1="10" x2="660" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="716" y1="10" x2="716" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="772" y1="10" x2="772" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="828" y1="10" x2="828" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<line x1="884" y1="10" x2="884" y2="192" stroke="#B9BEC2" stroke-width="2.5"/>
+<rect x="40" y="10" width="6" height="182" fill="#E8E0CC"/>
+<line x1="14" y1="26" x2="884" y2="26" stroke="#D8C9A0" stroke-width="1"/>
+<line x1="14" y1="56" x2="884" y2="56" stroke="#D8C9A0" stroke-width="1.3"/>
+<line x1="14" y1="86" x2="884" y2="86" stroke="#D8C9A0" stroke-width="1.7"/>
+<line x1="14" y1="116" x2="884" y2="116" stroke="#D8C9A0" stroke-width="2.1"/>
+<line x1="14" y1="146" x2="884" y2="146" stroke="#D8C9A0" stroke-width="2.6"/>
+<line x1="14" y1="176" x2="884" y2="176" stroke="#D8C9A0" stroke-width="3.1"/>
+<text x="72" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">1</text>
+<text x="128" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">2</text>
+<text x="184" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">3</text>
+<text x="240" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">4</text>
+<text x="296" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">5</text>
+<text x="352" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">6</text>
+<text x="408" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">7</text>
+<text x="464" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">8</text>
+<text x="520" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">9</text>
+<text x="576" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">10</text>
+<text x="632" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">11</text>
+<text x="688" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">12</text>
+<text x="744" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">13</text>
+<text x="800" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">14</text>
+<text x="856" y="212" text-anchor="middle" font-size="11" fill="#C9B8A3" font-family="inherit">15</text>
+<text x="24" y="181" text-anchor="middle" font-size="15" font-weight="700" fill="#E3A21A" font-family="inherit">✕</text>
+<circle cx="24" cy="26" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<text x="24" y="30" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">E</text>
+<circle cx="464" cy="26" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<text x="464" y="30" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">C</text>
+<circle cx="72" cy="56" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1"/>
+<text x="72" y="60" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit">C</text>
+<circle cx="744" cy="56" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<text x="744" y="60" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">C</text>
+<circle cx="24" cy="86" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<text x="24" y="90" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">G</text>
+<circle cx="296" cy="86" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<text x="296" y="90" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">C</text>
+<circle cx="128" cy="116" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<text x="128" y="120" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">E</text>
+<circle cx="576" cy="116" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<text x="576" y="120" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">C</text>
+<circle cx="184" cy="146" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1"/>
+<text x="184" y="150" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit">C</text>
+<circle cx="856" cy="146" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<text x="856" y="150" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">C</text>
+<circle cx="464" cy="176" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<text x="464" y="180" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">C</text>
+<rect class="hit" data-s="0" data-f="0" x="4" y="11" width="38" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="1" x="44" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="2" x="100" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="3" x="156" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="4" x="212" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="5" x="268" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="6" x="324" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="7" x="380" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="8" x="436" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="9" x="492" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="10" x="548" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="11" x="604" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="12" x="660" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="13" x="716" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="14" x="772" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="0" data-f="15" x="828" y="11" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="0" x="4" y="41" width="38" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="1" x="44" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="2" x="100" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="3" x="156" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="4" x="212" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="5" x="268" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="6" x="324" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="7" x="380" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="8" x="436" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="9" x="492" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="10" x="548" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="11" x="604" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="12" x="660" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="13" x="716" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="14" x="772" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="1" data-f="15" x="828" y="41" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="0" x="4" y="71" width="38" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="1" x="44" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="2" x="100" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="3" x="156" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="4" x="212" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="5" x="268" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="6" x="324" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="7" x="380" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="8" x="436" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="9" x="492" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="10" x="548" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="11" x="604" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="12" x="660" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="13" x="716" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="14" x="772" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="2" data-f="15" x="828" y="71" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="0" x="4" y="101" width="38" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="1" x="44" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="2" x="100" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="3" x="156" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="4" x="212" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="5" x="268" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="6" x="324" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="7" x="380" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="8" x="436" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="9" x="492" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="10" x="548" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="11" x="604" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="12" x="660" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="13" x="716" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="14" x="772" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="3" data-f="15" x="828" y="101" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="0" x="4" y="131" width="38" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="1" x="44" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="2" x="100" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="3" x="156" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="4" x="212" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="5" x="268" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="6" x="324" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="7" x="380" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="8" x="436" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="9" x="492" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="10" x="548" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="11" x="604" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="12" x="660" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="13" x="716" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="14" x="772" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="4" data-f="15" x="828" y="131" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="0" x="4" y="161" width="38" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="1" x="44" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="2" x="100" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="3" x="156" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="4" x="212" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="5" x="268" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="6" x="324" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="7" x="380" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="8" x="436" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="9" x="492" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="10" x="548" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="11" x="604" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="12" x="660" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="13" x="716" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="14" x="772" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+<rect class="hit" data-s="5" data-f="15" x="828" y="161" width="56" height="30" fill="transparent" style="cursor:pointer"/>
+</svg>

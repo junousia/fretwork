@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- New **Identify** tab: mark notes on the fretboard (click, or per-string selects) and see which chords
+  fit - ranked, with slash chords and omitted tones, Play, and "Open in Chords". Validated against all
+  3,263 stored fingerings.
+
 - Fix: the Docker/nginx image served every file as `application/octet-stream` (a `types {}` block
   replaced nginx's mime table), so browsers downloaded the page instead of showing it. GitHub Pages
   was not affected. A new test builds the real image and checks every file's Content-Type.

@@ -1,28 +1,16 @@
-import { CHORDS, SHARP, spell, esc } from './music.js';
+import { CHORDS, SHARP, spell, esc, chordLabel } from './music.js';
 import { FEATURE_GROUPS, chordFeatures } from './chord-features.js';
 import { board } from './board.js';
 import { play } from './audio.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { arpeggioAround, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { playNotes } from './player.js';
+import { tabOf } from './share.js';
 import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
 
 const STORE_KEY = 'gtr-chords-v1';
 
-const LABELS = {
-  '':'Major','m':'Minor','5':'Power chord (5)','6':'6','maj6':'6','69':'6/9','m6':'Minor 6','m69':'Minor 6/9',
-  'add9':'Add 9','add2':'Add 9','madd9':'Minor add 9','sus2':'Sus2','sus4':'Sus4',
-  '7':'Dominant 7th','9':'Dominant 9th','11':'Dominant 11th','13':'Dominant 13th',
-  '7sus4':'7sus4','9sus4':'9sus4','13sus4':'13sus4',
-  'maj7':'Major 7th','maj9':'Major 9th','maj13':'Major 13th','maj7#11':'Major 7♯11',
-  'm7':'Minor 7th','m9':'Minor 9th','m11':'Minor 11th','m13':'Minor 13th',
-  'mmaj7':'Minor-major 7th','mmaj9':'Minor-major 9th','m7b5':'Half-diminished (m7♭5)',
-  'dim':'Diminished','dim7':'Diminished 7th','aug':'Augmented','aug7':'Augmented 7th',
-  '7#5':'7♯5','7b5':'7♭5','7b9':'7♭9','7#9':'7♯9','7#11':'7♯11',
-  '9#11':'9♯11','13#11':'13♯11','7b13':'7♭13','7b9b13':'7♭9♭13',
-  '13b9':'13♭9','7#9b13':'7♯9♭13','7#5#9':'7♯5♯9','7alt':'7alt (altered)'
-};
-function labelFor(suf){ return LABELS[suf] || suf; }
+const labelFor = chordLabel;
 
 // Keep insertion order from music.js's CHORDS table - it's already grouped
 // by family (major, minor, 7ths, suspended, dominant, diminished, augmented).
@@ -65,6 +53,17 @@ export function mount(root){
     if(saved) Object.assign(state, saved);
   }catch(e){}
   function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+
+  // "#chords?r=<root>&s=<suffix>" (from the Identify tab) selects a chord.
+  function applyHash(){
+    const q = new URLSearchParams(location.hash.split('?')[1] || '');
+    if(tabOf(location.hash) !== 'chords' || !q.has('r')) return false;
+    const r = +(q.get('r') ?? NaN), suf = q.get('s') ?? '';
+    if(!Number.isInteger(r) || r < 0 || r > 11 || !Object.prototype.hasOwnProperty.call(CHORDS, suf)) return false;
+    state.root = r; state.suffix = suf; state.voicing = 'all'; state.builder = [];
+    return true;
+  }
+  applyHash();
 
   rootsEl.innerHTML = SHARP.map((n, i) =>
     `<button class="chip" type="button" data-r="${i}" aria-pressed="${i === state.root}"><b>${esc(n)}</b></button>`
@@ -152,5 +151,6 @@ export function mount(root){
   }
 
   render();
+  window.addEventListener('hashchange', () => { if(applyHash()) render(); });
   onInstrumentChange(() => render());
 }

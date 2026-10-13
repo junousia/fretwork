@@ -62,6 +62,8 @@ const cases = {
   'c-major-voicing-2-capo-3': () => chordBoard(inst('guitar', 'standard', 3), 3, '', 2),
   'c-major-chord-box-barre': () => voicingDiagram(getVoicings(G, 0, '')[1]),
   'c-major-chord-box-barre-left-handed': () => voicingDiagram(getVoicings(G, 0, '')[1], { mirror: true }),
+  'identify-open-c': () => board({ root: 0, iv: CHORDS[''], name: 'C' }, { s: { iv: [0], name: 'the marked notes' } }, 'notes', false,
+    { tuning: G.tuning, hitAreas: true, voicing: { f: [0, 1, 0, 2, 3, -1], g: [0, 0, 0, 0, 0, 0], b: null } }),
   'am7-chord-box-open': () => voicingDiagram(getVoicings(G, 9, 'm7')[0], { label: false }),
 };
 
