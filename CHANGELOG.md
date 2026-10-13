@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Layout: tablets keep the bottom tab bar (the side rail is only for wide mouse-driven screens), and
+- Layout: the desktop side rail is now a slim 84px column with the tabs grouped at the top; tablets keep the bottom tab bar (the side rail is only for wide mouse-driven screens), and
   tuning / capo / left-handed moved behind a menu button so they take no screen space until needed.
 
 - New **Identify** tab: mark notes on the fretboard (click, or per-string selects) and see which chords
