@@ -13,7 +13,7 @@
 // The same seed always gives the same solo.
 import { SC, CHORDS, parseChord, suggest, detectKey, isDominantish } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
-import { STEPS, BEAT } from './tab.js';
+import { STEPS, BEAT, linkedNext } from './tab.js';
 
 /** @typedef {import('./types.js').TabNote} TabNote */
 /** @typedef {{t:number, mode:'major'|'minor'}} Key */
@@ -133,6 +133,7 @@ export function rng(seed) {
  * @property {string} style  'follow' | 'pent' | 'blues'
  * @property {string} density 'sparse' | 'medium' | 'busy'
  * @property {string} [feel] 'straight' | 'shuffle' | 'triplet' | 'funk' (default straight)
+ * @property {string} [techniques] 'off' (default) | 'some' | 'lots': hammer-ons, pull-offs, slides, bends and vibrato
  * @property {number} seed
  * @property {Key} [key] default: detected from the chords, else A minor
  */
@@ -362,5 +363,44 @@ export function generateSolo(o) {
       prevFret = best.f; prevString = best.s; prev2Midi = prevMidi; prevMidi = pitches[idxs[n]];
     });
   });
+  const level = o.techniques === 'lots' ? 2 : o.techniques === 'some' ? 1 : 0;
+  if (level) addTechniques(outBars, info, o.style, o.inst.midi, level, rand);
   return { bars: outBars, info, key };
+}
+
+/**
+ * Guitar techniques, added after the notes are chosen. Only notes that suit them get them: a hammer-on or pull-off
+ * / slide joins two neighbouring notes on one string a few frets apart; a bend is written one or two semitones LOWER
+ * than the scale note it arrives at (so the sounding pitch stays in the scale and the position), on the high strings
+ * of a guitar only; vibrato goes on long notes, and most often on the last one. No note takes part in two links.
+ * @param {TabNote[][]} bars @param {SegmentInfo[]} info @param {string} style @param {number[]} midi open-string notes @param {number} level 1 some, 2 lots @param {() => number} rand
+ */
+function addTechniques(bars, info, style, midi, level, rand) {
+  const nStr = midi.length;
+  const pSlide = level === 2 ? 0.3 : 0.15, pHammer = level === 2 ? 0.6 : 0.35, pVib = level === 2 ? 0.6 : 0.35, pVibEnd = level === 2 ? 0.85 : 0.6;
+  const pBend = (/** @type {Record<string, number>} */ ({ blues: 0.2, pent: 0.1, follow: 0.05 })[style] ?? 0.05) * level;
+  bars.forEach((notes, bi) => {
+    /** @type {Set<TabNote>} */ const joined = new Set();
+    for (const a of notes) {
+      const b = linkedNext(notes, a);
+      if (!b || joined.has(a) || joined.has(b)) continue;
+      const d = Math.abs(b.f - a.f);
+      if (d < 1 || d > 5 || a.len > 12) continue;
+      const r = rand();
+      if (r < pSlide && a.len >= 6) a.link = 's';
+      else if (r < pSlide + pHammer && d <= 4) a.link = 'h';
+      else continue;
+      joined.add(a); joined.add(b);
+    }
+    notes.forEach((n, i) => {
+      if (joined.has(n)) return;
+      const seg = info.find(x => x.bar === bi && n.at >= x.from && n.at < x.to);
+      if (nStr >= 6 && n.len >= 6 && n.s < nStr - 2 && n.f >= 1 && seg && rand() < pBend * (seg.chordPcs.includes((midi[n.s] + n.f) % 12) ? 2 : 1)) { // bends that arrive on a chord tone are twice as likely
+        const bend = n.f >= 2 && rand() < 0.7 ? 2 : 1;
+        n.f -= bend; n.bend = bend;
+      }
+      const lastNote = bi === bars.length - 1 && i === notes.length - 1;
+      if (n.len >= 12 && rand() < (lastNote ? pVibEnd : pVib)) n.vib = true;
+    });
+  });
 }

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Tab: **techniques** - hammer-on / pull-off, slide, bend (half, full, 1 1/2, two steps) and vibrato on the
+  note at the cursor (buttons, or the h / s / b / v keys). They are drawn as slurs marked h or p, slanted
+  lines, bend arrows with their size and a wavy line, and they play: legato (soft) second notes, a real
+  glide for slides, bent and vibrato pitch. The solo generator has a **Techniques** setting (Off / Some /
+  Lots): it only adds a technique where it fits (neighbouring notes on one string a few frets apart; bends
+  written below the scale note they arrive at, on the high strings of a guitar only; vibrato on long notes).
+
 - Tab: **triplets**. The grid is now 48 steps per bar (a quarter is 12), so straight and triplet notes
   fit exactly: a Triplet box next to the note lengths (1/16, 1/8, 1/4, 1/2 triplets), brackets with a 3
   in the tab, and the cursor snaps to the triplet grid. Tabs saved before this are converted automatically

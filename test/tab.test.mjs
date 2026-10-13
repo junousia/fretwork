@@ -209,5 +209,55 @@ assert(tabToText(x, UKE.midi).split('\n').filter(l => /\|$/.test(l)).length === 
   assert(mono && SWINGS[0].long === 0.5 && SWINGS.some(x => x.id === 'shuffle' && Math.abs(x.long - 2 / 3) < 1e-9), 'swing keeps notes in order; options include straight and shuffle');
 }
 
+// --- techniques: hammer-on / pull-off, slide, bend, vibrato
+{
+  const st = (t, bar, at, s, patch) => T.setTechnique(t, bar, at * Q, s, patch);
+  let t = emptyTab(1);
+  t = putNote(t, 0, 0, 2, 5, 2); t = putNote(t, 0, 2, 2, 7, 2); t = putNote(t, 0, 4, 1, 8, 4);
+  const ev = x => tabEvents(x, GUITAR);
+  // setting and clearing
+  let h = st(t, 0, 0, 2, { link: 'h' });
+  assert(noteAt(h, 0, 0, 2).link === 'h' && !noteAt(t, 0, 0, 2).link, 'a hammer-on is set on the first note');
+  assert(st(h, 0, 0, 2, { link: '' }).bars[0].notes.every(n => !n.link), 'and cleared again');
+  assert(st(h, 0, 0, 2, { link: 'h' }) === h && st(t, 0, 9, 2, { link: 'h' }) === t && st(t, 5, 0, 2, { link: 'h' }) === t, 'setting the same thing, or on a missing note, changes nothing');
+  assert(st(t, 0, 0, 2, { link: 'x' }).bars[0].notes[0].link === undefined, 'an unknown link is ignored');
+  let b = st(t, 0, 4, 1, { bend: 2 }); b = st(b, 0, 4, 1, { vib: true });
+  assert(noteAt(b, 0, 4, 1).bend === 2 && noteAt(b, 0, 4, 1).vib === true, 'bend and vibrato combine');
+  assert(st(b, 0, 4, 1, { bend: 9 }).bars[0].notes[2].bend === undefined && st(b, 0, 4, 1, { bend: 0 }).bars[0].notes[2].bend === undefined && st(b, 0, 4, 1, { vib: false }).bars[0].notes[2].vib === undefined, 'bends are 1-4 semitones; 0 or junk clears it; vibrato clears');
+  const sl = st(b, 0, 4, 1, { link: 's' });
+  assert(noteAt(sl, 0, 4, 1).link === 's' && noteAt(sl, 0, 4, 1).bend === undefined && noteAt(sl, 0, 4, 1).vib === undefined, 'a slide replaces bend and vibrato on that note');
+  // techniques survive editing the note, and a JSON round trip
+  const kept = putNote(h, 0, 0, 2, 9, 2);
+  assert(noteAt(kept, 0, 0, 2).f === 9 && noteAt(kept, 0, 0, 2).link === 'h', 'changing the fret keeps the technique');
+  assert(noteAt(putNote(h, 0, 1, 2, 3, 1), 0, 0, 2).link === 'h', 'cutting a note short keeps its technique');
+  const full = st(st(st(t, 0, 0, 2, { link: 's' }), 0, 4, 1, { bend: 3 }), 0, 4, 1, { vib: true });
+  assert(JSON.stringify(normalizeTab(JSON.parse(JSON.stringify(full)))) === JSON.stringify(full), 'techniques survive a JSON round trip');
+  const bad = normalizeTab({ res: 48, bars: [{ chords: [], notes: [{ at: 0, len: 6, s: 0, f: 3, link: 'z', bend: 7, vib: 'yes' }] }] });
+  assert(bad.bars[0].notes[0].link === undefined && bad.bars[0].notes[0].bend === undefined && bad.bars[0].notes[0].vib === undefined, 'stored techniques are validated');
+  // what a link can run into
+  const nn = [{ at: 0, len: 6, s: 2, f: 5 }, { at: 9, len: 3, s: 2, f: 7 }, { at: 30, len: 6, s: 2, f: 9 }, { at: 6, len: 6, s: 1, f: 4 }];
+  assert(T.linkedNext(nn, nn[0]) === nn[1] && T.linkedNext(nn, nn[1]) === undefined && T.linkedNext(nn, nn[3]) === undefined, 'a link runs into the next note on the same string if it follows within a sixteenth; a far note or another string does not count');
+  // playback events
+  const eh = ev(h);
+  assert(eh[0].soft === undefined && eh[1].soft === true && eh.length === 3, 'a hammer-on makes the second note soft (no pick)');
+  const es = ev(st(t, 0, 0, 2, { link: 's' }));
+  assert(es.length === 3 && es[0].slideTo === 62 && es[0].dur === 12 && es[0].slideEnd === 6 && es[0].slideAt < es[0].slideEnd && es.filter(e => e.skip).length === 1 && es[1].skip === true, `a slide is one long glide into the next note, which is not struck again: ${JSON.stringify(es[0])}`);
+  const lone = ev(st(putNote(emptyTab(1), 0, 0, 2, 5, 2), 0, 0, 2, { link: 'h' }));
+  assert(lone.length === 1 && !lone[0].soft && !lone[0].skip && lone[0].slideTo === undefined, 'a link with no next note does nothing');
+  const eb = ev(b).find(e => e.s === 1);
+  assert(eb.bend === 2 && eb.vib === true && eb.midi === 59 + 8, 'bend and vibrato reach the player; the pitch is the written fret');
+  // drawing
+  const draw = x => tabSvg(x, GUITAR, { perRow: 1 });
+  assert((draw(h).match(/class="tablink"/g) || []).length === 1 && />h</.test(draw(h)) && !/>p</.test(draw(h)), 'a hammer-on is a slur marked h');
+  const pull = st(putNote(putNote(emptyTab(1), 0, 0, 2, 7, 2), 0, 2, 2, 5, 2), 0, 0, 2, { link: 'h' });
+  assert(/>p</.test(draw(pull)) && !/>h</.test(draw(pull)), 'a pull-off is a slur marked p');
+  assert(/<line class="tablink"/.test(draw(st(t, 0, 0, 2, { link: 's' }))) && !/class="tablinkletter"/.test(draw(st(t, 0, 0, 2, { link: 's' }))), 'a slide is a slanted line with no letter');
+  const up = draw(st(t, 0, 0, 2, { link: 's' })), down = draw(st(putNote(putNote(emptyTab(1), 0, 0, 2, 7, 2), 0, 2, 2, 5, 2), 0, 0, 2, { link: 's' }));
+  const ys = svg => svg.match(/<line class="tablink" x1="[\d.]+" y1="([\d.]+)" x2="[\d.]+" y2="([\d.]+)"/).slice(1).map(Number);
+  assert(ys(up)[0] > ys(up)[1] && ys(down)[0] < ys(down)[1], 'a slide up climbs, a slide down falls');
+  assert(/class="tabbend"/.test(draw(b)) && />full</.test(draw(b)) && />1\/2</.test(draw(st(t, 0, 4, 1, { bend: 1 }))) && />1 1\/2</.test(draw(st(t, 0, 4, 1, { bend: 3 }))), 'a bend is an arrow labelled with its size');
+  assert((draw(st(t, 0, 4, 1, { vib: true })).match(/class="tabbend"/g) || []).length === 1 && !/tablink/.test(draw(t)), 'vibrato is a wavy line; plain notes have no marks');
+}
+
 console.log(failures ? `${failures} FAILED` : 'tab: all passed');
 process.exit(failures ? 1 : 0);

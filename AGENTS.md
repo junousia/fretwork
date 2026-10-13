@@ -264,6 +264,17 @@ these on ~3,700 solos across all tunings, capos, styles and densities (notes in 
 >=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
 generator, not a performer: no bends, slides or feel yet.
 
+### Techniques
+
+A `TabNote` may carry `link` ('h' = hammer-on/pull-off, direction from the frets; 's' = slide) into the NEXT note
+on the same string (`linkedNext`: within a sixteenth of this note's end, same bar), `bend` (1-4 semitones) and
+`vib`. `setTechnique` edits them (a slide clears bend/vibrato); `putNote` keeps them when the fret changes.
+`tabEvents` turns links into player flags: hammer/pull -> the next event is `soft`; slide -> one long event
+with `slideTo/slideAt/slideEnd` and the next event `skip`. The generator adds them in a final pass
+(`addTechniques`); a bent note is written LOWER than the scale note it arrives at, so tests compare
+`fret + bend` to the position and scale, and the sounding pitch for leaps and chord tones. Remember when
+copying generated notes into a Tab: copy the technique fields too (the e2e test caught this once).
+
 ### Feels, swing and PDF
 
 `FEELS` in `solo.js` pick the rhythm pool (`RHYTHMS[feel][density]`, `FINALS[feel]`): straight and funk

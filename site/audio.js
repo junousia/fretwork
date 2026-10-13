@@ -2,12 +2,32 @@
 
 /** @type {AudioContext|null} */
 let ac=null;
-/** Play one note on the shared context. @param {number} freq Hz @param {number} t start time (context clock) @param {number} dur seconds @param {number} vol 0-1 */
-export function note(freq,t,dur,vol){
+/**
+ * Play one note on the shared context. `fx` adds guitar techniques: a bend (up `bend` semitones early in the note),
+ * vibrato, and a slide (the pitch glides to `slideTo` Hz between `slideStart` and `slideEnd` seconds after the start).
+ * @param {number} freq Hz @param {number} t start time (context clock) @param {number} dur seconds @param {number} vol 0-1
+ * @param {{bend?:number, vib?:boolean, slideTo?:number, slideStart?:number, slideEnd?:number}} [fx]
+ */
+export function note(freq,t,dur,vol,fx){
   if(!ac) return;
   const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
   o.type='triangle';o.frequency.value=freq;f.type='lowpass';f.frequency.value=2400;
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.012);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  if(fx){
+    if(fx.bend){ // up to pitch quickly, then hold
+      o.frequency.setValueAtTime(freq,t+0.03);
+      o.frequency.exponentialRampToValueAtTime(freq*Math.pow(2,fx.bend/12),t+Math.min(dur*0.45,0.3));
+    }
+    if(fx.slideTo&&fx.slideEnd!==undefined){
+      o.frequency.setValueAtTime(freq,t+(fx.slideStart||0));
+      o.frequency.exponentialRampToValueAtTime(fx.slideTo,t+fx.slideEnd);
+    }
+    if(fx.vib&&dur>0.3){ // a slow wobble that fades in after the note has settled
+      const lfo=ac.createOscillator(),lg=ac.createGain();
+      lfo.frequency.value=5.5; lg.gain.setValueAtTime(0,t); lg.gain.setValueAtTime(0,t+dur*0.35); lg.gain.linearRampToValueAtTime(28,t+dur*0.6);
+      lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(t+dur+0.05);
+    }
+  }
   o.connect(f);f.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+0.05);
 }
 /** MIDI note number to frequency. @type {(m:number) => number} */

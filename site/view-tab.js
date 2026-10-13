@@ -9,8 +9,9 @@ import { getPositions, positionFrets } from './positions.js';
 import { board, fitBoard } from './board.js';
 import { chordMidiNotes } from './audio.js';
 import { startTab } from './player.js';
+import * as T0 from './tab.js';
 import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, setChordPlan, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering, tabEvents,
-  stepSeconds, normalizeTab, createHistory, tabToText, STEPS, BEAT, MAX_FRET, LENGTHS, LENGTH_NAMES, TRIPLET_OF, gridFor } from './tab.js';
+  stepSeconds, normalizeTab, createHistory, tabToText, STEPS, BEAT, MAX_FRET, LENGTHS, LENGTH_NAMES, TRIPLET_OF, gridFor, setTechnique, linkedNext, BENDS, BEND_NAMES } from './tab.js';
 import { tabSvg, barsPerRowFor, stepPos } from './tab-view.js';
 
 const STORE_KEY = 'fw-tabs';
@@ -31,6 +32,13 @@ export function mount(root){
     <div class="row">
       <label class="keylab">Note <div class="seg" id="tb-len" role="group" aria-label="Note length">${LENGTH_NAMES.map((n, i) => `<button type="button" data-len="${i}" aria-pressed="false">${n}</button>`).join('')}</div></label>
       <label class="chk" title="Three in the time of two (1/16, 1/8, 1/4 and 1/2 notes)"><input type="checkbox" id="tb-trip"> Triplet</label>
+    </div>
+    <div class="row">
+      <label class="keylab">Technique <div class="seg" id="tb-tech" role="group" aria-label="Technique of the note at the cursor">
+        <button type="button" data-tech="h" aria-pressed="false" title="Hammer-on or pull-off into the next note on this string (h)">Hammer / pull</button>
+        <button type="button" data-tech="s" aria-pressed="false" title="Slide into the next note on this string (s)">Slide</button>
+        <button type="button" data-tech="b" aria-pressed="false" title="Bend up: tap again for a bigger bend (b)">Bend</button>
+        <button type="button" data-tech="v" aria-pressed="false" title="Vibrato (v)">Vibrato</button></div></label>
     </div>
     <div class="row">
       <label class="keylab">Chord at bar <span id="tb-barno">1</span>, beat <span id="tb-beat">1</span> <input id="tb-chord" type="text" size="7" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Am7"></label>
@@ -60,6 +68,7 @@ export function mount(root){
         <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Notes <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
         <label class="keylab">Key <select id="tb-key"></select></label>
         <label class="keylab">Seed <input id="tb-seed" type="number" min="1" max="999999" step="1" inputmode="numeric"></label>
       </div>
@@ -87,10 +96,10 @@ export function mount(root){
   const $ = sel => root.querySelector(sel);
   const surface = $('#tb-surface'), playBtn = $('#tb-play'), undoBtn = $('#tb-undo'), redoBtn = $('#tb-redo'), bpmIn = $('#tb-bpm'),
         lenSeg = $('#tb-len'), chordIn = $('#tb-chord'), barNo = $('#tb-barno'), msg = $('#tb-msg'), titleIn = $('#tb-title'),
-        tripCb = $('#tb-trip'), backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
+        tripCb = $('#tb-trip'), techSeg = $('#tb-tech'), backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
 
   // --- state ---------------------------------------------------------------
-  const opts = { backing: true, metro: true, loop: false, unit: 1, triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
+  const opts = { backing: true, metro: true, loop: false, unit: 1, tech: 'some', triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
   /** @type {Record<string, any>} */ let stored = {};
   try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* defaults */ }
   if (stored.opts && typeof stored.opts === 'object') {
@@ -101,6 +110,7 @@ export function mount(root){
     if (Number.isInteger(stored.opts.seed) && stored.opts.seed > 0 && stored.opts.seed <= 999999) opts.seed = stored.opts.seed;
     if (Number.isInteger(stored.opts.unit) && stored.opts.unit >= 0 && stored.opts.unit < LENGTHS.length) opts.unit = stored.opts.unit;
     opts.triplet = stored.opts.triplet === true;
+    if (['off', 'some', 'lots'].includes(stored.opts.tech)) opts.tech = stored.opts.tech;
     if (SWINGS.some(x => x.id === stored.opts.swing)) opts.swing = stored.opts.swing;
     if (FEELS.some(x => x.id === stored.opts.feel)) opts.feel = stored.opts.feel;
   }
@@ -180,9 +190,34 @@ export function mount(root){
     if (k === 'ArrowUp' || k === 'ArrowDown') { cancelPending(); cursor.s += k === 'ArrowUp' ? -1 : 1; clampCursor(); render(true); return true; }
     if (k === 'Backspace' || k === 'Delete') { deleteAtCursor(k === 'Backspace'); return true; }
     if (k === ' ') { cancelPending(); togglePlay(); return true; }
+    if (!e?.ctrlKey && !e?.metaKey && ['h', 's', 'b', 'v'].includes(k.toLowerCase()) && toggleTech(k.toLowerCase())) return true;
     if ((e?.ctrlKey || e?.metaKey) && k.toLowerCase() === 'z') { cancelPending(); e.shiftKey ? hist.redo() : hist.undo(); persist(); clampCursor(); render(); return true; }
     if ((e?.ctrlKey || e?.metaKey) && k.toLowerCase() === 'y') { cancelPending(); hist.redo(); persist(); clampCursor(); render(); return true; }
     return false;
+  }
+
+  // --- techniques of the note under the cursor ---
+  const noteForTech = () => T0.noteAt(tab(), cursor.bar, cursor.at, cursor.s) || T0.noteCovering(tab(), cursor.bar, cursor.at, cursor.s);
+  function toggleTech(k){
+    const n = noteForTech(); if (!n) return false;
+    cancelPending();
+    /** @type {{link?:''|'h'|'s', bend?:number, vib?:boolean}} */ let patch = {};
+    if (k === 'h' || k === 's') patch = { link: n.link === k ? '' : k };
+    else if (k === 'b') patch = { bend: n.bend ? (BENDS[BENDS.indexOf(n.bend) + 1] ?? 0) : BENDS[0] };
+    else if (k === 'v') patch = { vib: !n.vib };
+    const t = setTechnique(tab(), cursor.bar, n.at, n.s, patch);
+    if (t !== tab()) commit(t);
+    render(); return true;
+  }
+  function renderTech(){
+    const n = noteForTech(), linkable = !!(n && linkedNext(tab().bars[cursor.bar].notes, n));
+    techSeg.querySelectorAll('button').forEach(b => {
+      const k = b.dataset.tech;
+      const on = !!n && (k === 'h' ? n.link === 'h' : k === 's' ? n.link === 's' : k === 'b' ? !!n.bend : !!n.vib);
+      b.setAttribute('aria-pressed', String(on));
+      b.disabled = !n || ((k === 'h' || k === 's') && !linkable) || ((k === 'b' || k === 'v') && n.link === 's');
+      if (k === 'b') b.textContent = n?.bend ? `Bend ${BEND_NAMES[BENDS.indexOf(n.bend)]}` : 'Bend';
+    });
   }
 
   // --- drawing ---------------------------------------------------------------
@@ -205,6 +240,7 @@ export function mount(root){
     chordIn.setAttribute('aria-invalid', String(!!chordIn.value && !parseChord(chordIn.value)));
     renderChords(inst);
     renderPlan(inst);
+    renderTech();
     $('#tb-delbar').disabled = tab().bars.length <= 1;
     $('#tb-addbar').disabled = tab().bars.length >= 64;
     if (reveal) surface.querySelector('.tabcursor')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -362,6 +398,7 @@ export function mount(root){
     persist(); render();
   });
   playBtn.onclick = () => { cancelPending(); togglePlay(); };
+  techSeg.querySelectorAll('button').forEach(b => b.onclick = () => { toggleTech(b.dataset.tech); surface.focus({ preventScroll: true }); });
   tripCb.onchange = () => { cancelPending(); opts.triplet = tripCb.checked; snap(); persist(); render(); };
   undoBtn.onclick = () => { cancelPending(); hist.undo(); persist(); render(); };
   redoBtn.onclick = () => { cancelPending(); hist.redo(); persist(); render(); };
@@ -389,6 +426,7 @@ export function mount(root){
   progKey.innerHTML = keyHtml; progKey.value = '9:minor';
   keySel.innerHTML = `<option value="auto">Auto (from the chords)</option>${keyHtml}`;
   const feelSel = $('#tb-feel'), swingSel = $('#tb-swing');
+  const gtSel = $('#tb-gentech'); gtSel.value = opts.tech; gtSel.onchange = () => { opts.tech = gtSel.value; persist(); };
   feelSel.value = opts.feel; swingSel.value = opts.swing;
   feelSel.onchange = () => { opts.feel = feelSel.value; persist(); };
   swingSel.onchange = () => { opts.swing = swingSel.value; persist(); };
@@ -411,11 +449,14 @@ export function mount(root){
     const inst = getInstrument();
     const [t, mode] = opts.key === 'auto' ? [] : opts.key.split(':');
     const res = generateSolo({
-      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, seed: opts.seed,
+      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, techniques: opts.tech, seed: opts.seed,
       key: opts.key === 'auto' ? undefined : { t: +t, mode: /** @type {'major'|'minor'} */ (mode) },
     });
     let next = clearNotes(tab());
-    res.bars.forEach((notes, bi) => notes.forEach(n => { next = putNote(next, bi, n.at, n.s, n.f, n.len); }));
+    res.bars.forEach((notes, bi) => notes.forEach(n => {
+      next = putNote(next, bi, n.at, n.s, n.f, n.len);
+      if (n.link || n.bend || n.vib) next = setTechnique(next, bi, n.at, n.s, { link: n.link, bend: n.bend, vib: n.vib === true });
+    }));
     commit(next);
     const named = chordsUsed(tab()).length > 0;
     genMsg.textContent = `${named ? '' : 'No chords named, so it used ' + keyName(res.key) + '. '}Seed ${opts.seed}`;

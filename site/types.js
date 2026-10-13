@@ -152,6 +152,9 @@ export {};
  * @property {number} len  length in steps, never past the end of the bar
  * @property {number} s    string index, top string = 0
  * @property {number} f    fret, 0 = open
+ * @property {'h'|'s'} [link]  into the NEXT note on the same string: 'h' hammer-on (if it is higher) / pull-off (if lower), 's' slide
+ * @property {1|2|3|4} [bend]  bent up this many semitones (1 = half, 2 = full, 3 = 1 1/2, 4 = two whole steps)
+ * @property {true} [vib]      vibrato
  */
 
 /**
