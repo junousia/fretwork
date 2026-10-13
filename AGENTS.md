@@ -213,6 +213,11 @@ those are allowed. Re-run the build only if updating the dataset.
   and chord boxes - unintentional shape/colour/mirror changes fail with a line-level message;
   intentional ones: `npm run test:golden:update` and review the diff in the PR), and the shipped-site
   checks (manifest, service-worker file list, nothing external, relative paths, nginx mime/gzip).
+- `npm run test:nginx` builds the real Docker image and checks every shipped file's Content-Type,
+  no-store and gzip (skips locally without Docker; required in CI). It exists because a `types {}`
+  block in `nginx.conf` REPLACES nginx's whole mime table - the whole site was served as a download
+  once, and the dev server used by the other tests could not see it. Never test only a dev server
+  for what nginx is responsible for.
 - `npm run test:e2e` (Playwright): drives the app at `/` and `/fretwork/`, offline, sharing, playback.
 - `npm run test:a11y` (axe-core): every tab, light + dark, desktop + phone, plus Chrome's own
   installability check. Contrast, labels and landmarks currently pass - keep it that way.

@@ -27,6 +27,8 @@ jobs:
         run: npm run typecheck
       - name: Theory, arpeggio, tuning, golden and shipped-site checks
         run: npm test
+      - name: Real nginx image serves every file correctly (types, caching, gzip)
+        run: npm run test:nginx
       - name: Install browser
         run: npx playwright install --with-deps chromium
       - name: End-to-end smoke test (root, subpath, offline)
