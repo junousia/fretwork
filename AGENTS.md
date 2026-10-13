@@ -1,6 +1,6 @@
-# Fretboard Theory - Agent Notes
+# Fretwork - Agent Notes
 
-This app (`apps/guitar/`) is a vanilla-JS, no-build-step, no-framework PWA
+This app is a vanilla-JS, no-build-step, no-framework PWA
 for guitar/ukulele theory: chord progressions, scales, and chords, each
 rendered on a shared SVG fretboard (`board()` in `site/theory.js`). Read
 this before touching `getPositions`/`positionFrets`/`board()` - the
@@ -74,9 +74,9 @@ Windows whose top fret has no scale tone on any string are extended
 
 ## Verified invariants (and why)
 
-`verify-theory.mjs` is the actual regression suite (not a print-and-read
+`test/theory.test.mjs` is the actual regression suite (not a print-and-read
 script - it asserts and exits non-zero on failure). Run it with
-`node apps/guitar/verify-theory.mjs` before shipping any change to
+`npm test` before shipping any change to
 `theory.js`'s scale/position logic. It checks, across all 20 scales x 12
 roots x the guitar's own tuning:
 
@@ -105,7 +105,7 @@ Fingerings are **not computed** - they come from
 (c) 2016 David Rubert; attribution in `site/data/voicings.LICENSE.txt`).
 Computing playable fingerings means encoding finger-stretch/barre rules
 and which shapes people actually play, which a curated dataset already
-does. `tools/build-voicings.mjs <chords-db>/lib` converts it into
+does. `npm run build:voicings -- <chords-db>/lib` converts it into
 `site/data/voicings.json` (guitar ~1630, ukulele ~1630 voicings): our own
 string order (index 0 = highest string, like `tuning[]`), **absolute**
 frets (the source stores them relative to `baseFret`), finger numbers,
@@ -133,7 +133,7 @@ those are allowed. Re-run the build only if updating the dataset.
   voicing follows again.
 - Chord types with no stored voicing (13 exotic extensions) show no
   diagram, not an invented one.
-- `verify-theory.mjs` checks all ~3260 voicings (valid frets/fingers/barre,
+- `test/theory.test.mjs` checks all ~3260 voicings (valid frets/fingers/barre,
   fits the 15 drawn frets, only chord tones, `board()` draws exactly its
   dots).
 
@@ -150,7 +150,7 @@ present, an 11th only counts above a third, `11` is really sus4+7+9) - read
 selected feature, exact matches first; when the selection is exactly one
 chord's feature set it is auto-selected; toggles that would match nothing
 are disabled. True aliases share a feature set (6/maj6, add9/add2, aug7/7#5,
-11/9sus4). `verify-theory.mjs` checks the features never merge chords with
+11/9sus4). `test/theory.test.mjs` checks the features never merge chords with
 different notes and that every toggle is used.
 
 ## Before inventing further changes here
@@ -166,14 +166,20 @@ reference implementation (check its license) and running it, or by
 reading an actual method book's description of its own rules, rather than
 finding a ready-made dataset.
 
-## Deployment
+## PWA, caching and deployment
 
-Static site, no build step: `rsync` `apps/guitar/` to the runtime stacks
-dir (excluding `verify-theory.mjs` and any local `pw-*.mjs` Playwright
-scratch scripts), then `docker compose build && up -d` in
-`compose/guitar/`. Served by nginx with `Cache-Control: no-store` on
-everything (`apps/guitar/nginx.conf`) - this is deliberate: a personal,
-low-traffic tool with no content-hashed filenames, so correctness during
-active iteration matters more than cache performance. Live at
-`guitar.internal.junou.dev` (LAN) and `guitar.junou.dev` (public, via the
-existing Cloudflare tunnel wildcard).
+- **Everything is relative** (`./`, `sw.js`, `manifest.webmanifest`, `fetch('./data/...')`):
+  the app is served from `/` (Docker/nginx) and from `/fretwork/` (GitHub Pages). Never
+  introduce a root-absolute URL or an external request - `test/site.test.mjs` fails on it, and
+  `test/e2e.test.mjs` loads the app at both a root and a `/fretwork/` origin, then goes offline.
+- **Service worker (`site/sw.js`)** is network-first with `cache: 'no-cache'` (always revalidates;
+  the cache is only an offline fallback). This is deliberate: files have no content hashes, and
+  stale-cache problems while iterating were a real, repeated pain. A file under `site/` that is not
+  listed in `SHELL` will not work offline - the site test catches it.
+- **Icons** are generated from the SVGs by `tools/make-icons.mjs` (Playwright). The font is
+  self-hosted (`site/fonts`, OFL).
+- **Pages:** `.github/workflows/pages.yml` runs the tests then publishes `site/` on every push to
+  `main`. `ci.yml` (job `test`) runs on pull requests and is the required status check; changes
+  reach `main` only through reviewed PRs.
+- **Docker:** `Dockerfile` + `nginx.conf` serve `site/` on port 8000 with `Cache-Control: no-store`
+  (and gzip for the 150 KB voicing JSON) for self-hosting.

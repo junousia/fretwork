@@ -1,0 +1,24 @@
+{
+  "name": "fretwork",
+  "version": "1.0.0",
+  "description": "Scales, chords and chord progressions on the fretboard for guitar and ukulele. Vanilla JS PWA, no build step.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/junousia/fretwork.git"
+  },
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node test/theory.test.mjs && node test/site.test.mjs",
+    "build:voicings": "node tools/build-voicings.mjs",
+    "test:e2e": "node test/e2e.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.0"
+  }
+}

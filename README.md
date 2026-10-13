@@ -1,0 +1,68 @@
+# Fretwork
+
+Scales, chords and chord progressions on the fretboard, for guitar and ukulele.
+A small installable web app that works offline - vanilla JavaScript, no framework,
+no build step, no accounts, no tracking.
+
+**Live:** https://junousia.github.io/fretwork/
+
+![Chord progression with scale position and chord voicing](docs/screenshots/progressions.png)
+
+## What it does
+
+- **Progressions** - type a chord progression (or pick a common one and transpose it to any
+  key). Each chord gets the scales that fit it, ranked for the detected key, laid out on the neck
+  with chord tones and safe landing notes marked.
+- **Scale positions** - pick any scale and root, then isolate one of its positions (or several).
+  Pentatonic scales use the classic CAGED boxes; seven-note scales use one-finger-per-fret
+  positions in the style of the Berklee/Leavitt system. Every position reads as an unbroken run
+  of the scale - no skipped notes.
+- **Chord voicings** - real fingerings (about 1,600 for guitar and for ukulele) with finger
+  numbers and barres, shown next to each chord and ringed on the neck. Picking a voicing moves
+  the scale position to match, and "Play" strums the actual fretted notes.
+- **Chord builder** - toggle minor, 7, maj7, sus4, 9, b5 ... and the chord list narrows to what
+  matches; impossible combinations are greyed out.
+- **Guitar and ukulele**, labelled by note name, interval or finger, with audio playback.
+- **Installable and offline** (PWA), responsive from phone to desktop.
+
+| Chords | Scales on a phone |
+| --- | --- |
+| ![Chord builder and voicing](docs/screenshots/chords.png) | ![Scale position on a phone](docs/screenshots/scales-phone.png) |
+
+## Run it
+
+No dependencies are needed to use it - it is static files in `site/`:
+
+```sh
+node tools/serve.mjs        # http://localhost:8000
+BASE=/fretwork node tools/serve.mjs 8001   # under a subpath, like GitHub Pages
+```
+
+or `docker build -t fretwork . && docker run -p 8000:8000 fretwork`.
+
+## Develop
+
+```sh
+npm install                       # only needed for the browser test (Playwright)
+npm test                          # theory + shipped-site checks (plain Node, fast)
+npx playwright install chromium   # once
+npm run test:e2e                  # real-browser smoke test incl. offline + subpath
+```
+
+Everything lives in `site/` as ES modules; there is nothing to compile. See
+[AGENTS.md](AGENTS.md) for the design notes - especially how scale positions and chord voicings
+are generated and why - before changing `site/theory.js`.
+
+Contributions go through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Deployment
+
+Merging to `main` runs the tests and publishes `site/` to GitHub Pages
+(`.github/workflows/pages.yml`). Everything in the app uses relative paths so it also works under
+the `/fretwork/` subpath. The `Dockerfile` serves the same files with nginx for self-hosting.
+
+## Credits and licence
+
+MIT licensed, see [LICENSE](LICENSE). Chord fingerings come from
+[tombatossals/chords-db](https://github.com/tombatossals/chords-db) (MIT); the font is Familjen
+Grotesk (SIL OFL 1.1). Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

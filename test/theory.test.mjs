@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { CHORDS, FEATURE_GROUPS, chordFeatures, parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, TUNING, SCALES } from './site/theory.js';
+import { CHORDS, FEATURE_GROUPS, chordFeatures, parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, TUNING, SCALES } from '../site/theory.js';
 
 let failures = 0;
 function assert(cond, msg) {
@@ -108,7 +108,7 @@ function assert(cond, msg) {
 // exactly its dots. This guards the converted third-party data and the
 // string-order / base-fret conversion in tools/build-voicings.mjs.
 {
-  const V = JSON.parse(fs.readFileSync(new URL('./site/data/voicings.json', import.meta.url)));
+  const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url)));
   const OPEN = { guitar: [64, 59, 55, 50, 45, 40], ukulele: [69, 64, 60, 67] };
   const TUN = { guitar: TUNING, ukulele: [9, 4, 0, 7] };
   const EXTRA = { 11: [4], 13: [5] }; // tones real voicings add that our chord table omits

@@ -3,17 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Fretboard Theory</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- Self-hosted font + manifest.json + service worker land in GTR-005 (PWA packaging). -->
+<title>Fretwork - guitar and ukulele theory toolkit</title>
+<meta name="description" content="Scales, chords and chord progressions on the fretboard for guitar and ukulele: positions, voicings, a chord builder and a scale finder for any progression. Works offline.">
+<meta name="theme-color" content="#E6E9E3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141716" media="(prefers-color-scheme: dark)">
+<meta name="application-name" content="Fretwork">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fretwork">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/familjen-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <span class="brand">Fretboard Theory</span>
+    <span class="brand">Fretwork</span>
     <div class="seg" id="instrument-switch" role="group" aria-label="Instrument">
       <button type="button" data-inst="guitar" aria-pressed="true">Guitar</button>
       <button type="button" data-inst="ukulele" aria-pressed="false">Ukulele</button>

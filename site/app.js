@@ -46,4 +46,8 @@ if(!currentTab()){
 }
 route();
 
-// Service worker registration is added in GTR-005 once sw.js exists.
+
+// Offline support / installability (needs https or localhost).
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}

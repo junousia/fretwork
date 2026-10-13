@@ -1,9 +1,7 @@
 /* Shared, DOM-free guitar theory engine: chord parsing, scale
-   compatibility/ranking, key detection, the fretboard SVG builder, and the
-   Web Audio playback engine. Every tool view imports from this module.
-   Extracted verbatim from the original single-file "Over the Changes"
-   (guitar.html) per ADR-006 / GTR-001 - no logic changes, only `export`
-   keywords added. */
+   compatibility/ranking, key detection, scale positions, chord-builder
+   features, the fretboard SVG builder and the Web Audio playback engine.
+   Every tool view imports from this module. */
 
 export const SHARP=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const FLAT=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];

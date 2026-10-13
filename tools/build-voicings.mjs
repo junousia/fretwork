@@ -72,5 +72,5 @@ for (const [name, { file, open }] of Object.entries(INSTR)) {
 fs.writeFileSync(path.join(here, '../site/data/voicings.json'), JSON.stringify(out));
 fs.writeFileSync(path.join(here, '../site/data/voicings.LICENSE.txt'),
   'Voicing data derived from tombatossals/chords-db\nhttps://github.com/tombatossals/chords-db\nMIT License, Copyright (c) 2016 David Rubert\n');
-fs.writeFileSync('/home/jukka/claw-lab/voicing-drops.txt', report.join('\n'));
-console.log('dropped details in /home/jukka/claw-lab/voicing-drops.txt');
+fs.writeFileSync('voicing-drops.txt', report.join('\n'));
+console.log('dropped details in ./voicing-drops.txt (gitignored)');
