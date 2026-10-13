@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fix: the Docker/nginx image served every file as `application/octet-stream` (a `types {}` block
+  replaced nginx's mime table), so browsers downloaded the page instead of showing it. GitHub Pages
+  was not affected. A new test builds the real image and checks every file's Content-Type.
+
 - Internal: `theory.js` split into `music`, `positions`, `chord-features`, `board`, `audio` and
   `progressions` modules (behaviour unchanged - all 17 golden SVGs are byte-identical).
 - Type checking: JSDoc types checked by `tsc --noEmit` in CI; the engine modules compile with

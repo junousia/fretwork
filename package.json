@@ -16,7 +16,8 @@
     "test:e2e": "node test/e2e.test.mjs",
     "test:a11y": "node test/a11y.test.mjs",
     "test:golden:update": "UPDATE_GOLDEN=1 node test/golden.test.mjs",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.strict.json && tsc -p tsconfig.sw.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.strict.json && tsc -p tsconfig.sw.json",
+    "test:nginx": "node test/nginx.test.mjs"
   },
   "engines": {
     "node": ">=20"
