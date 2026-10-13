@@ -97,3 +97,21 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .empty{color:var(--muted);margin-top:24px}
 .foot{margin-top:28px;font-size:.85rem;color:var(--muted);max-width:66ch}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.vometa{color:var(--muted);font-size:.9rem}
+.vobig{margin:10px 0 4px;color:var(--ink)}
+.vdiag{display:block;--chip-num:var(--panel)}
+.chip[aria-pressed="true"] .vdiag{--chip-num:var(--wood)}
+.hint{color:var(--muted);font-size:.9rem;margin:10px 0 0}
+.chip .vdiag{margin:4px 0 2px}
+
+.builder{display:grid;gap:10px;margin:8px 0 14px}
+.bgroup{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.bl{min-width:5.6rem;font-size:.82rem;color:var(--muted)}
+.bseg{flex-wrap:wrap}
+.bseg button:disabled{opacity:.3;cursor:not-allowed}
+.brow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.bclear{font:inherit;font-size:.85rem;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer}
+.bclear:disabled{opacity:.35;cursor:default}
+.bcount{color:var(--muted);font-size:.9rem}
+.bh{margin:14px 0 4px}

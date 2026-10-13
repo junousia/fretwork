@@ -1,5 +1,6 @@
 import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, play, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
+import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
 
@@ -40,9 +41,9 @@ export function mount(root){
         detail=root.querySelector('#pr-detail'), err=root.querySelector('#pr-err'), ex=root.querySelector('#pr-examples'),
         libProgSel=root.querySelector('#pr-libprog'), libKeySel=root.querySelector('#pr-libkey');
 
-  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{}};
-  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{}});}catch(e){}
-  function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos}));}catch(e){}}
+  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{},vo:{}};
+  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{},vo:saved.vo||{}});}catch(e){}
+  function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos,vo:state.vo}));}catch(e){}}
 
   prog.value=state.text;
   EXAMPLES.forEach(([label,text])=>{const b=document.createElement('button');b.type='button';b.textContent=label;
@@ -81,10 +82,47 @@ export function mount(root){
     sugs=parsed.map(c=>suggest(c,key));
     strip.innerHTML=parsed.map((c,i)=>{
       const p=pickFor(i);
-      return `<button class="chip" type="button" data-i="${i}" aria-pressed="${i===state.sel}"><b>${esc(c.name)}</b><span>${p?esc(p.s.short):'No match'}</span></button>`;
+      const vc=voicingChoice(i);
+      return `<button class="chip" type="button" data-i="${i}" aria-pressed="${i===state.sel}"><b>${esc(c.name)}</b>${vc.idx>=0?voicingDiagram(vc.list[vc.idx],{size:.85,label:false}):''}<span>${p?esc(p.s.short):'No match'}</span></button>`;
     }).join('');
     strip.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{state.sel=+b.dataset.i;render();});
     renderDetail();
+  }
+  // Selected scale position(s) + chosen scale for chord i, or null.
+  function posInfo(i){
+    const c=parsed[i], cur=pickFor(i); if(!cur) return null;
+    const inst=getInstrument(), positions=getPositions(cur.s.iv,c.root,inst.tuning), posKey=`${c.name}|${cur.s.id}`;
+    let pCur=state.pos[posKey]??'all';
+    if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
+    else if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
+    return {c,cur,inst,positions,posKey,pCur};
+  }
+  // The voicing shown for chord i: the one the user picked, else the one that
+  // best fits the selected scale position(s), else the lowest on the neck.
+  function voicingChoice(i){
+    const info=posInfo(i); if(!info) return {list:[],idx:-1,info:null};
+    const {c,inst,positions,cur,pCur}=info, list=getVoicings(inst.id,c.root,c.suf);
+    if(!list.length) return {list,idx:-1,info};
+    const ov=state.vo[c.name]; if(Number.isInteger(ov)&&list[ov]) return {list,idx:ov,info};
+    if(pCur==='all') return {list,idx:0,info};
+    let lo=99,hi=0;
+    for(const n of (Array.isArray(pCur)?pCur:[pCur])){
+      const k=positions.findIndex(p=>p.n===n);
+      positionFrets(positions,k,cur.s.iv,c.root,inst.tuning,inst.midi).forEach(set=>set.forEach(f=>{lo=Math.min(lo,f);hi=Math.max(hi,f);}));
+    }
+    const mid=(lo+hi)/2; let best=0,bd=1e9;
+    list.forEach((v,k)=>{ const fs=v.f.filter(f=>f>0), vm=fs.length?(Math.min(...fs)+Math.max(...fs))/2:0, d=Math.abs(vm-mid); if(d<bd){bd=d;best=k;} });
+    return {list,idx:best,info};
+  }
+  // The scale position that contains the most of a voicing's fretted notes.
+  function positionForVoicing(info,v){
+    let best=info.positions[0].n,bc=-1;
+    info.positions.forEach((p,k)=>{
+      const sets=positionFrets(info.positions,k,info.cur.s.iv,info.c.root,info.inst.tuning,info.inst.midi);
+      const hit=v.f.filter((f,j)=>f>=0&&sets[j].has(f)).length;
+      if(hit>bc){bc=hit;best=p.n;}
+    });
+    return best;
   }
   function pickFor(i){const list=sugs[i]; if(!list||!list.length) return null; const id=state.pick[i]; return list.find(x=>x.s.id===id)||list[0];}
   function renderDetail(){
@@ -97,18 +135,25 @@ export function mount(root){
     const posKey=`${c.name}|${cur.s.id}`;
     let pCur=state.pos[posKey]??'all';
     if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
+    else if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
     const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths};
     let runNotes=null; // MIDI list: the actual notes of the selected position(s)
     if(pCur!=='all'){
       const idxs=(Array.isArray(pCur)?pCur:[pCur]).map(n=>positions.findIndex(p=>p.n===n));
       boardOpts.dimRange={s:Math.min(...idxs.map(i=>positions[i].s)),e:Math.max(...idxs.map(i=>positions[i].e))};
-      const sets=idxs.map(i=>positionFrets(positions,i,cur.s.iv,c.root,inst.tuning));
+      const sets=idxs.map(i=>positionFrets(positions,i,cur.s.iv,c.root,inst.tuning,inst.midi));
       boardOpts.brightSets=inst.tuning.map((_,j)=>{ const set=new Set();
         for(const s of sets) s[j].forEach(f=>set.add(f));
         return set;
       });
       runNotes=inst.midi.flatMap((open,j)=>[...boardOpts.brightSets[j]].map(f=>open+f));
     }
+    const vc=voicingChoice(i), vo=vc.idx>=0?vc.list[vc.idx]:null;
+    if(vo) boardOpts.voicingRing=vo;
+    const voRow=vo?`<div class="row"><label class="keylab">Voicing <div class="seg" id="pr-voseg" role="group" aria-label="Chord voicing">${vc.list.map((v,k)=>
+        `<button type="button" data-vo="${k}" title="${esc(voicingLabel(v))}" aria-pressed="${k===vc.idx}">${k+1}</button>`).join('')}</div></label>
+        <span class="vometa">${esc(voicingLabel(vo))}${vo.b?' \u00b7 barre':''}</span></div>
+      <div class="vobig">${voicingDiagram(vo,{size:1.5})}</div>`:'';
     h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
         <button type="button" data-l="notes" aria-pressed="${state.labels==='notes'}">Note names</button>
@@ -116,6 +161,7 @@ export function mount(root){
         <button type="button" class="play" id="pr-play">Play chord and scale</button></div></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="pr-posseg" role="group" aria-label="Fretboard position">${['all',...positions.map(p=>p.n)].map(p=>
         `<button type="button" data-pos="${p}" title="${p==='all'?'Whole neck':'Toggle this position'}" aria-pressed="${p==='all'?pCur==='all':(Array.isArray(pCur)?pCur.includes(p):pCur===p)}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
+      ${voRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(c,cur,state.labels,flats,boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone, safe landing note</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
       <h3>Scales that fit ${esc(c.name)}</h3><div class="scales">`;
@@ -129,7 +175,13 @@ export function mount(root){
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
     detail.querySelectorAll('.seg button').forEach(b=>{ if(b.dataset.l) b.onclick=()=>{state.labels=b.dataset.l;save();renderDetail();};});
+    detail.querySelectorAll('#pr-voseg button').forEach(b=>b.onclick=()=>{
+      const k=+b.dataset.vo; state.vo[c.name]=k;
+      state.pos[posKey]=[positionForVoicing(vc.info,vc.list[k])];
+      save();render();
+    });
     detail.querySelectorAll('#pr-posseg button').forEach(b=>b.onclick=()=>{
+      delete state.vo[c.name]; // follow the position again
       const v=b.dataset.pos;
       if(v==='all'){ state.pos[posKey]='all'; }
       else{
@@ -141,7 +193,7 @@ export function mount(root){
       }
       save();renderDetail();
     });
-    detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset,runNotes);
+    detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset,runNotes,vo?vo.f.map((f,j)=>f>=0?inst.midi[j]+f:null).filter(m=>m!==null):null);
   }
 
   let deb;
@@ -154,5 +206,6 @@ export function mount(root){
     if(e.key==='ArrowLeft'){state.sel=(state.sel-1+parsed.length)%parsed.length;render();strip.querySelector('[aria-pressed="true"]')?.focus();}
   });
   render();
-  onInstrumentChange(() => { if(parsed.length) renderDetail(); });
+  loadVoicings().then(()=>render());
+  onInstrumentChange(() => { if(parsed.length) render(); });
 }

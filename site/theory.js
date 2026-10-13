@@ -72,7 +72,7 @@ export function parseChord(tok){
   const suf=normSuffix(rest);
   const iv=CHORDS[suf];
   if(!iv) return null;
-  return {name:tok, root:pcOf(m[1],m[2]), acc:m[2], iv:iv.slice(), bass};
+  return {name:tok, root:pcOf(m[1],m[2]), acc:m[2], iv:iv.slice(), bass, suf};
 }
 
 /* Chord-scale compatibility */
@@ -208,9 +208,45 @@ export function getPositions(scaleIv,root,tuning){
 //
 // Returns one Set<fret> per string (indexed like `tuning`) for the given
 // position index.
-export function positionFrets(positions,idx,scaleIv,root,tuning){
+export function positionFrets(positions,idx,scaleIv,root,tuning,midi=openMidi(tuning)){
   const D=new Set(scaleIv).size;
-  return D<=6?boxFrets(positions,idx,scaleIv,root,tuning):windowFrets(positions,idx,scaleIv,root,tuning);
+  const sets=D<=6?boxFrets(positions,idx,scaleIv,root,tuning):windowFrets(positions,idx,scaleIv,root,tuning);
+  return fillPitchGaps(sets,scaleIv,root,midi);
+}
+
+// Open-string MIDI notes, derived assuming each lower string sits below the
+// one above it (true for guitar). Re-entrant tunings (ukulele) must pass
+// their own `midi`.
+export function openMidi(tuning){
+  const m=[64];
+  for(let j=1;j<tuning.length;j++) m.push(m[j-1]-(((tuning[j-1]-tuning[j])%12+12)%12||12));
+  return m;
+}
+
+// A position must read as an unbroken run: every scale pitch between its
+// lowest and highest displayed note has to be shown somewhere. A uniform
+// fret window can't guarantee that (a pitch may only be reachable on the
+// next string 1-2 frets outside the window), so such pitches are added at
+// the nearest fret outside the window - the "stretch" notes real positions
+// use (Leavitt) rather than silently skipping them.
+function fillPitchGaps(sets,scaleIv,root,midi,maxFret=19){
+  const out=sets.map(s=>new Set(s));
+  const have=new Set(); out.forEach((s,j)=>s.forEach(f=>have.add(midi[j]+f)));
+  const lo=Math.min(...have), hi=Math.max(...have);
+  const all=[...out.flatMap(s=>[...s])];
+  const wlo=Math.min(...all), whi=Math.max(...all);
+  for(let m=lo;m<=hi;m++){
+    if(have.has(m)||!scaleIv.includes(((m-root)%12+12)%12)) continue;
+    let best=null,bestD=Infinity;
+    midi.forEach((open,j)=>{
+      const f=m-open;
+      if(f<0||f>maxFret) return;
+      const d=f<wlo?wlo-f:f>whi?f-whi:0;
+      if(d<bestD){bestD=d;best=[j,f];}
+    });
+    if(best) out[best[0]].add(best[1]);
+  }
+  return out;
 }
 
 const fretHasDegree=(fret,scaleIv,root,pc)=>scaleIv.includes(((pc+fret-root)%12+12)%12);
@@ -300,6 +336,37 @@ function windowFrets(positions,idx,scaleIv,root,tuning,defaultWidth=4,maxFret=28
   });
 }
 
+// Chord "builder" features, derived from a chord's intervals (so any chord
+// added to CHORDS is picked up automatically). Pick-one groups: third,
+// seventh. The rest are independent on/off flags.
+export const FEATURE_GROUPS=[
+  {id:'third',label:'Third',radio:true,items:[['major','Major'],['minor','Minor'],['sus2','sus2'],['sus4','sus4'],['power','No 3rd']]},
+  {id:'seventh',label:'Seventh',radio:true,items:[['6','6'],['7','7'],['maj7','maj7'],['dim7','dim7']]},
+  {id:'fifth',label:'Fifth',items:[['b5','\u266d5'],['#5','\u266f5']]},
+  {id:'ext',label:'Extensions',items:[['add9','add9'],['9','9'],['11','11'],['13','13']]},
+  {id:'alt',label:'Alterations',items:[['b9','\u266d9'],['#9','\u266f9'],['#11','\u266f11'],['b13','\u266d13']]},
+];
+export function chordFeatures(iv){
+  const h=new Set(iv.map(x=>x%12)), f=new Set();
+  const major=h.has(4), minor=h.has(3)&&!major;
+  const third=major?'major':minor?'minor':h.has(2)&&!h.has(5)?'sus2':h.has(5)?'sus4':'power';
+  f.add(third);
+  const b5=h.has(6)&&!h.has(7), s5=h.has(8)&&!h.has(7);
+  if(b5) f.add('b5'); if(s5) f.add('#5');
+  const dim7=minor&&b5&&h.has(9)&&!h.has(10)&&!h.has(11);
+  const seventh=h.has(11)?'maj7':h.has(10)?'7':dim7?'dim7':null;
+  if(seventh) f.add(seventh);
+  if(h.has(9)&&!seventh&&!dim7) f.add('6');
+  if(h.has(9)&&seventh&&!dim7) f.add('13');
+  if(h.has(2)&&third!=='sus2') f.add(!seventh&&!h.has(9)&&(major||minor)?'add9':'9');
+  if(h.has(5)&&(major||minor)) f.add('11');
+  if(h.has(6)&&h.has(7)) f.add('#11');
+  if(h.has(1)) f.add('b9');
+  if(h.has(3)&&major) f.add('#9');
+  if(h.has(8)&&h.has(7)) f.add('b13');
+  return f;
+}
+
 export function board(chord,sug,mode,flats,opts={}){
   const tuning=opts.tuning||TUNING, sw=opts.stringWidths||STRING_WIDTHS;
   const FRETS=15;
@@ -331,18 +398,36 @@ export function board(chord,sug,mode,flats,opts={}){
       g+=`<circle cx="${cx}" cy="${bTop-10}" r="8" fill="${active?'#C23B2E':'#2A170F'}"/><text x="${cx}" y="${bTop-6}" text-anchor="middle" font-size="10" font-weight="700" fill="#F5EBDD" font-family="inherit">${p.n}</text>`;
     });
   }
+  // A chord voicing (opts.voicing = {f,g,b}: absolute frets per string in
+  // tuning order, -1 muted; finger numbers; optional barre {fret,from,to}):
+  // everything but its own dots is dimmed, muted strings get an X, a barre
+  // is drawn as a bar behind the dots.
+  // opts.voicingRing marks a voicing over the board WITHOUT dimming anything
+  // (used where a scale position is already shown): rings + barre + X only.
+  const ring=opts.voicingRing, vo=opts.voicing||ring;
+  const bright=opts.voicing?opts.voicing.f.map(f=>new Set(f>=0?[f]:[])):brightSets;
+  if(vo){
+    if(vo.b&&vo.b.fret<=FRETS){
+      const bx=NUT+(vo.b.fret-0.5)*FW;
+      g+=`<rect x="${bx-14}" y="${TOP+vo.b.from*GAP-14}" width="28" height="${(vo.b.to-vo.b.from)*GAP+28}" rx="14" fill="#E3A21A" fill-opacity="0.35" stroke="#E3A21A" stroke-width="1.5"/>`;
+    }
+    vo.f.forEach((f,s)=>{ if(f<0) g+=`<text x="${NUT-20}" y="${TOP+s*GAP+5}" text-anchor="middle" font-size="15" font-weight="700" fill="#E3A21A" font-family="inherit">\u2715</text>`; });
+  }
   for(let s=0;s<strings;s++) for(let f=0;f<=FRETS;f++){
     const pc=(tuning[s]+f)%12, rel=(pc-chord.root+12)%12;
-    if(!scaleSet.has(rel)) continue;
+    const inVoicing=opts.voicing&&opts.voicing.f[s]===f;
+    if(!scaleSet.has(rel)&&!inVoicing) continue;
     const x=f===0?NUT-20:NUT+(f-0.5)*FW, y=TOP+s*GAP;
     const isRoot=rel===0, isChord=chordSet.has(rel);
     const fill=isRoot?'#C23B2E':isChord?'#E3A21A':'#EDE6D6', tc=isRoot?'#FFFFFF':isChord?'#2A1A00':'#2A1E16';
-    const label=mode==='notes'?spell(pc,flats):ivLabel(rel,scaleSet);
-    const outside=brightSets?!brightSets[s].has(f):(dim&&(f<dim.s||f>dim.e));
+    let label=mode==='notes'?spell(pc,flats):ivLabel(rel,scaleSet.has(rel)?scaleSet:new Set([...scaleSet,rel]));
+    if(inVoicing&&opts.fingerLabels) label=vo.g[s]>0?String(vo.g[s]):spell(pc,flats);
+    const outside=bright?!bright[s].has(f):(dim&&(f<dim.s||f>dim.e));
     const op=outside?' opacity="0.25"':'';
     g+=`<circle cx="${x}" cy="${y}" r="12.5" fill="${fill}" stroke="#2A170F" stroke-width="1"${op}/>`;
     g+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="${label.length>2?10:11.5}" font-weight="600" fill="${tc}" font-family="inherit"${op}>${esc(label)}</text>`;
   }
+  if(ring) ring.f.forEach((f,s)=>{ if(f>=0&&f<=FRETS) g+=`<circle cx="${f===0?NUT-20:NUT+(f-0.5)*FW}" cy="${TOP+s*GAP}" r="17" fill="none" stroke="#fff" stroke-width="3"/>`; });
   return g+'</svg>';
 }
 
@@ -355,10 +440,11 @@ export function note(freq,t,dur,vol){
   o.connect(f);f.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+0.05);
 }
 export const mtof=m=>440*Math.pow(2,(m-69)/12);
-export function play(chord,scale,offset=0,run=null){
+export function play(chord,scale,offset=0,run=null,chordMidi=null){
   try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); ac.resume(); }catch(e){return;}
   const base=40+offset+((chord.root-4+12)%12); let t=ac.currentTime+0.05;
-  const voicing=[...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
+  // chordMidi: the real fretted notes of a chosen voicing (low string first)
+  const voicing=chordMidi?[...chordMidi].sort((a,b)=>a-b):[...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
   voicing.forEach((m,i)=>note(mtof(m),t+i*0.03,1.8,0.11));
   t+=1.3;
   // `run`: optional explicit list of MIDI notes (the actual fretted notes of

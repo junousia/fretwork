@@ -53,7 +53,7 @@ export function mount(root){
       const idx = Math.max(0, positions.findIndex(p => p.n === state.position));
       const p = positions[idx];
       boardOpts.dimRange = { s: p.s, e: p.e };
-      boardOpts.brightSets = positionFrets(positions, idx, scale.iv, state.root, inst.tuning);
+      boardOpts.brightSets = positionFrets(positions, idx, scale.iv, state.root, inst.tuning, inst.midi);
     }
     let runNotes = null; // MIDI list: the actual notes of the selected position
     if(boardOpts.brightSets) runNotes = inst.midi.flatMap((open, j) => [...boardOpts.brightSets[j]].map(f => open + f));

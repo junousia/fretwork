@@ -1,0 +1,3 @@
+Voicing data derived from tombatossals/chords-db
+https://github.com/tombatossals/chords-db
+MIT License, Copyright (c) 2016 David Rubert

@@ -1,4 +1,5 @@
-import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, TUNING, SCALES } from './site/theory.js';
+import fs from 'fs';
+import { CHORDS, FEATURE_GROUPS, chordFeatures, parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, TUNING, SCALES } from './site/theory.js';
 
 let failures = 0;
 function assert(cond, msg) {
@@ -57,6 +58,100 @@ function assert(cond, msg) {
   // over 5 frets as the accepted cost of never shifting the hand).
   assert(maxOverallSpanWindow <= 6, `a window-model position's overall span reached ${maxOverallSpanWindow} frets (expected <= 6, per Leavitt's documented norm)`);
   console.log(`Position/box checks over ${total} (scale x root) positions: ${missingDegreePositions} missing-degree positions, max per-string span ${maxPerStringSpan}, max overall span ${maxOverallSpanBox} (box model) / ${maxOverallSpanWindow} (window model)`);
+}
+
+// "All notes in order", checked the way a player (and the HTML) sees it:
+// ascending by PITCH across strings, not per string. For every scale, root,
+// position and instrument, every scale pitch between the position's lowest
+// and highest displayed note must itself be displayed - nothing skipped. And
+// what board() actually draws bright in the SVG must equal that data, so a
+// rendering cut-off (e.g. frets past the drawn neck) can't hide notes.
+{
+  const INSTR = [
+    ['guitar', TUNING, [64, 59, 55, 50, 45, 40]],
+    ['ukulele', [9, 4, 0, 7], [69, 64, 60, 67]],
+  ];
+  let skipped = 0, notRendered = 0, total = 0;
+  const examples = [];
+  for (const [name, tuning, midi] of INSTR) for (const sc of SCALES) for (let root = 0; root < 12; root++) {
+    const P = getPositions(sc.iv, root, tuning);
+    P.forEach((p, i) => {
+      total++;
+      const sets = positionFrets(P, i, sc.iv, root, tuning, midi);
+      const pitches = new Set();
+      sets.forEach((set, j) => set.forEach(f => pitches.add(midi[j] + f)));
+      const lo = Math.min(...pitches), hi = Math.max(...pitches);
+      for (let m = lo; m <= hi; m++) {
+        if (sc.iv.includes(((m - root) % 12 + 12) % 12) && !pitches.has(m)) {
+          skipped++;
+          if (examples.length < 5) examples.push(`${name} ${sc.id} root ${root} pos ${p.n}: pitch ${m} skipped`);
+        }
+      }
+      const svg = board({ root, iv: [0], name: 'x' }, { s: sc }, 'notes', false,
+        { tuning, brightSets: sets, showPositions: true, positions: P, dimRange: { s: p.s, e: p.e } });
+      const drawn = new Set();
+      for (const mt of svg.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="12.5"[^>]*?\/>/g)) {
+        if (/opacity/.test(mt[0])) continue;
+        drawn.add(Math.round((+mt[2] - 34) / 30) + ':' + (+mt[1] === 24 ? 0 : Math.round((+mt[1] - 44) / 56 + 0.5)));
+      }
+      sets.forEach((set, j) => set.forEach(f => { if (!drawn.has(j + ':' + f)) notRendered++; }));
+    });
+  }
+  assert(skipped === 0, `${skipped} scale notes are skipped inside a position's pitch range (e.g. ${examples.join('; ')})`);
+  assert(notRendered === 0, `${notRendered} position notes are not drawn bright in the rendered SVG`);
+  console.log(`Pitch-order/render checks over ${total} positions (guitar+ukulele): ${skipped} skipped notes, ${notRendered} notes missing from the SVG`);
+}
+
+// Chord voicings (site/data/voicings.json): every stored fingering must
+// sound only notes of its own chord (with the root, on guitar), use real
+// fret/finger/barre values, fit on the drawn neck, and board() must draw
+// exactly its dots. This guards the converted third-party data and the
+// string-order / base-fret conversion in tools/build-voicings.mjs.
+{
+  const V = JSON.parse(fs.readFileSync(new URL('./site/data/voicings.json', import.meta.url)));
+  const OPEN = { guitar: [64, 59, 55, 50, 45, 40], ukulele: [69, 64, 60, 67] };
+  const TUN = { guitar: TUNING, ukulele: [9, 4, 0, 7] };
+  const EXTRA = { 11: [4], 13: [5] }; // tones real voicings add that our chord table omits
+  let total = 0, bad = 0, notDrawn = 0; const ex = [];
+  for (const inst of Object.keys(V)) for (const [key, list] of Object.entries(V[inst])) {
+    const [root, suffix] = [+key.split('|')[0], key.slice(key.indexOf('|') + 1)];
+    const want = new Set([...CHORDS[suffix], ...(EXTRA[suffix] || [])].map(x => (root + x) % 12));
+    list.forEach(v => {
+      total++;
+      const pcs = new Set(v.f.map((f, j) => f >= 0 ? (OPEN[inst][j] + f) % 12 : null).filter(x => x !== null));
+      const ok = v.f.length === OPEN[inst].length && v.g.length === v.f.length
+        && v.f.every(f => Number.isInteger(f) && f >= -1 && f <= 15) && v.g.every(g => g >= 0 && g <= 4)
+        && [...pcs].every(x => want.has(x)) && pcs.size >= 2 && (inst !== 'guitar' || pcs.has(root))
+        && (!v.b || (v.b.from <= v.b.to && v.b.to < v.f.length && v.b.fret <= 15));
+      if (!ok) { bad++; if (ex.length < 3) ex.push(`${inst} ${key} ${JSON.stringify(v.f)}`); }
+      const svg = board({ root, iv: CHORDS[suffix], name: 'x' }, { s: { iv: CHORDS[suffix], name: 'x' } }, 'notes', false, { tuning: TUN[inst], voicing: v });
+      const bright = (svg.match(/<circle [^>]*r="12.5"(?![^>]*opacity)/g) || []).length;
+      if (bright !== v.f.filter(f => f >= 0).length) notDrawn++;
+    });
+  }
+  assert(total > 3000, `only ${total} voicings loaded (expected ~3200)`);
+  assert(bad === 0, `${bad} voicings are malformed or sound notes outside their chord (e.g. ${ex.join('; ')})`);
+  assert(notDrawn === 0, `${notDrawn} voicings are not drawn with exactly their own dots`);
+  console.log(`Chord voicing checks over ${total} voicings: ${bad} bad, ${notDrawn} not drawn correctly`);
+}
+
+// Chord builder: features are derived from intervals, so the toggles must
+// (1) reach every chord - the exact feature set of each chord finds that
+// chord, (2) never merge two chords with different notes (only true aliases
+// share a feature set), and (3) every offered toggle is used by some chord.
+{
+  const sig = iv => [...new Set(iv.map(x => x % 12))].sort((a, b) => a - b).join(',');
+  const feats = Object.fromEntries(Object.entries(CHORDS).map(([k, iv]) => [k, chordFeatures(iv)]));
+  const bySet = {};
+  for (const [k, f] of Object.entries(feats)) (bySet[[...f].sort().join(' ')] ||= []).push(k);
+  let merged = 0;
+  for (const list of Object.values(bySet)) if (new Set(list.map(k => sig(CHORDS[k]))).size > 1) merged++;
+  assert(merged === 0, `${merged} feature sets merge chords with different notes (the builder could not tell them apart)`);
+  const used = new Set(Object.values(feats).flatMap(f => [...f]));
+  const unused = FEATURE_GROUPS.flatMap(g => g.items.map(([id]) => id)).filter(id => !used.has(id));
+  assert(unused.length === 0, `builder toggles no chord uses: ${unused.join(' ')}`);
+  assert(chordFeatures(CHORDS.m7).has('minor') && chordFeatures(CHORDS.m7).has('7') && chordFeatures(CHORDS['7alt']).has('b9'), 'feature derivation changed for m7 / 7alt');
+  console.log(`Chord builder checks over ${Object.keys(CHORDS).length} chord types: ${merged} merged sets, ${unused.length} unused toggles`);
 }
 
 // A minor pentatonic position 3 and 4 must match the textbook box shapes

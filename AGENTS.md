@@ -56,14 +56,21 @@ its own anchor degree, G#, was already sitting at fret 4 on the high E
 string). These are two different, both-authoritative conventions for two
 different scale families, not one convention needing a better parameter.
 
-**One narrower-than-the-rest position per scale/root is normal, not a
-bug.** For any 7-note scale, exactly one of its 7 positions will end up
-with a 2-fret (not 3-fret) rendered span, because the major-scale step
-pattern (W-W-H-W-W-W-H) means the window's topmost default fret
-occasionally has no scale tone on *any* string. This is mathematically
-unavoidable and was checked explicitly (every root of Ionian was swept;
-exactly one position per root is narrower, confirmed accurate, not
-missing any note).
+**Positions must read as an unbroken run by PITCH, not per string.**
+Played low string to high string, every scale pitch between a position's
+lowest and highest displayed note must be shown. Neither model guarantees
+this on its own: a uniform window skips a pitch whose only nearby
+instance sits 1-2 frets outside the window (e.g. C Ionian position 4: the
+B at fret 4 of the G string, outside frets 5-8, was dropped while the B an
+octave up was shown). `fillPitchGaps()` (run last in `positionFrets`)
+adds such pitches at the nearest fret outside the window - the "stretch"
+notes Leavitt positions use. It needs absolute pitch, so callers pass
+`inst.midi` (re-entrant ukulele tuning can't be derived). Per-string
+checks alone missed this entirely; always test by pitch across strings
+and against what `board()` actually draws in the SVG.
+
+Windows whose top fret has no scale tone on any string are extended
+(`topUsed`) so no position collapses to a 2-fret shape.
 
 ## Verified invariants (and why)
 
@@ -76,9 +83,7 @@ roots x the guitar's own tuning:
 - **Completeness**: every scale degree is reachable somewhere in every
   position (you should never have to leave a position to play a note of
   its scale).
-- **No internal gaps**: within one string's own displayed fret range in a
-  position, every scale tone in that range is shown - nothing silently
-  skipped between the lowest and highest note shown on that string.
+- **No skipped notes by pitch** (guitar and ukulele): every scale pitch between a position's lowest and highest note is shown, and the SVG's bright circles equal the data.
 - **Per-string span <= 4**: no single string should ever demand more than
   a 4-fret reach within one position (the max possible for 3 consecutive
   diatonic degrees, confirmed against Leavitt's documented norm).
@@ -92,6 +97,61 @@ roots x the guitar's own tuning:
 - **Pinned exact shapes**: A minor pentatonic positions 3/4 (the
   canonical, user-verified reference, jog included) and A Ionian positions
   1/3 (the literal bug reports that motivated the window model).
+
+## Chord voicings (fingerings)
+
+Fingerings are **not computed** - they come from
+[tombatossals/chords-db](https://github.com/tombatossals/chords-db) (MIT,
+(c) 2016 David Rubert; attribution in `site/data/voicings.LICENSE.txt`).
+Computing playable fingerings means encoding finger-stretch/barre rules
+and which shapes people actually play, which a curated dataset already
+does. `tools/build-voicings.mjs <chords-db>/lib` converts it into
+`site/data/voicings.json` (guitar ~1630, ukulele ~1630 voicings): our own
+string order (index 0 = highest string, like `tuning[]`), **absolute**
+frets (the source stores them relative to `baseFret`), finger numbers,
+and barre `{fret, from, to}`. During conversion each voicing is validated
+(frets must reproduce the source's own MIDI notes, notes must belong to
+the chord, root present on guitar); the ~60 that fail (mostly rootless or
+odd extended-chord entries) are dropped and reported, not shown. Our table's
+plain `11` omits the 3rd and `13` the 11th, which real voicings keep, so
+those are allowed. Re-run the build only if updating the dataset.
+
+- `site/voicings.js`: lazy `fetch` of the JSON, `getVoicings()`, and
+  `voicingDiagram()` (small SVG chord box with nut/base fret, finger
+  numbers, barre bar, x/o markers). It uses `currentColor`; the finger
+  number colour is the `--chip-num` CSS variable (inverted on the
+  selected chip).
+- Chords tab: a "Voicing" selector like the scale Position selector. A
+  chosen voicing dims the neck to just its dots (`board` `opts.voicing`),
+  with a Fingers label mode, a drawn barre and x marks. "Play chord"
+  strums the real fretted notes (`play`'s `chordMidi`).
+- Progressions: each chip shows a diagram. The voicing defaults to the one
+  that best fits the chord's selected scale position(s) (else lowest on the
+  neck); picking a voicing sets the scale position to the one containing
+  most of its notes and rings the voicing over the neck without dimming the
+  scale (`opts.voicingRing`). Picking a position clears the override so the
+  voicing follows again.
+- Chord types with no stored voicing (13 exotic extensions) show no
+  diagram, not an invented one.
+- `verify-theory.mjs` checks all ~3260 voicings (valid frets/fingers/barre,
+  fits the 15 drawn frets, only chord tones, `board()` draws exactly its
+  dots).
+
+## Chord builder (Chords tab)
+
+Toggles above the chord header (`FEATURE_GROUPS` / `chordFeatures` in
+`theory.js`) filter the chord-type list and build a chord: third (pick
+one), seventh (pick one), fifth/extension/alteration flags. A chord's
+features are **derived from its intervals**, never hand-tagged, so a chord
+added to `CHORDS` appears automatically; the tagging rules are subtle (a
+6 vs a 13th, a b5 vs a #11, a #5 vs a b13 depend on whether a 5th is
+present, an 11th only counts above a third, `11` is really sus4+7+9) - read
+`chordFeatures` before changing it. The list shows chords containing every
+selected feature, exact matches first; when the selection is exactly one
+chord's feature set it is auto-selected; toggles that would match nothing
+are disabled. True aliases share a feature set (6/maj6, add9/add2, aug7/7#5,
+11/9sus4). `verify-theory.mjs` checks the features never merge chords with
+different notes and that every toggle is used.
 
 ## Before inventing further changes here
 
