@@ -26,8 +26,9 @@
       <button type="button" data-inst="guitar" aria-pressed="true">Guitar</button>
       <button type="button" data-inst="ukulele" aria-pressed="false">Ukulele</button>
     </div>
+    <button type="button" class="menubtn" id="menu-btn" aria-expanded="false" aria-controls="optbar" aria-label="Instrument setup: tuning, capo, left-handed">&#9776;</button>
   </header>
-  <div class="optbar" id="optbar" role="region" aria-label="Instrument setup">
+  <div class="optbar" id="optbar" role="region" aria-label="Instrument setup" hidden>
     <label>Tuning <select id="tuning-select"></select></label>
     <label>Capo <select id="capo-select"></select></label>
     <label class="chk"><input type="checkbox" id="lefty-toggle"> Left-handed</label>

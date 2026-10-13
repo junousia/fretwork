@@ -23,6 +23,10 @@ instSwitch.querySelectorAll('button').forEach(b => b.onclick = () => applySetup(
 tuningSel.onchange = () => applySetup({ tuning: tuningSel.value });
 capoSel.onchange = () => applySetup({ capo: +capoSel.value });
 lefty.onchange = () => applySetup({ leftHanded: lefty.checked });
+const menuBtn = /** @type {HTMLButtonElement} */ (document.getElementById('menu-btn'));
+const optbar = /** @type {HTMLElement} */ (document.getElementById('optbar'));
+menuBtn.onclick = () => { optbar.hidden = !optbar.hidden; menuBtn.setAttribute('aria-expanded', String(!optbar.hidden)); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !optbar.hidden) { menuBtn.click(); menuBtn.focus(); } });
 onInstrumentChange(syncSetupControls);
 syncSetupControls();
 

@@ -133,6 +133,9 @@ async function run(browser, origin, label) {
   assert((await page.textContent('#pr-run')).includes('Play'), `${label}: Stop turns back into Play`);
 
   // setup: tuning, capo and left-handed change the neck and travel in share links
+  assert(await page.isHidden('#optbar'), `${label}: the setup menu starts collapsed`);
+  await page.click('#menu-btn');
+  assert(await page.isVisible('#tuning-select') && (await page.getAttribute('#menu-btn', 'aria-expanded')) === 'true', `${label}: the menu button opens the setup`);
   await page.selectOption('#tuning-select', 'dadgad');
   assert((await page.$$('#pr-strip .chip')).length === 3, `${label}: the chord strip still renders in DADGAD`);
   await page.selectOption('#tuning-select', 'half-down');
@@ -152,6 +155,13 @@ async function run(browser, origin, label) {
   await tp.goto(setupUrl, { waitUntil: 'networkidle' });
   assert(await tp.inputValue('#tuning-select') === 'half-down' && await tp.inputValue('#capo-select') === '2' && await tp.isChecked('#lefty-toggle'), `${label}: opening the link restores tuning, capo and handedness`);
   await third.close();
+  // a tablet-sized window keeps the tab bar at the bottom (the side rail is for wide desktops)
+  const tab = await browser.newContext({ viewport: { width: 820, height: 1180 } });
+  const tbp = await tab.newPage();
+  await tbp.goto(origin, { waitUntil: 'networkidle' });
+  const bar = await tbp.$eval('.tabbar', el => { const r = el.getBoundingClientRect(); return { top: r.top, w: r.width, vw: innerWidth, vh: innerHeight }; });
+  assert(bar.w === bar.vw && bar.top > bar.vh / 2, `${label}: on a tablet the tab bar is a full-width bottom bar`);
+  await tab.close();
   await page.check('#lefty-toggle', { force: true }).catch(() => {});
   await page.uncheck('#lefty-toggle'); await page.selectOption('#capo-select', '0'); await page.selectOption('#tuning-select', 'standard');
 

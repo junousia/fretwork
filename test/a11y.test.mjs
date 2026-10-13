@@ -18,6 +18,7 @@ const browser = await chromium.launch();
 const states = [
   ['progressions', async p => { await p.waitForSelector('#pr-strip .vdiag'); }],
   ['progressions-position', async p => { await p.waitForSelector('#pr-posseg'); await p.click('#pr-posseg button[data-pos="3"]'); }],
+  ['progressions-menu', async p => { await p.waitForSelector('#pr-strip .vdiag'); await p.click('#menu-btn'); }],
   ['scales', async p => { await p.waitForSelector('#sc-posseg'); await p.click('#sc-posseg button[data-pos="3"]'); await p.click('#sc-arpseg button[data-k="4"]'); }],
   ['chords', async p => { await p.waitForSelector('#ch-voseg'); await p.click('#ch-voseg button[data-vo="2"]'); await p.click('.bseg button[data-f="minor"]'); }],
   ['identify', async p => { await p.waitForSelector('#view-identify rect.hit'); for (const [s, f] of [[1, 1], [3, 2], [4, 3]]) await p.click(`#view-identify rect.hit[data-s="${s}"][data-f="${f}"]`, { force: true }); await p.waitForSelector('#id-matches'); }],

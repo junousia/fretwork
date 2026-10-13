@@ -34,7 +34,7 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
   padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));
   border-bottom:1px solid var(--line);background:var(--panel)}
-.topbar .brand{font-weight:700;font-size:1.05rem;letter-spacing:-0.01em}
+.topbar .brand{margin-right:auto;font-weight:700;font-size:1.05rem;letter-spacing:-0.01em}
 .shell{display:flex;flex-direction:column;flex:1;min-height:0}
 .tabbar{display:flex;order:2;position:fixed;bottom:0;left:0;right:0;background:var(--panel);
   border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:10;margin:0}
@@ -44,7 +44,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .tabbar .tab .ic{display:block;font-size:1.3rem;line-height:1.1;margin-bottom:2px}
 .views{order:1;flex:1;min-width:0}
 .view{max-width:1000px;margin:0 auto;padding:24px 16px calc(86px + env(safe-area-inset-bottom,0px))}
-@media (min-width:760px){
+/* The side rail is for desktops (wide, mouse); tablets and phones keep the bottom bar. */
+@media (min-width:1100px) and (pointer:fine){
   .shell{flex-direction:row}
   .tabbar{position:sticky;top:0;align-self:flex-start;flex-direction:column;bottom:auto;left:auto;right:auto;
     width:188px;height:100vh;border-top:0;border-right:1px solid var(--line);padding:24px 0 0;order:1}
@@ -129,6 +130,9 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .share{font:inherit;font-size:.9rem;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
 .chip.playing{outline:3px solid #E3A21A;outline-offset:2px}
 
+.menubtn{font:inherit;font-size:1.25rem;line-height:1;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer}
+.menubtn[aria-expanded="true"]{background:var(--ink);color:var(--bg)}
+.optbar[hidden]{display:none}
 .optbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:7px 16px;font-size:.88rem;color:var(--muted);
   border-bottom:1px solid var(--line);background:var(--panel)}
 .optbar select{font:inherit;font-size:.88rem;padding:3px 6px;border:1.5px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);max-width:62vw}
