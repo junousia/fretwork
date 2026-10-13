@@ -1,7 +1,8 @@
 // The tab data model (pure, no DOM): a song is a list of 4/4 bars, each a list
 // of notes on a sixteenth-note grid. Editing functions never mutate; they return
 // a new Tab, so undo/redo is just a stack of snapshots. The tab view, the editor,
-// playback and (later) the generator and PDF export all read this one shape.
+// playback, the solo generator and (later) PDF export all read this one shape.
+import { SC } from './music.js';
 
 /** @typedef {import('./types.js').Tab} Tab */
 /** @typedef {import('./types.js').TabBar} TabBar */
@@ -95,10 +96,33 @@ export function putChord(tab, bar, at, name) {
   if (!Number.isInteger(at) || at < 0 || at >= STEPS) return tab;
   const nm = String(name).trim().slice(0, 16);
   return withBar(tab, bar, b => {
+    const old = b.chords.find(c => c.at === at);
     const rest = b.chords.filter(c => c.at !== at);
     if (!nm) return rest.length === b.chords.length ? b : { ...b, chords: rest };
-    if (rest.length >= MAX_CHORDS_PER_BAR) return b;
+    if (!old && rest.length >= MAX_CHORDS_PER_BAR) return b;
+    if (old && old.name === nm) return b;
+    // renaming a chord drops its scale/position choices: they were made for the old chord
     return { ...b, chords: [...rest, { at, name: nm }].sort((x, y) => x.at - y.at) };
+  });
+}
+
+/**
+ * Choose the scale and/or positions the generator uses over the chord marker at this step.
+ * `scale: ''` goes back to automatic; `positions: []` means every position. Changing the scale
+ * clears the positions (they are numbered per scale).
+ * @param {Tab} tab @param {number} bar @param {number} at @param {{scale?:string, positions?:number[]}} patch @returns {Tab}
+ */
+export function setChordPlan(tab, bar, at, patch) {
+  return withBar(tab, bar, b => {
+    const c = b.chords.find(x => x.at === at); if (!c) return b;
+    /** @type {TabChord} */ const next = { at: c.at, name: c.name };
+    let scale = c.scale, positions = c.positions;
+    if (patch.scale !== undefined) { const ns = patch.scale && SC[patch.scale] ? patch.scale : undefined; if (ns !== scale) { scale = ns; positions = undefined; } }
+    if (patch.positions !== undefined) positions = [...new Set(patch.positions.filter(n => Number.isInteger(n) && n >= 1 && n <= 12))].sort((x, y) => x - y).slice(0, 8);
+    if (scale) next.scale = scale;
+    if (positions && positions.length) next.positions = positions;
+    if (next.scale === c.scale && JSON.stringify(next.positions) === JSON.stringify(c.positions)) return b;
+    return { ...b, chords: b.chords.map(x => (x === c ? next : x)) };
   });
 }
 
@@ -155,7 +179,10 @@ export function normalizeTab(raw) {
   raw.bars.forEach((/** @type {any} */ b, /** @type {number} */ i) => {
     if (!b || typeof b !== 'object') return;
     if (typeof b.chord === 'string') tab = putChord(tab, i, 0, b.chord); // the old one-chord-per-bar shape
-    if (Array.isArray(b.chords)) for (const c of b.chords.slice(0, 32)) if (c && typeof c.name === 'string') tab = putChord(tab, i, c.at, c.name);
+    if (Array.isArray(b.chords)) for (const c of b.chords.slice(0, 32)) if (c && typeof c.name === 'string') {
+      tab = putChord(tab, i, c.at, c.name);
+      if (typeof c.scale === 'string' || Array.isArray(c.positions)) tab = setChordPlan(tab, i, c.at, { ...(typeof c.scale === 'string' ? { scale: c.scale } : {}), ...(Array.isArray(c.positions) ? { positions: c.positions.filter((/** @type {any} */ n) => typeof n === 'number') } : {}) });
+    }
     const notes = Array.isArray(b.notes) ? b.notes.slice(0, STEPS * 12) : [];
     for (const n of notes) {
       if (!n || typeof n !== 'object' || !Number.isInteger(n.len) || n.len < 1 || n.len > STEPS) continue;

@@ -254,7 +254,10 @@ key's blues scale throughout, tonic = the first chord); first note of a stretch 
 chord tones (the nearest other one); other notes step (58%), skip (22%), repeat, or leap (answered
 by a step back); no leap over a major sixth and no triple repeats; the last onset before a chord
 change is a scale step from a chord tone of the NEXT chord; bar-0 rhythm and shape come back in
-bars 1 and 3 of each 4; the last note is the last chord's root, held. `test/solo.test.mjs` checks
+bars 1 and 3 of each 4; the last note is the last chord's root, held. Scale/position choices live on the chord MARKER (`TabChord.scale`, `.positions`, 1-based) so they are per
+occurrence, as in Progressions: the same chord later can use another position (the solo can evolve). Renaming
+a chord drops its choices; changing the scale clears the positions. `scaleFor`/`soloContext` are shared by
+the generator and the plan panel so the preview matches what is generated. `test/solo.test.mjs` checks
 these on ~3,700 solos across all tunings, capos, styles and densities (notes in scale and position,
 >=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
 generator, not a performer: no bends, slides or feel yet.

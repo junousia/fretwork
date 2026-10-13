@@ -197,3 +197,5 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .tabtools input[type=number]{width:4.2rem;font:inherit;padding:5px 6px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
 .chordsum{margin-top:10px}
 .chordsum .bh{margin:8px 0 2px}
+.plansum{margin-top:2px}
+.plansum .board{margin-top:8px}

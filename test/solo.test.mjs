@@ -129,5 +129,41 @@ assert(sp < me && me < bu && sp >= 2 && sp <= 5 && bu >= 8, `notes per bar: spar
   assert(keyed.key.t === 2 && keyed.info.every(s => s.root === 2), 'a given key is used when no chords are named');
 }
 
+// --- choices made on a chord marker (scale, positions) are honoured, per occurrence
+{
+  const mk = (a, b) => [{ chords: [{ at: 0, name: 'A7', ...a }] }, { chords: [{ at: 0, name: 'A7', ...b }] }];
+  let checked = 0;
+  for (const inst of insts) for (const seed of [1, 2, 3]) {
+    for (const [scale, positions] of /** @type {[string, number[]][]} */ ([['dorian', [2]], ['minpent', [1, 3]], ['mixolydian', [5]], ['blues', [2, 4]]])) {
+      const r = generateSolo({ bars: mk({ scale, positions }, {}), inst, style: 'follow', density: 'busy', seed });
+      const a = r.info.filter(s => s.bar === 0), b = r.info.filter(s => s.bar === 1);
+      assert(a.every(s => s.scaleId === scale && s.root === 9), `${inst.name}: bar 0 plays the chosen ${scale}`);
+      assert(a.every(s => positions.includes(s.position)), `${inst.name}: bar 0 stays in positions ${positions} (got ${a.map(s => s.position)})`);
+      assert(b.every(s => s.scaleId !== scale || scale === 'mixolydian'), `${inst.name}: bar 1, the same chord without choices, plays its own automatic scale (${b.map(s => s.scaleId)})`);
+      r.bars[0].forEach(n => { const m = inst.midi[n.s] + n.f; assert(a[0].scalePcs.includes(m % 12), `${inst.name}: bar 0 note ${m} is in ${scale}`); assert(a[0].frets[n.s].has(n.f), `${inst.name}: bar 0 note is inside the chosen position`); });
+      checked++;
+    }
+  }
+  // positions are really restricted: every position the generator reports is one of the allowed ones whenever that position exists
+  const guitar = std;
+  for (let k = 1; k <= 5; k++) for (const seed of [1, 2, 3, 4]) {
+    const r = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent', positions: [k] }] }], inst: guitar, style: 'follow', density: 'medium', seed });
+    assert(r.info.every(s => s.position === k), `minor pentatonic restricted to position ${k} reports position ${r.info.map(s => s.position)}`);
+  }
+  // two occurrences of one chord can be played differently (the solo can evolve)
+  const evo = generateSolo({ bars: mk({ scale: 'minpent', positions: [1] }, { scale: 'minpent', positions: [4] }), inst: std, style: 'follow', density: 'medium', seed: 3 });
+  assert(evo.info[0].position === 1 && evo.info[1].position === 4, 'the same chord can use a different position the second time');
+  const fretsOf = bar => evo.bars[bar].map(n => n.f);
+  assert(Math.min(...fretsOf(1)) > Math.min(...fretsOf(0)) || Math.max(...fretsOf(1)) > Math.max(...fretsOf(0)), 'the second occurrence really moves up the neck');
+  // junk choices are ignored
+  const junk = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'nope', positions: [99, -1] }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
+  assert(junk.info[0].scaleId && junk.bars[0].length > 0, 'an unknown scale or position falls back to automatic');
+  // same chord, same choices, back to back in one bar: one stretch; different choices: two
+  const same = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent' }, { at: 8, name: 'Am', scale: 'minpent' }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
+  const diff = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent' }, { at: 8, name: 'Am', scale: 'aeolian' }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
+  assert(same.info.length === 1 && diff.info.length === 2 && diff.info[1].scaleId === 'aeolian', 'identical neighbouring markers are one stretch; different choices start a new one');
+  console.log(`marker choices: ${checked} cases checked`);
+}
+
 console.log(failures ? `${failures} FAILED` : 'solo: all passed');
 process.exit(failures ? 1 : 0);

@@ -138,6 +138,25 @@ async function run(browser, origin, label) {
   await page.click('#tb-gen-new');
   assert((await frets()) !== g1 && (await page.inputValue('#tb-seed')) !== '4242', `${label}: Another one gives a different solo and a new seed`);
   assert((await page.textContent('#tb-genmsg')).includes('Seed'), `${label}: the seed is shown`);
+  // per chord occurrence: scale and position choices for the chord under the cursor
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="2"]');
+  const planText = () => page.textContent('#tb-planfold > summary');
+  assert((await planText()).includes('A7 (bar 1, beat 1)'), `${label}: the plan panel names the chord occurrence under the cursor (${await planText()})`);
+  assert((await page.$$('#tb-planboard svg circle')).length > 10, `${label}: the plan panel shows the scale on a fretboard`);
+  await page.selectOption('#tb-planscale', 'minpent');
+  await page.click('#tb-planpos button[data-pos="2"]');
+  assert((await planText()).includes('position 2') && (await page.getAttribute('#tb-planpos button[data-pos="2"]', 'aria-pressed')) === 'true', `${label}: picking a position is shown (${await planText()})`);
+  const dimmed = await page.$$eval('#tb-planboard svg circle[r="12.5"][opacity]', c => c.length);
+  assert(dimmed > 0, `${label}: notes outside the chosen position are dimmed on the strip`);
+  await page.click('#tb-surface .tabhit[data-bar="1"][data-at="0"][data-s="2"]');
+  assert(!/position \d/.test(await planText()) && (await planText()).includes('bar 2'), `${label}: the same chord later in the song keeps its own (automatic) choices`);
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="2"]');
+  await page.click('#tb-gen-go');
+  const inPos = await page.$$eval('#tb-surface .fret[data-bar="0"]', e => e.length);
+  assert(inPos > 2 && (await planText()).includes('position 2'), `${label}: generating keeps the choices (${inPos} notes in bar 1)`);
+  await page.click('#tb-planpos button[data-pos="all"]');
+  assert(!/position \d/.test(await planText()), `${label}: All clears the position choice`);
+  await page.click('#tb-undo');
   await page.click('#tb-undo'); await page.click('#tb-undo');
   assert((await frets()) !== '' , `${label}: undo steps back through generated solos`);
   await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
