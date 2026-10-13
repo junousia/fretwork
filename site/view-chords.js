@@ -1,12 +1,12 @@
 import { CHORDS, SHARP, spell, esc, chordLabel } from './music.js';
 import { FEATURE_GROUPS, chordFeatures } from './chord-features.js';
-import { board } from './board.js';
+import { board, fitBoard, setsSpan, voicingSpan } from './board.js';
 import { play } from './audio.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { arpeggioAround, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { playNotes } from './player.js';
 import { tabOf } from './share.js';
-import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
+import { loadVoicings, getVoicings, voicingGallery } from './voicings.js';
 
 const STORE_KEY = 'gtr-chords-v1';
 
@@ -38,8 +38,12 @@ export function mount(root){
       <p class="lead">Pick a root and a chord. See every occurrence of its tones across the whole neck, and hear it played.</p>
     </header>
     <section>
-      <label class="big">Root</label>
+      <label class="big desk">Root</label>
       <nav class="rootpicker" id="ch-roots" aria-label="Root note"></nav>
+      <div class="row phoneonly">
+        <label class="keylab">Root <select id="ch-rootsel"></select></label>
+        <label class="keylab">Chord <select id="ch-typesel"></select></label>
+      </div>
     </section>
     <section id="ch-detail"></section>
   `;
@@ -72,6 +76,14 @@ export function mount(root){
     state.root = +b.dataset.r; state.voicing = 'all'; save(); render();
   });
 
+  const rootSel = root.querySelector('#ch-rootsel'), typeSel = root.querySelector('#ch-typesel');
+  rootSel.innerHTML = SHARP.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join('');
+  typeSel.innerHTML = SUFFIXES.map(suf => `<option value="${esc(suf)}">${esc(labelFor(suf))}</option>`).join('');
+  rootSel.onchange = () => { state.root = +rootSel.value; state.voicing = 'all'; save(); render(); };
+  typeSel.onchange = () => { state.suffix = typeSel.value; state.voicing = 'all'; save(); render(); };
+  // The builder starts folded on phones (it is long) and open where there is room.
+  let builderOpen = matchMedia('(min-width:760px)').matches;
+
   let loaded = false;
   loadVoicings().then(() => { loaded = true; render(); });
 
@@ -81,7 +93,7 @@ export function mount(root){
       const off = !sel.includes(id) && !matching(toggled(sel, id)).length;
       return `<button type="button" data-f="${esc(id)}" aria-pressed="${sel.includes(id)}"${off ? ' disabled' : ''}>${esc(lab)}</button>`;
     }).join('')}</div></div>`).join('');
-    return `<div class="builder">${groups}<div class="brow"><button type="button" class="bclear" id="ch-bclear"${sel.length ? '' : ' disabled'}>Clear</button><span class="bcount">${sel.length ? `${n} chord type${n === 1 ? '' : 's'} match` : 'Toggle to build a chord - the list below narrows as you go.'}</span></div></div>`;
+    return `<details class="fold" id="ch-builder"${builderOpen ? ' open' : ''}><summary>Build a chord${sel.length ? ` <span class="bcount">\u00b7 ${sel.length} filter${sel.length === 1 ? '' : 's'}, ${n} match${n === 1 ? '' : 'es'}</span>` : ''}</summary><div class="builder">${groups}<div class="brow"><button type="button" class="bclear" id="ch-bclear"${sel.length ? '' : ' disabled'}>Clear</button><span class="bcount">${sel.length ? `${n} chord type${n === 1 ? '' : 's'} match` : 'Toggle to build a chord - the list below narrows as you go.'}</span></div></div></details>`;
   }
   function applyBuilder(sel){
     state.builder = sel;
@@ -90,8 +102,11 @@ export function mount(root){
     save(); render();
   }
 
+  let refit = () => {};
+  root.addEventListener('fw-shown', () => refit());
   function render(){
     rootsEl.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.r === state.root)));
+    rootSel.value = String(state.root); typeSel.value = state.suffix;
     const iv = CHORDS[state.suffix] || CHORDS[''];
     const name = spell(state.root, false) + (state.suffix === '' ? '' : state.suffix);
     const chord = { root: state.root, iv, name };
@@ -109,18 +124,12 @@ export function mount(root){
     const showArp = !!vo && state.arp;
     if(vo && showArp){ boardOpts.voicingRing = vo; boardOpts.brightSets = arpSets; }
     else if(vo){ boardOpts.voicing = vo; boardOpts.fingerLabels = state.labels === 'fingers'; }
-    /** @type {('all'|number)[]} */
-    const voChoices = ['all', ...voicings.map((_, i) => i + 1)];
-    const voBtns = voChoices.map(v =>
-      `<button type="button" data-vo="${v}" title="${v === 'all' ? 'Every chord tone on the neck' : esc(voicingLabel(voicings[v - 1]))}" aria-pressed="${state.voicing === v}">${v === 'all' ? 'All' : v}</button>`).join('');
     const voRow = voicings.length
-      ? `<div class="row"><label class="keylab">Voicing <div class="seg" id="ch-voseg" role="group" aria-label="Chord voicing">${voBtns}</div></label>
-          ${vo ? `<span class="vometa">${esc(voicingLabel(vo))}${vo.b ? ' \u00b7 barre' : ''}</span>
-          <label class="chk"><input type="checkbox" id="ch-arp"${state.arp ? ' checked' : ''}> Arpeggio shape</label>
-          <button type="button" class="share" id="ch-arpplay">Play arpeggio</button>` : ''}</div>
-         ${vo ? `<div class="vobig">${voicingDiagram(vo, { size: 1.8, mirror: inst.leftHanded })}</div>` : ''}`
+      ? `<h3 class="vh">Voicings <span class="hint">tap one to show it on the neck</span></h3>${voicingGallery(voicings, state.voicing === 'all' ? -1 : state.voicing - 1, { id: 'ch-voseg', base: 1, mirror: inst.leftHanded })}
+         ${vo ? `<div class="row"><label class="chk"><input type="checkbox" id="ch-arp"${state.arp ? ' checked' : ''}> Arpeggio shape</label>
+          <button type="button" class="share" id="ch-arpplay">Play arpeggio</button></div>` : ''}`
       : (loaded ? `<p class="hint">No stored fingering for this chord in this tuning - the neck shows every chord tone.</p>` : '');
-    let h = `<h2 class="bh">Build a chord</h2>${builderHtml()}
+    let h = `${builderHtml()}
       <div class="chordhead"><h2>${esc(spell(state.root, false))} ${esc(labelFor(state.suffix))}</h2><p>Tones ${esc(iv.map(x => spell(state.root + x, false)).join(' '))}</p></div>
       <div class="boardbar"><div class="scaletitle">${esc(name)}</div>
         <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
@@ -144,7 +153,15 @@ export function mount(root){
     const bc = detail.querySelector('#ch-bclear'); if(bc) bc.onclick = () => applyBuilder([]);
     detail.querySelectorAll('.srow').forEach(b => b.onclick = () => { state.suffix = b.dataset.suf; state.voicing = 'all'; save(); render(); });
     detail.querySelectorAll('.seg button[data-l]').forEach(b => b.onclick = () => { state.labels = b.dataset.l; save(); render(); });
-    detail.querySelectorAll('#ch-voseg button').forEach(b => b.onclick = () => { const v = b.dataset.vo; state.voicing = v === 'all' ? 'all' : +v; if(v !== 'all' && state.labels === 'notes') state.labels = 'fingers'; save(); render(); });
+    detail.querySelectorAll('#ch-voseg button').forEach(b => b.onclick = () => {
+      const v = +b.dataset.vo;
+      state.voicing = state.voicing === v ? 'all' : v; // tapping the chosen one again clears it
+      if(state.voicing !== 'all' && state.labels === 'notes') state.labels = 'fingers';
+      save(); render();
+    });
+    const fb = detail.querySelector('#ch-builder'); if(fb) fb.addEventListener('toggle', () => { builderOpen = fb.open; });
+    const span = boardOpts.brightSets ? setsSpan(boardOpts.brightSets) : vo ? voicingSpan(vo) : null;
+    refit = () => fitBoard(detail.querySelector('.board'), span, inst.leftHanded); refit();
     const ca = detail.querySelector('#ch-arp'); if(ca) ca.onchange = () => { state.arp = ca.checked; save(); render(); };
     const cap = detail.querySelector('#ch-arpplay'); if(cap) cap.onclick = () => playNotes(upAndDown(arpeggioNotes(arpSets, inst)));
     detail.querySelector('#ch-play').onclick = () => play(chord, { iv }, getInstrument().audioOffset, null, vo ? vo.f.map((f, j) => f >= 0 ? inst.midi[j] + f : null).filter(m => m !== null) : null);

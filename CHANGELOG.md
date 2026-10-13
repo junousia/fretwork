@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Phones: less scrolling to reach the fretboard. Intro text is hidden, root / chord / scale are
+  drop-downs, the chord builder and tempo options are folds, and the examples are merged into one
+  "Load" menu with the common progressions.
+- Choosing a scale position or voicing now scrolls the neck so it is on screen.
+- Voicings are shown as a row of chord boxes (all at once); the one you pick is highlighted on the
+  neck and, in Progressions, used by the chord strip and playback.
+- The white ring marking a voicing is smaller so it no longer covers notes on neighbouring strings.
+
 - Layout: the desktop side rail is now a slim 84px column with the tabs grouped at the top; tablets keep the bottom tab bar (the side rail is only for wide mouse-driven screens), and
   tuning / capo / left-handed moved behind a menu button so they take no screen space until needed.
 

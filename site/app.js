@@ -53,6 +53,7 @@ function route(){
   const active = currentTab() || 'progressions';
   ensureMounted(active);
   TABS.forEach(id => { views[id].hidden = id !== active; });
+  views[active].dispatchEvent(new Event('fw-shown')); // views re-centre their fretboard now that it has a width
   document.querySelectorAll('.tab').forEach(a => {
     a.setAttribute('aria-current', /** @type {HTMLElement} */ (a).dataset.tab === active ? 'page' : 'false');
   });

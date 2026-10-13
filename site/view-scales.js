@@ -1,6 +1,6 @@
 import { SCALES, SHARP, spell, esc } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
-import { board } from './board.js';
+import { board, fitBoard } from './board.js';
 import { play } from './audio.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { degreeChord, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
@@ -22,8 +22,12 @@ export function mount(root){
       <p class="lead">Pick a root and a scale. See it laid out on the neck, with the root and the scale's own triad picked out, and hear it played.</p>
     </header>
     <section>
-      <label class="big">Root</label>
+      <label class="big desk">Root</label>
       <nav class="rootpicker" id="sc-roots" aria-label="Root note"></nav>
+      <div class="row phoneonly">
+        <label class="keylab">Root <select id="sc-rootsel"></select></label>
+        <label class="keylab">Scale <select id="sc-scalesel"></select></label>
+      </div>
     </section>
     <section id="sc-detail"></section>
   `;
@@ -45,9 +49,18 @@ export function mount(root){
     state.root = +b.dataset.r; save(); render();
   });
 
+  const rootSel = root.querySelector('#sc-rootsel'), scaleSel = root.querySelector('#sc-scalesel');
+  rootSel.innerHTML = SHARP.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join('');
+  scaleSel.innerHTML = SCALES.map(sc => `<option value="${esc(sc.id)}">${esc(sc.name)}</option>`).join('');
+  rootSel.onchange = () => { state.root = +rootSel.value; save(); render(); };
+  scaleSel.onchange = () => { state.scaleId = scaleSel.value; save(); render(); };
+
+  let refit = () => {};
+  root.addEventListener('fw-shown', () => refit());
   function render(){
     rootsEl.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.r === state.root)));
     const scale = SCALES.find(s => s.id === state.scaleId) || SCALES[0];
+    rootSel.value = String(state.root); scaleSel.value = scale.id;
     const triad = triadFromScale(scale);
     let chord = { root: state.root, iv: triad, name: spell(state.root, false) };
     let sug = { s: scale };
@@ -111,6 +124,7 @@ export function mount(root){
     detail.querySelectorAll('#sc-arpseg button').forEach(b => b.onclick = () => { state.arp = b.dataset.k === 'none' ? null : +b.dataset.k; save(); render(); });
     const sev = detail.querySelector('#sc-sev'); if(sev) sev.onchange = () => { state.sev = sev.checked; save(); render(); };
     const ap = detail.querySelector('#sc-arpplay'); if(ap) ap.onclick = () => playNotes(upAndDown(arpNotes));
+    refit = () => fitBoard(detail.querySelector('.board'), boardOpts.dimRange, inst.leftHanded); refit();
     detail.querySelector('#sc-play').onclick = () => play(chord, scale, inst.audioOffset, runNotes);
   }
 
