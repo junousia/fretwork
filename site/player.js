@@ -63,3 +63,40 @@ export function startProgression(opts) {
   schedule();
   return { stop: finish };
 }
+
+// Plays a tab: its notes on the sixteenth-note grid, optionally the bar chords
+// strummed on beat 1 and a click on every beat. opts: {events:[{step,dur,midi}],
+// chords:[{step,midi:[...]}], totalSteps, stepSec, loop, metronome, onStep(step|-1), onEnd()}.
+// Returns {stop()}.
+export function startTab(opts) {
+  const ac = audioContext();
+  if (!ac || !opts.totalSteps) return { stop() {} };
+  const { stepSec, totalSteps } = opts;
+  /** @type {Map<number, {dur:number, midi:number}[]>} */
+  const byStep = new Map();
+  for (const e of opts.events) byStep.set(e.step, [...(byStep.get(e.step) || []), e]);
+  const chordAt = new Map(opts.chords.map(c => [c.step, c.midi]));
+  const t0 = ac.currentTime + 0.1;
+  let next = 0, timer = null, stopped = false;
+  const finish = () => {
+    if (stopped) return;
+    stopped = true; clearInterval(timer);
+    opts.onStep(-1); opts.onEnd && opts.onEnd();
+  };
+  const schedule = () => {
+    const horizon = ac.currentTime + LOOKAHEAD - t0;
+    while (next * stepSec < horizon) {
+      if (!opts.loop && next >= totalSteps) { if (ac.currentTime >= t0 + totalSteps * stepSec + 0.3) finish(); return; }
+      const step = next % totalSteps, at = t0 + next * stepSec;
+      if (opts.metronome && step % 4 === 0) click(ac, at, step % 16 === 0);
+      const chord = chordAt.get(step);
+      if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.03, Math.min(3, 16 * stepSec), 0.07));
+      for (const e of byStep.get(step) || []) note(mtof(e.midi), at, Math.max(0.12, Math.min(3, e.dur * stepSec)), 0.16);
+      setTimeout(() => { if (!stopped) opts.onStep(step); }, Math.max(0, (at - ac.currentTime) * 1000));
+      next++;
+    }
+  };
+  timer = setInterval(schedule, TICK_MS);
+  schedule();
+  return { stop: finish };
+}

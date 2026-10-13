@@ -29,6 +29,10 @@ no build step, no accounts, no tracking.
 - **Chord identifier** - mark notes on the fretboard (click frets, or pick a fret per string) and
   get every chord that fits, best first, with slash chords and any omitted tones ("without the
   5th"); play it, or open a match in the Chords tab.
+- **Tab editor** - write a riff or solo as tab: click a spot, type the fret, pick note lengths
+  (1/16 to a whole note, dotted too), name a chord per bar, undo/redo. It plays back with the bar
+  chords and a click, keeps a separate tab per instrument, saves in the browser, and copies as plain
+  ASCII tab.
 - **Arpeggios** - on any seven-note scale pick a chord stacked on a degree (I, ii ... vii, with
   optional 7ths) and see its arpeggio inside the chosen position; on a chord fingering, switch on the
   *arpeggio shape* to see every chord tone in its fret window. Both can be played.

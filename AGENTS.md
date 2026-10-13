@@ -18,6 +18,7 @@ All plain ES modules in `site/` (no build). Dependencies point one way (`music.j
 | `chord-features.js` | chord-builder features derived from intervals |
 | `arpeggio.js` | degree chords, arpeggios in positions / around fingerings |
 | `identify.js` | chord identification from marked notes (pure): `identifyChord`, `marksToNotes` |
+| `tab.js` / `tab-view.js` | tab data model + editing rules (pure) / the tab SVG and its geometry |
 | `board.js` | the fretboard SVG (positions, fingerings, capo, left-handed mirror) |
 | `voicings.js` | chord fingering data lookup (incl. reuse in other tunings) and chord boxes |
 | `instrument.js` | setup: instrument, tuning, capo, handedness |
@@ -226,6 +227,20 @@ those are allowed. Re-run the build only if updating the dataset.
   practices >= 0.9, SEO >= 0.9; currently all 1.0) and CodeQL.
 - **Performance rule:** only the visible tab is mounted at startup (`ensureMounted` in `app.js`);
   mounting all three cost ~300 ms of blocking time and doubled the DOM. Keep new views lazy.
+
+## Tab editor (Tab tab)
+
+`tab.js` is the single model every tab feature uses (editor, playback, and later the solo generator
+and PDF export): a `Tab` is bars of 16 sixteenth-note steps; a `TabNote` is `{at, len, s, f}` (string 0
+= top string, fret counts from the capo). All edits are pure functions returning a new Tab, so undo
+is a stack of snapshots (`createHistory`). A string rings one note at a time: `putNote` shortens the
+earlier note and clips the new one. Never trust stored/shared data: run it through `normalizeTab`.
+Pitch is `inst.midi[s] + f`, so tuning and capo come for free. `tab-view.js` draws the SVG (CSS
+classes `tab*`, so dark mode and printing work) and exports the geometry (`stepPos`) the editor uses
+for the cursor and playhead. Typing: a digit places a note at the cursor, a second digit within
+700 ms extends it (1 then 2 = fret 12, one undo step), then the cursor advances by the note length.
+Tests: `test/tab.test.mjs` (model, validation, exact text export, rendering), the `tab-riff` golden,
+and the Tab section of the e2e test.
 
 ## Chord identifier (Identify tab)
 

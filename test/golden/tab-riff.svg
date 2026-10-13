@@ -1,0 +1,54 @@
+<svg class="tabsvg" width="636" height="162" viewBox="0 0 636 162" role="img" aria-label="Tab, 2 bars">
+<text class="tabname" x="20" y="26" text-anchor="end" font-size="11">e</text>
+<text class="tabname" x="20" y="42" text-anchor="end" font-size="11">B</text>
+<text class="tabname" x="20" y="58" text-anchor="end" font-size="11">G</text>
+<text class="tabname" x="20" y="74" text-anchor="end" font-size="11">D</text>
+<text class="tabname" x="20" y="90" text-anchor="end" font-size="11">A</text>
+<text class="tabname" x="20" y="106" text-anchor="end" font-size="11">E</text>
+<line class="tabline" x1="26" y1="22" x2="634" y2="22"/>
+<line class="tabline" x1="26" y1="38" x2="634" y2="38"/>
+<line class="tabline" x1="26" y1="54" x2="634" y2="54"/>
+<line class="tabline" x1="26" y1="70" x2="634" y2="70"/>
+<line class="tabline" x1="26" y1="86" x2="634" y2="86"/>
+<line class="tabline" x1="26" y1="102" x2="634" y2="102"/>
+<line class="tabbar" x1="26" y1="22" x2="26" y2="102"/>
+<line class="tabbar" x1="330" y1="22" x2="330" y2="102"/>
+<line class="tabbar" x1="634" y1="22" x2="634" y2="102"/>
+<line class="tabbeat" x1="106" y1="18" x2="106" y2="106"/>
+<line class="tabbeat" x1="178" y1="18" x2="178" y2="106"/>
+<line class="tabbeat" x1="250" y1="18" x2="250" y2="106"/>
+<text class="tabchord" x="30" y="14" font-size="13" font-weight="700">Em</text>
+<line class="tabstem" x1="43" y1="114" x2="43" y2="132"/>
+<line class="tabstem" x1="43" y1="132" x2="49" y2="128"/>
+<line class="tabstem" x1="79" y1="114" x2="79" y2="132"/>
+<line class="tabstem" x1="79" y1="132" x2="85" y2="128"/>
+<line class="tabstem" x1="115" y1="114" x2="115" y2="132"/>
+<line class="tabstem" x1="187" y1="114" x2="187" y2="132"/>
+<line class="tabstem" x1="187" y1="132" x2="193" y2="128"/>
+<circle class="tabdot" cx="192" cy="133" r="1.5"/>
+<line class="tabstem" x1="241" y1="114" x2="241" y2="132"/>
+<line class="tabstem" x1="241" y1="132" x2="247" y2="128"/>
+<line class="tabstem" x1="241" y1="128" x2="247" y2="124"/>
+<line class="tabstem" x1="259" y1="114" x2="259" y2="132"/>
+<rect class="tabfretbg" x="37.5" y="95" width="11" height="14"/>
+<text class="fret" data-bar="0" data-at="0" data-s="5" x="43" y="106" text-anchor="middle" font-size="12" font-weight="600">0</text>
+<rect class="tabfretbg" x="73.5" y="95" width="11" height="14"/>
+<text class="fret" data-bar="0" data-at="2" data-s="5" x="79" y="106" text-anchor="middle" font-size="12" font-weight="600">3</text>
+<rect class="tabfretbg" x="109.5" y="79" width="11" height="14"/>
+<text class="fret" data-bar="0" data-at="4" data-s="4" x="115" y="90" text-anchor="middle" font-size="12" font-weight="600">0</text>
+<rect class="tabfretbg" x="181.5" y="63" width="11" height="14"/>
+<text class="fret" data-bar="0" data-at="8" data-s="3" x="187" y="74" text-anchor="middle" font-size="12" font-weight="600">2</text>
+<rect class="tabfretbg" x="235.5" y="47" width="11" height="14"/>
+<text class="fret" data-bar="0" data-at="11" data-s="2" x="241" y="58" text-anchor="middle" font-size="12" font-weight="600">0</text>
+<rect class="tabfretbg" x="250" y="15" width="18" height="14"/>
+<text class="fret" data-bar="0" data-at="12" data-s="0" x="259" y="26" text-anchor="middle" font-size="12" font-weight="600">12</text>
+<line class="tabbeat" x1="410" y1="18" x2="410" y2="106"/>
+<line class="tabbeat" x1="482" y1="18" x2="482" y2="106"/>
+<line class="tabbeat" x1="554" y1="18" x2="554" y2="106"/>
+<text class="tabchord" x="334" y="14" font-size="13" font-weight="700">C</text>
+<rect class="tabcursor" x="482" y="30" width="18" height="16" rx="3"/>
+<line class="tabstem" x1="347" y1="114" x2="347" y2="132"/>
+<circle class="tabring" cx="347" cy="136" r="3"/>
+<rect class="tabfretbg" x="341.5" y="31" width="11" height="14"/>
+<text class="fret" data-bar="1" data-at="0" data-s="1" x="347" y="42" text-anchor="middle" font-size="12" font-weight="600">3</text>
+</svg>
