@@ -27,6 +27,9 @@ async function run(browser, origin, label) {
   assert((await page.title()).startsWith('Fretwork'), `${label}: title is branded Fretwork`);
   assert((await page.textContent('.brand')) === 'Fretwork', `${label}: brand text`);
 
+  // only the visible tab is built at startup (performance), the others on first visit
+  assert(await page.evaluate(() => document.querySelector('#view-progressions').children.length > 0 && document.querySelector('#view-scales').children.length === 0 && document.querySelector('#view-chords').children.length === 0), `${label}: only the visible tab is mounted at startup`);
+
   // service worker takes control
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload({ waitUntil: 'networkidle' });

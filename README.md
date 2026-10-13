@@ -4,6 +4,10 @@ Scales, chords and chord progressions on the fretboard, for guitar and ukulele.
 A small installable web app that works offline - vanilla JavaScript, no framework,
 no build step, no accounts, no tracking.
 
+[![CI](https://github.com/junousia/fretwork/actions/workflows/ci.yml/badge.svg)](https://github.com/junousia/fretwork/actions/workflows/ci.yml)
+[![Pages](https://github.com/junousia/fretwork/actions/workflows/pages.yml/badge.svg)](https://junousia.github.io/fretwork/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Live:** https://junousia.github.io/fretwork/
 
 ![Chord progression with scale position and chord voicing](docs/screenshots/progressions.png)
@@ -52,9 +56,11 @@ or `docker build -t fretwork . && docker run -p 8000:8000 fretwork`.
 
 ```sh
 npm install                       # only needed for the browser test (Playwright)
-npm test                          # theory + shipped-site checks (plain Node, fast)
+npm test                          # theory, arpeggios, tunings, SVG goldens, shipped site (plain Node, fast)
 npx playwright install chromium   # once
 npm run test:e2e                  # real-browser smoke test incl. offline + subpath
+npm run test:a11y                 # axe accessibility (light/dark, desktop/phone) + PWA installability
+npm run test:golden:update        # after an intentional visual change: regenerate, then review the diff
 ```
 
 Everything lives in `site/` as ES modules; there is nothing to compile. See

@@ -28,9 +28,15 @@ const TABS = ['progressions', 'scales', 'chords'];
 const views = {};
 TABS.forEach(id => { views[id] = document.getElementById('view-' + id); });
 
-mountProgressions(views.progressions);
-mountScales(views.scales);
-mountChords(views.chords);
+// Each tab is built the first time it is shown, so startup only pays for the
+// visible one (the others would add ~1,000 DOM nodes and lots of main-thread work).
+const mounters = { progressions: mountProgressions, scales: mountScales, chords: mountChords };
+const mounted = new Set();
+function ensureMounted(id){
+  if(mounted.has(id)) return;
+  mounted.add(id);
+  mounters[id](views[id]);
+}
 
 function currentTab(){
   const h = tabOf(location.hash);
@@ -38,6 +44,7 @@ function currentTab(){
 }
 function route(){
   const active = currentTab() || 'progressions';
+  ensureMounted(active);
   TABS.forEach(id => { views[id].hidden = id !== active; });
   document.querySelectorAll('.tab').forEach(a => {
     a.setAttribute('aria-current', a.dataset.tab === active ? 'page' : 'false');
