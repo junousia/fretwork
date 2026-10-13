@@ -6,17 +6,19 @@
 /** @typedef {import('./types.js').Tab} Tab */
 /** @typedef {import('./types.js').TabBar} TabBar */
 /** @typedef {import('./types.js').TabNote} TabNote */
+/** @typedef {import('./types.js').TabChord} TabChord */
 
 export const STEPS = 16;          // sixteenth notes per bar (4/4)
 export const MAX_FRET = 24;
 export const MAX_BARS = 64;
+export const MAX_CHORDS_PER_BAR = 8;
 /** Note lengths on offer, in steps: 1/16, 1/8, dotted 1/8, 1/4, dotted 1/4, 1/2, dotted 1/2, whole. */
 export const LENGTHS = [1, 2, 3, 4, 6, 8, 12, 16];
 export const LENGTH_NAMES = ['1/16', '1/8', '1/8.', '1/4', '1/4.', '1/2', '1/2.', '1'];
 
 /** @param {number} [nBars] @returns {Tab} */
 export function emptyTab(nBars = 4) {
-  return { title: '', bpm: 90, bars: Array.from({ length: nBars }, () => ({ chord: '', notes: [] })) };
+  return { title: '', bpm: 90, bars: Array.from({ length: nBars }, () => ({ chords: [], notes: [] })) };
 }
 
 /** @param {TabNote[]} notes @returns {TabNote[]} notes in time order (then top string first) */
@@ -25,7 +27,8 @@ const ordered = notes => [...notes].sort((a, b) => a.at - b.at || a.s - b.s);
 /** Replace one bar. @param {Tab} tab @param {number} bar @param {(b:TabBar) => TabBar} fn @returns {Tab} */
 function withBar(tab, bar, fn) {
   if (!tab.bars[bar]) return tab;
-  return { ...tab, bars: tab.bars.map((b, i) => (i === bar ? fn(b) : b)) };
+  const next = fn(tab.bars[bar]);
+  return next === tab.bars[bar] ? tab : { ...tab, bars: tab.bars.map((b, i) => (i === bar ? next : b)) };
 }
 
 /** The note that starts exactly here, if any. @type {(tab:Tab, bar:number, at:number, s:number) => TabNote|undefined} */
@@ -73,7 +76,7 @@ export function setLength(tab, bar, at, s, len) {
 export function addBar(tab, index = tab.bars.length) {
   if (tab.bars.length >= MAX_BARS) return tab;
   const at = Math.max(0, Math.min(index, tab.bars.length));
-  const bars = [...tab.bars]; bars.splice(at, 0, { chord: '', notes: [] });
+  const bars = [...tab.bars]; bars.splice(at, 0, { chords: [], notes: [] });
   return { ...tab, bars };
 }
 
@@ -83,8 +86,38 @@ export function removeBar(tab, index) {
   return { ...tab, bars: tab.bars.filter((_, i) => i !== index) };
 }
 
-/** @param {Tab} tab @param {number} bar @param {string} chord @returns {Tab} */
-export const setChord = (tab, bar, chord) => withBar(tab, bar, b => ({ ...b, chord: String(chord).trim().slice(0, 16) }));
+/**
+ * Place a chord name at a step of a bar (it holds until the next marker). An empty name
+ * removes the marker at that step.
+ * @param {Tab} tab @param {number} bar @param {number} at @param {string} name @returns {Tab}
+ */
+export function putChord(tab, bar, at, name) {
+  if (!Number.isInteger(at) || at < 0 || at >= STEPS) return tab;
+  const nm = String(name).trim().slice(0, 16);
+  return withBar(tab, bar, b => {
+    const rest = b.chords.filter(c => c.at !== at);
+    if (!nm) return rest.length === b.chords.length ? b : { ...b, chords: rest };
+    if (rest.length >= MAX_CHORDS_PER_BAR) return b;
+    return { ...b, chords: [...rest, { at, name: nm }].sort((x, y) => x.at - y.at) };
+  });
+}
+
+/** The chord marker exactly at this step, if any. @param {Tab} tab @param {number} bar @param {number} at @returns {TabChord|undefined} */
+export const chordAt = (tab, bar, at) => tab.bars[bar]?.chords.find(c => c.at === at);
+
+/** Every chord marker in time order, with its step counted from the start. @param {Tab} tab @returns {{bar:number, at:number, step:number, name:string}[]} */
+export const chordTimeline = tab => tab.bars.flatMap((b, bar) => b.chords.map(c => ({ bar, at: c.at, step: bar * STEPS + c.at, name: c.name })));
+
+/** The distinct chord names used, in order of first appearance. @param {Tab} tab @returns {string[]} */
+export const chordsUsed = tab => [...new Set(chordTimeline(tab).map(c => c.name))];
+
+/** Choose which stored fingering (0-based) a chord uses. @param {Tab} tab @param {string} name @param {number} index @returns {Tab} */
+export function setVoicing(tab, name, index) {
+  if (!Number.isInteger(index) || index < 0 || index > 99) return tab;
+  const voicings = { ...(tab.voicings || {}) };
+  if (index === 0) delete voicings[name]; else voicings[name] = index;
+  return { ...tab, voicings };
+}
 
 /** @param {Tab} tab @param {any} bpm @returns {Tab} */
 export const setBpm = (tab, bpm) => ({ ...tab, bpm: Math.min(220, Math.max(40, Math.round(+bpm) || 90)) });
@@ -117,17 +150,21 @@ export const stepSeconds = bpm => 60 / bpm / 4;
  */
 export function normalizeTab(raw) {
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.bars) || !raw.bars.length || raw.bars.length > MAX_BARS) return null;
-  let tab = { title: typeof raw.title === 'string' ? raw.title.slice(0, 80) : '', bpm: 90, bars: raw.bars.map((/** @type {any} */ _) => ({ chord: '', notes: /** @type {TabNote[]} */ ([]) })) };
+  let tab = { title: typeof raw.title === 'string' ? raw.title.slice(0, 80) : '', bpm: 90, bars: raw.bars.map((/** @type {any} */ _) => ({ chords: /** @type {TabChord[]} */ ([]), notes: /** @type {TabNote[]} */ ([]) })) };
   tab = setBpm(tab, raw.bpm);
   raw.bars.forEach((/** @type {any} */ b, /** @type {number} */ i) => {
     if (!b || typeof b !== 'object') return;
-    tab = setChord(tab, i, typeof b.chord === 'string' ? b.chord : '');
+    if (typeof b.chord === 'string') tab = putChord(tab, i, 0, b.chord); // the old one-chord-per-bar shape
+    if (Array.isArray(b.chords)) for (const c of b.chords.slice(0, 32)) if (c && typeof c.name === 'string') tab = putChord(tab, i, c.at, c.name);
     const notes = Array.isArray(b.notes) ? b.notes.slice(0, STEPS * 12) : [];
     for (const n of notes) {
       if (!n || typeof n !== 'object' || !Number.isInteger(n.len) || n.len < 1 || n.len > STEPS) continue;
       tab = putNote(tab, i, n.at, n.s, n.f, n.len);
     }
   });
+  if (raw.voicings && typeof raw.voicings === 'object') {
+    for (const [name, idx] of Object.entries(raw.voicings).slice(0, 64)) if (typeof idx === 'number') tab = setVoicing(tab, name.slice(0, 16), idx);
+  }
   return tab;
 }
 
@@ -173,9 +210,14 @@ export function tabToText(tab, midi) {
   if (tab.title) lines.push(tab.title, '');
   for (let first = 0; first < tab.bars.length; first += perLine) {
     const group = tab.bars.slice(first, first + perLine);
-    let chords = ' '.repeat(pad + 1);
-    group.forEach(b => { chords += (b.chord || '').slice(0, barLen).padEnd(barLen + 1); });
-    if (group.some(b => b.chord)) lines.push(chords.trimEnd());
+    const line = Array(pad + 1 + group.length * (barLen + 1)).fill(' ');
+    let any = false;
+    group.forEach((b, gi) => b.chords.forEach(c => {
+      const col = pad + 1 + gi * (barLen + 1) + c.at * 2;
+      if (line.slice(col, col + c.name.length + 1).some(ch => ch !== ' ')) return; // would run into the previous name
+      [...c.name].forEach((ch, k) => { line[col + k] = ch; }); any = true;
+    }));
+    if (any) lines.push(line.join('').trimEnd());
     midi.forEach((_, s) => {
       let row = names[s].padEnd(pad) + '|';
       for (const b of group) {

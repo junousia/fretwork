@@ -11,7 +11,7 @@ const sw = /** @type {ServiceWorkerGlobalScope} */ (/** @type {unknown} */ (self
 const CACHE = 'fretwork-shell-v1';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'app.js', 'music.js', 'positions.js', 'chord-features.js', 'board.js', 'audio.js', 'progressions.js', 'instrument.js', 'voicings.js', 'share.js', 'transport.js', 'player.js', 'arpeggio.js', 'identify.js', 'tab.js', 'tab-view.js',
+  'app.js', 'music.js', 'positions.js', 'chord-features.js', 'board.js', 'audio.js', 'progressions.js', 'instrument.js', 'voicings.js', 'share.js', 'transport.js', 'player.js', 'arpeggio.js', 'identify.js', 'tab.js', 'tab-view.js', 'solo.js',
   'view-progressions.js', 'view-scales.js', 'view-chords.js', 'view-identify.js', 'view-tab.js',
   'data/voicings.json',
   'fonts/familjen-grotesk-latin-wght-normal.woff2', 'fonts/familjen-grotesk-latin-ext-wght-normal.woff2',

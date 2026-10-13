@@ -32,7 +32,8 @@ no build step, no accounts, no tracking.
 - **Tab editor** - write a riff or solo as tab: click a spot, type the fret, pick note lengths
   (1/16 to a whole note, dotted too), name a chord per bar, undo/redo. It plays back with the bar
   chords and a click, keeps a separate tab per instrument, saves in the browser, and copies as plain
-  ASCII tab.
+  ASCII tab. Chords can sit anywhere in a bar and are gathered at the top with fingerings. A **solo
+  generator** writes a melodic line over the chords (follow the chords, pentatonic or blues).
 - **Arpeggios** - on any seven-note scale pick a chord stacked on a degree (I, ii ... vii, with
   optional 7ths) and see its arpeggio inside the chosen position; on a chord fingering, switch on the
   *arpeggio shape* to see every chord tone in its fret window. Both can be played.
