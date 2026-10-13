@@ -1,4 +1,8 @@
-import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, play, chordMidiNotes, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
+import { parseChord, detectKey, suggest, keyName, spell, chordFlats, esc } from './music.js';
+import { getPositions, positionFrets } from './positions.js';
+import { board } from './board.js';
+import { play, chordMidiNotes } from './audio.js';
+import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
 import { getInstrument, getInstrumentId, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
@@ -79,7 +83,7 @@ export function mount(root){
 
   libProgSel.innerHTML=PROGRESSION_LIBRARY.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('');
   let libKeyHtml='';
-  for(const mode of ['major','minor']) for(let t=0;t<12;t++){const k={t,mode};libKeyHtml+=`<option value="${t}:${mode}">${esc(keyName(k))}</option>`;}
+  for(const mode of /** @type {('major'|'minor')[]} */ (['major','minor'])) for(let t=0;t<12;t++){const k={t,mode};libKeyHtml+=`<option value="${t}:${mode}">${esc(keyName(k))}</option>`;}
   libKeySel.innerHTML=libKeyHtml; libKeySel.value='0:major';
   function applyLibrary(){
     const tpl=PROGRESSION_LIBRARY[+libProgSel.value]; const [t,mode]=libKeySel.value.split(':');
@@ -92,7 +96,7 @@ export function mount(root){
   let parsed=[], key=null, sugs=[];
   function buildKeySelect(detected){
     let h=`<option value="auto">Auto${detected?' ('+esc(keyName(detected))+')':''}</option>`;
-    for(const mode of ['major','minor']) for(let t=0;t<12;t++){const k={t,mode};h+=`<option value="${t}:${mode}">${esc(keyName(k))}</option>`;}
+    for(const mode of /** @type {('major'|'minor')[]} */ (['major','minor'])) for(let t=0;t<12;t++){const k={t,mode};h+=`<option value="${t}:${mode}">${esc(keyName(k))}</option>`;}
     keySel.innerHTML=h; keySel.value=state.key;
     if(keySel.value!==state.key){state.key='auto';keySel.value='auto';}
   }

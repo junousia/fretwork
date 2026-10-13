@@ -15,13 +15,16 @@
     "build:voicings": "node tools/build-voicings.mjs",
     "test:e2e": "node test/e2e.test.mjs",
     "test:a11y": "node test/a11y.test.mjs",
-    "test:golden:update": "UPDATE_GOLDEN=1 node test/golden.test.mjs"
+    "test:golden:update": "UPDATE_GOLDEN=1 node test/golden.test.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.strict.json && tsc -p tsconfig.sw.json"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "playwright": "^1.64.0"
+    "@types/node": "^26.6.5",
+    "playwright": "^1.64.0",
+    "typescript": "^7.0.2"
   }
 }

@@ -34,7 +34,7 @@ async function run(browser, origin, label) {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload({ waitUntil: 'networkidle' });
   assert(await page.evaluate(() => !!navigator.serviceWorker.controller), `${label}: service worker controls the page`);
-  const manifestOk = await page.evaluate(async () => (await (await fetch(document.querySelector('link[rel=manifest]').href)).json()).name);
+  const manifestOk = await page.evaluate(async () => (await (await fetch(/** @type {HTMLLinkElement} */ (document.querySelector('link[rel=manifest]')).href)).json()).name);
   assert(manifestOk === 'Fretwork', `${label}: manifest reachable`);
 
   // chords tab: voicing + builder

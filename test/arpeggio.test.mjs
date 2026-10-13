@@ -2,7 +2,8 @@
 // arpeggio shape around a chord fingering.
 import fs from 'fs';
 import { degreeChord, arpeggioInSets, arpeggioAround, arpeggioNotes, upAndDown } from '../site/arpeggio.js';
-import { getPositions, positionFrets, SCALES, CHORDS, TUNING, spell } from '../site/theory.js';
+import { getPositions, positionFrets } from '../site/positions.js';
+import { SCALES, CHORDS, TUNING, spell } from '../site/music.js';
 
 let failures = 0;
 const assert = (c, m) => { if (!c) { console.log(`FAIL: ${m}`); failures++; } };
@@ -48,7 +49,7 @@ assert(spell(0 + degreeChord(ionian, 4).root, false) === 'G', 'degree V of C maj
 
 // --- arpeggio shape around every stored fingering ---------------------------------------
 {
-  const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url)));
+  const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url), 'utf8'));
   const OPEN = { guitar: [64, 59, 55, 50, 45, 40], ukulele: [69, 64, 60, 67] };
   const TUN = { guitar: TUNING, ukulele: [9, 4, 0, 7] };
   const EXTRA = { 11: [4], 13: [5] };

@@ -8,7 +8,9 @@ import { decodeProgression, tabOf } from './share.js';
 { const sh = decodeProgression(location.hash); if (sh && tabOf(location.hash) === 'progressions') applySetup({ instrument: sh.instrument || 'guitar', tuning: sh.tuning || 'standard', capo: sh.capo || 0, leftHanded: sh.leftHanded === true }); }
 
 const instSwitch = document.getElementById('instrument-switch');
-const tuningSel = document.getElementById('tuning-select'), capoSel = document.getElementById('capo-select'), lefty = document.getElementById('lefty-toggle');
+const tuningSel = /** @type {HTMLSelectElement} */ (document.getElementById('tuning-select'));
+const capoSel = /** @type {HTMLSelectElement} */ (document.getElementById('capo-select'));
+const lefty = /** @type {HTMLInputElement} */ (document.getElementById('lefty-toggle'));
 capoSel.innerHTML = Array.from({ length: MAX_CAPO + 1 }, (_, n) => `<option value="${n}">${n ? 'Capo at fret ' + n : 'No capo'}</option>`).join('');
 function syncSetupControls(){
   const s = getSetup();
@@ -47,7 +49,7 @@ function route(){
   ensureMounted(active);
   TABS.forEach(id => { views[id].hidden = id !== active; });
   document.querySelectorAll('.tab').forEach(a => {
-    a.setAttribute('aria-current', a.dataset.tab === active ? 'page' : 'false');
+    a.setAttribute('aria-current', /** @type {HTMLElement} */ (a).dataset.tab === active ? 'page' : 'false');
   });
   try{ localStorage.setItem(LAST_TAB_KEY, active); }catch(e){}
 }

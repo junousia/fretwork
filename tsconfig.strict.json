@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  },
+  "include": [
+    "site/types.js",
+    "site/music.js",
+    "site/positions.js",
+    "site/chord-features.js",
+    "site/arpeggio.js",
+    "site/share.js",
+    "site/transport.js",
+    "site/progressions.js",
+    "site/board.js",
+    "site/instrument.js",
+    "site/voicings.js",
+    "site/audio.js"
+  ],
+  "exclude": []
+}

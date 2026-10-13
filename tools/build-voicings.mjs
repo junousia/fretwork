@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CHORDS } from '../site/theory.js';
+import { CHORDS } from '../site/music.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const lib = process.argv[2];
@@ -20,7 +20,7 @@ const INSTR = {
 
 const out = {}; const report = [];
 for (const [name, { file, open }] of Object.entries(INSTR)) {
-  const db = JSON.parse(fs.readFileSync(path.join(lib, file)));
+  const db = JSON.parse(fs.readFileSync(path.join(lib, file), 'utf8'));
   const bySuffix = {};
   for (const arr of Object.values(db.chords)) for (const c of arr) (bySuffix[c.suffix] ||= []).push(c);
   out[name] = {};

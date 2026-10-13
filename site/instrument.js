@@ -2,7 +2,7 @@
 // handedness. Everything else (positions, scales, voicings, audio) reads the
 // derived `getInstrument()` object, so adding a tuning here is all it takes
 // for the engines to handle it.
-import { STRING_WIDTHS } from './theory.js';
+import { STRING_WIDTHS } from './music.js';
 
 const STORE_KEY = 'gtr-instrument';
 const SETUP_KEY = 'fw-setup';
@@ -11,13 +11,20 @@ const SETUP_KEY = 'fw-setup';
 // tuning[] uses - index 0 is the string drawn on top, the highest one on a
 // guitar). Ukulele standard is re-entrant: its G string sits above C, so the
 // notes are given explicitly and are not derivable from pitch classes.
+/** @type {(arr:number[], n:number) => number[]} */
 const down = (arr, n) => arr.map(m => m - n);
 const GUITAR_STD = [64, 59, 55, 50, 45, 40];
 
+/** @typedef {import('./types.js').Family} Family */
+/** @typedef {import('./types.js').Setup} Setup */
+/** @typedef {import('./types.js').Instrument} Instrument */
+
+/** @type {Record<string, Family>} */
 export const FAMILIES = {
   guitar: {
     id: 'guitar', name: 'Guitar', audioOffset: 0,
     standard: GUITAR_STD,
+    /** @param {number} n */
     stringWidths: n => n === 7 ? [...STRING_WIDTHS, 3.6] : STRING_WIDTHS,
     tunings: [
       { id: 'standard', name: 'Standard (E A D G B E)', midi: GUITAR_STD },
@@ -46,16 +53,18 @@ export const FAMILIES = {
 };
 
 export const MAX_CAPO = 9;
+/** @param {string} family */
 export const tuningsFor = family => FAMILIES[family].tunings;
 
 // Browsers only: touching localStorage elsewhere (the Node tests) just warns.
 const ls = typeof window !== 'undefined' ? window.localStorage : null;
 
+/** @type {Setup} */
 const setup = { instrument: 'guitar', tunings: { guitar: 'standard', ukulele: 'standard' }, capo: 0, leftHanded: false };
 try {
-  const savedId = ls.getItem(STORE_KEY);
+  const savedId = ls?.getItem(STORE_KEY) ?? '';
   if (FAMILIES[savedId]) setup.instrument = savedId;
-  const sv = JSON.parse(ls.getItem(SETUP_KEY) || 'null');
+  const sv = JSON.parse(ls?.getItem(SETUP_KEY) || 'null');
   if (sv && typeof sv === 'object') {
     for (const f of Object.keys(FAMILIES)) {
       const t = sv.tunings?.[f];
@@ -66,16 +75,18 @@ try {
   }
 } catch (e) { /* defaults */ }
 
+/** @type {Set<(inst:Instrument) => void>} */
 const listeners = new Set();
 function persist() {
   try {
-    ls.setItem(STORE_KEY, setup.instrument);
-    ls.setItem(SETUP_KEY, JSON.stringify({ tunings: setup.tunings, capo: setup.capo, leftHanded: setup.leftHanded }));
+    ls?.setItem(STORE_KEY, setup.instrument);
+    ls?.setItem(SETUP_KEY, JSON.stringify({ tunings: setup.tunings, capo: setup.capo, leftHanded: setup.leftHanded }));
   } catch (e) { /* storage unavailable */ }
 }
 
 // The current instrument as the engines want it: effective pitch classes and
 // MIDI notes (capo included), string widths, and what voicing lookup needs.
+/** @returns {Instrument} */
 export function getInstrument() {
   const fam = FAMILIES[setup.instrument];
   const tuningId = setup.tunings[setup.instrument];
@@ -95,22 +106,29 @@ export const getSetup = () => ({ instrument: setup.instrument, tuning: setup.tun
 
 // Apply any of {instrument, tuning, capo, leftHanded} at once (unknown or
 // out-of-range values are ignored) and notify listeners once if anything changed.
+/** @param {{instrument?:string, tuning?:string, capo?:number, leftHanded?:boolean}} next */
 export function applySetup(next) {
   const before = JSON.stringify(setup);
   if (next.instrument && FAMILIES[next.instrument]) setup.instrument = next.instrument;
   if (next.tuning && FAMILIES[setup.instrument].tunings.some(t => t.id === next.tuning)) setup.tunings[setup.instrument] = next.tuning;
-  if (Number.isInteger(next.capo) && next.capo >= 0 && next.capo <= MAX_CAPO) setup.capo = next.capo;
+  const capo = next.capo;
+  if (capo !== undefined && Number.isInteger(capo) && capo >= 0 && capo <= MAX_CAPO) setup.capo = capo;
   if (typeof next.leftHanded === 'boolean') setup.leftHanded = next.leftHanded;
   if (JSON.stringify(setup) === before) return;
   persist();
   const inst = getInstrument();
   listeners.forEach(cb => cb(inst));
 }
+/** @param {string} id */
 export const setInstrument = id => applySetup({ instrument: id });
+/** @param {string} id */
 export const setTuning = id => applySetup({ tuning: id });
+/** @param {number} n */
 export const setCapo = n => applySetup({ capo: n });
+/** @param {boolean} b */
 export const setLeftHanded = b => applySetup({ leftHanded: !!b });
 
+/** @param {(inst:Instrument) => void} cb @returns {() => void} unsubscribe */
 export function onInstrumentChange(cb) {
   listeners.add(cb);
   return () => listeners.delete(cb);

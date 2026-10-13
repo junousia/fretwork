@@ -1,4 +1,7 @@
-import { SCALES, SHARP, getPositions, positionFrets, spell, board, play, esc } from './theory.js';
+import { SCALES, SHARP, spell, esc } from './music.js';
+import { getPositions, positionFrets } from './positions.js';
+import { board } from './board.js';
+import { play } from './audio.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { degreeChord, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { playNotes } from './player.js';
@@ -27,6 +30,7 @@ export function mount(root){
 
   const rootsEl = root.querySelector('#sc-roots'), detail = root.querySelector('#sc-detail');
 
+  /** @type {{root:number, scaleId:string, labels:string, position:'all'|number, arp:number|null, sev:boolean}} */
   const state = { root: 9, scaleId: SCALES[0].id, labels: 'notes', position: 'all', arp: null, sev: false }; // default A, Ionian, whole neck
   try{
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
