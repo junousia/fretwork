@@ -57,7 +57,7 @@ export function normSuffix(s){
   s=s.replace(/^Maj/,'maj').replace(/^M(?=\d)/,'maj').replace(/^ma(?=\d)/,'maj').replace(/^maj(?=$)/,'');
   if(s==='M') s='';
   s=s.replace(/^\+$/,'aug').replace(/^\+7$|^7\+5?$|^7aug$/,'aug7');
-  s=s.replace(/^sus$/,'sus4').replace(/^7sus$/,'7sus4').replace(/^6\/9$/,'69').replace(/^alt$/,'7alt').replace(/^add9$/,'add9');
+  s=s.replace(/^sus$/,'sus4').replace(/^7sus$/,'7sus4').replace(/^6\/9$/,'69').replace(/^alt$/,'7alt');
   if(s==='maj') s='';
   if(s==='aug7') return 'aug7';
   return s;
