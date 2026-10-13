@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Tab: **Evolve** for the solo generator (Steady / Build up / Arc). The solo develops over the song: it
+  starts lower and calmer, climbs up the neck one position at a time, gets busier (up to the density you
+  asked for) and uses more techniques towards the peak, then settles for the ending. Positions you choose
+  yourself for a chord are kept. (Measured on a 12-bar blues: the arc is ~40% busier and ~4 semitones higher
+  in the middle than at the start.)
+
 - Tab: **techniques** - hammer-on / pull-off, slide, bend (half, full, 1 1/2, two steps) and vibrato on the
   note at the cursor (buttons, or the h / s / b / v keys). They are drawn as slurs marked h or p, slanted
   lines, bend arrows with their size and a wavy line, and they play: legato (soft) second notes, a real

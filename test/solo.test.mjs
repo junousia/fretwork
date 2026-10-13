@@ -3,7 +3,7 @@
 // in the middle of a bar): notes are in the scale and the position, chord tones land
 // where they should, leaps are limited, changes are approached, the ending is the
 // root, and the same seed gives the same solo.
-import { generateSolo, STYLES, DENSITIES, FEELS, RHYTHMS, FINALS } from '../site/solo.js';
+import { generateSolo, STYLES, DENSITIES, FEELS, RHYTHMS, FINALS, EVOLVES, intensityAt } from '../site/solo.js';
 import { linkedNext, tabEvents, emptyTab, putNote } from '../site/tab.js';
 import { parseChord, suggest } from '../site/music.js';
 import { FAMILIES } from '../site/instrument.js';
@@ -29,7 +29,7 @@ const std = insts.find(i => i.name === 'guitar/standard/capo0');
 const uke = insts.find(i => i.name === 'ukulele/standard/capo0');
 
 // --- determinism and variety
-const run = (bars, inst, style, density, seed, feel = 'straight', techniques = 'off') => generateSolo({ bars, inst, style, density, seed, feel, techniques });
+const run = (bars, inst, style, density, seed, feel = 'straight', techniques = 'off', evolve = 'off') => generateSolo({ bars, inst, style, density, seed, feel, techniques, evolve });
 const A = run(PROGS.jazz, std, 'follow', 'medium', 42), B = run(PROGS.jazz, std, 'follow', 'medium', 42), C = run(PROGS.jazz, std, 'follow', 'medium', 43);
 assert(JSON.stringify(A.bars) === JSON.stringify(B.bars), 'the same seed gives the same solo');
 assert(JSON.stringify(A.bars) !== JSON.stringify(C.bars), 'a different seed gives a different solo');
@@ -42,13 +42,13 @@ const cases = [];
 for (const inst of insts) for (const style of STYLES) for (const density of DENSITIES) for (const [pn, bars] of Object.entries(PROGS)) {
   const full = inst === std || inst === uke;
   const seeds = full ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2];
-  for (const seed of seeds) cases.push({ inst, style: style.id, density: density.id, pn, bars, seed, feel: FEELS[full ? seed % 4 : (insts.indexOf(inst) + seed) % 4].id, tech: ['off', 'some', 'lots'][(seed + insts.indexOf(inst)) % 3] });
+  for (const seed of seeds) cases.push({ inst, style: style.id, density: density.id, pn, bars, seed, feel: FEELS[full ? seed % 4 : (insts.indexOf(inst) + seed) % 4].id, tech: ['off', 'some', 'lots'][(seed + insts.indexOf(inst)) % 3], evolve: EVOLVES[(seed + 2 * insts.indexOf(inst)) % 3].id });
 }
 for (const c of cases) {
   let r;
-  try { r = run(c.bars, c.inst, c.style, c.density, c.seed, c.feel, c.tech); } catch (e) { assert(false, `${c.inst.name} ${c.style} ${c.density} ${c.pn} seed ${c.seed} threw ${e.message}`); continue; }
+  try { r = run(c.bars, c.inst, c.style, c.density, c.seed, c.feel, c.tech, c.evolve); } catch (e) { assert(false, `${c.inst.name} ${c.style} ${c.density} ${c.pn} seed ${c.seed} threw ${e.message}`); continue; }
   stat.combos++;
-  const tag = `${c.inst.name} ${c.style}/${c.density}/${c.feel}/${c.tech}/${c.pn}/${c.seed}`;
+  const tag = `${c.inst.name} ${c.style}/${c.density}/${c.feel}/${c.tech}/${c.evolve}/${c.pn}/${c.seed}`;
   assert(r.bars.length === c.bars.length, `${tag}: one list of notes per bar`);
   const lastSeg = r.info[r.info.length - 1];
   let prevNote = null;
@@ -118,6 +118,47 @@ assert(pct(stat.strongTone, stat.strong) >= 0.55, 'most strong-beat notes are ch
 assert(pct(stat.bigLeaps, stat.steps) <= 0.08, 'leaps over a fifth are rare');
 assert(pct(stat.approachOk, stat.approach) >= 0.8, 'chord changes are approached from within a tone of a new chord tone');
 assert(stat.triples / Math.max(1, stat.steps) < 0.01, 'a note is rarely repeated three times in a row');
+
+// --- evolve: the solo develops over the song
+{
+  assert([0, 3, 7, 11].every(b => intensityAt('off', b, 12) === 1), 'steady: every bar is at full intensity');
+  const arc = Array.from({ length: 12 }, (_, b) => intensityAt('arc', b, 12)), build = Array.from({ length: 12 }, (_, b) => intensityAt('build', b, 12));
+  const peakAt = arc.indexOf(Math.max(...arc));
+  assert(arc.every(v => v >= 0.1 && v <= 1) && build.every(v => v >= 0.1 && v <= 1), 'intensity stays between 0.1 and 1');
+  assert(peakAt >= 7 && peakAt <= 9 && arc[0] < 0.3 && arc[10] < arc[peakAt] && arc[11] <= 0.4, `the arc rises to a peak about two thirds in (bar ${peakAt + 1}) then settles: ${arc.map(v => v.toFixed(2))}`);
+  assert(build.slice(0, 11).every((v, i, a) => i === 0 || v > a[i - 1]) && build[11] <= 0.4, 'build-up rises every bar and the last bar comes down');
+  assert(Number.isFinite(intensityAt('arc', 0, 1)) && Number.isFinite(intensityAt('build', 0, 2)), 'one-bar and two-bar solos have an intensity too');
+  const thirds = (evolve, density, style = 'blues', techniques = 'off', seeds = 14) => {
+    const out = { notes: [0, 0, 0], pitch: [0, 0, 0], count: [0, 0, 0], fret: [0, 0, 0], marks: [0, 0, 0] };
+    for (let sd = 1; sd <= seeds; sd++) {
+      const r = run(PROGS.blues, std, style, density, sd, 'straight', techniques, evolve);
+      r.bars.forEach((notes, bi) => {
+        const th = Math.min(2, Math.floor(bi / 4)), seg = r.info.find(x => x.bar === bi);
+        out.notes[th] += notes.length; out.count[th]++;
+        notes.forEach(n => { out.pitch[th] += std.midi[n.s] + n.f + (n.bend || 0); if (n.link || n.bend || n.vib) out.marks[th]++; });
+        const fr = seg.frets.flatMap(x => [...x]); out.fret[th] += fr.reduce((a, b) => a + b, 0) / fr.length;
+      });
+    }
+    return { notes: out.notes.map((v, i) => v / out.count[i]), pitch: out.pitch.map((v, i) => v / Math.max(1, out.notes[i])), fret: out.fret.map((v, i) => v / out.count[i]), marks: out.marks.map((v, i) => v / out.count[i]) };
+  };
+  const arcS = thirds('arc', 'busy'), buildS = thirds('build', 'busy'), flat = thirds('off', 'busy');
+  console.log(`evolve (12-bar blues, busy): notes/bar by third arc ${arcS.notes.map(v => v.toFixed(1))}, build ${buildS.notes.map(v => v.toFixed(1))}, steady ${flat.notes.map(v => v.toFixed(1))}; mean pitch arc ${arcS.pitch.map(v => v.toFixed(0))}, steady ${flat.pitch.map(v => v.toFixed(0))}`);
+  assert(arcS.notes[1] > arcS.notes[0] * 1.25, 'arc: the middle of the solo is busier than the start');
+  assert(arcS.pitch[1] - arcS.pitch[0] >= 3, `arc: the line climbs towards the peak (${arcS.pitch.map(v => v.toFixed(1))})`);
+  assert(arcS.fret[1] > arcS.fret[0] + 2, 'arc: the position moves up the neck');
+  assert(buildS.notes[2] > buildS.notes[0] * 1.25 && buildS.pitch[2] - buildS.pitch[0] >= 1.5, `build: the end of the solo is busier and higher than the start (${buildS.notes.map(v => v.toFixed(1))}, ${buildS.pitch.map(v => v.toFixed(1))})`);
+  assert(Math.abs(flat.pitch[1] - flat.pitch[0]) < 2 && Math.abs(flat.notes[1] - flat.notes[0]) < flat.notes[0] * 0.2, 'steady: no trend (the control)');
+  const sparse = thirds('arc', 'sparse');
+  assert(Math.abs(sparse.notes[1] - sparse.notes[0]) < sparse.notes[0] * 0.25, 'evolving never gets busier than the density asked for (sparse stays sparse)');
+  const t1 = thirds('arc', 'medium', 'pent', 'lots', 30);
+  assert(t1.marks[1] > t1.marks[0], `techniques are rarer early and more frequent at the peak (${t1.marks.map(v => v.toFixed(2))})`);
+  // choices made by the user win over the build-up
+  const fixed = generateSolo({ bars: PROGS.blues.map(b => ({ chords: [{ ...b.chords[0], scale: 'minpent', positions: [2] }] })), inst: std, style: 'blues', density: 'busy', seed: 3, evolve: 'arc' });
+  assert(fixed.info.every(x => x.position === 2), 'an explicit position on every chord is kept while evolving');
+  const a = run(PROGS.blues, std, 'blues', 'busy', 5, 'straight', 'some', 'arc'), b = run(PROGS.blues, std, 'blues', 'busy', 5, 'straight', 'some', 'arc');
+  assert(JSON.stringify(a.bars) === JSON.stringify(b.bars) && a.info.every((x, i) => x.intensity === b.info[i].intensity), 'evolving is deterministic for a seed');
+  assert(run(PROGS.blues, std, 'blues', 'busy', 5).info.every(x => x.intensity === 1), 'steady reports full intensity');
+}
 
 // --- techniques
 console.log(`techniques in the runs above: ${stat.links} links, ${stat.bends} bends, ${stat.vibs} vibratos`);
