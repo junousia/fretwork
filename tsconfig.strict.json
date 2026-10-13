@@ -16,7 +16,8 @@
     "site/board.js",
     "site/instrument.js",
     "site/voicings.js",
-    "site/audio.js"
+    "site/audio.js",
+    "site/identify.js"
   ],
   "exclude": []
 }

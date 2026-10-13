@@ -17,6 +17,7 @@ All plain ES modules in `site/` (no build). Dependencies point one way (`music.j
 | `positions.js` | `getPositions`/`positionFrets`: the two position models, always an unbroken run by pitch |
 | `chord-features.js` | chord-builder features derived from intervals |
 | `arpeggio.js` | degree chords, arpeggios in positions / around fingerings |
+| `identify.js` | chord identification from marked notes (pure): `identifyChord`, `marksToNotes` |
 | `board.js` | the fretboard SVG (positions, fingerings, capo, left-handed mirror) |
 | `voicings.js` | chord fingering data lookup (incl. reuse in other tunings) and chord boxes |
 | `instrument.js` | setup: instrument, tuning, capo, handedness |
@@ -225,6 +226,18 @@ those are allowed. Re-run the build only if updating the dataset.
   practices >= 0.9, SEO >= 0.9; currently all 1.0) and CodeQL.
 - **Performance rule:** only the visible tab is mounted at startup (`ensureMounted` in `app.js`);
   mounting all three cost ~300 ms of blocking time and doubled the DOM. Keep new views lazy.
+
+## Chord identifier (Identify tab)
+
+`identify.js` is pure. A chord matches when every played pitch class is one of its tones
+(`TOLERATED` adds the 11th that 13th-chord fingerings contain). Score = 10 - 0.15*tones minus omit
+penalties (root 3, 5th 0.5, 3rd/sus/altered 5th 6, 7th 5, extensions 1.5, or 6 in chords of <=4
+tones) minus 0.8 for a slash chord; matches under 2.5 are dropped. Aliases (maj6, add2, 7#5, 11)
+are not candidates and `11` is the full dominant 11th. Re-entrant tunings (ukulele high G) give no
+bass, so no slash chords. `test/identify.test.mjs` runs every stored fingering through it (every
+guitar one must be found) - that is the check against real data; keep it when changing weights.
+The fretboard cells come from `board(..., {hitAreas:true})`; the per-string selects are the
+keyboard-accessible equivalent.
 
 ## Chord builder (Chords tab)
 

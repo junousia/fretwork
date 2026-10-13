@@ -187,3 +187,20 @@ export const esc=s=>String(s).replace(/[&<>"']/g,c=>HTML_ESCAPES[c]);
 
 export const TUNING=[4,11,7,2,9,4]; // high E to low E (6-string guitar, standard tuning)
 export const STRING_WIDTHS=[1,1.3,1.7,2.1,2.6,3.1];
+
+/** Friendly names of chord types, by suffix. @type {Record<string, string>} */
+export const CHORD_LABELS = {
+  '':'Major','m':'Minor','5':'Power chord (5)','6':'6','maj6':'6','69':'6/9','m6':'Minor 6','m69':'Minor 6/9',
+  'add9':'Add 9','add2':'Add 9','madd9':'Minor add 9','sus2':'Sus2','sus4':'Sus4',
+  '7':'Dominant 7th','9':'Dominant 9th','11':'Dominant 11th','13':'Dominant 13th',
+  '7sus4':'7sus4','9sus4':'9sus4','13sus4':'13sus4',
+  'maj7':'Major 7th','maj9':'Major 9th','maj13':'Major 13th','maj7#11':'Major 7♯11',
+  'm7':'Minor 7th','m9':'Minor 9th','m11':'Minor 11th','m13':'Minor 13th',
+  'mmaj7':'Minor-major 7th','mmaj9':'Minor-major 9th','m7b5':'Half-diminished (m7♭5)',
+  'dim':'Diminished','dim7':'Diminished 7th','aug':'Augmented','aug7':'Augmented 7th',
+  '7#5':'7♯5','7b5':'7♭5','7b9':'7♭9','7#9':'7♯9','7#11':'7♯11',
+  '9#11':'9♯11','13#11':'13♯11','7b13':'7♭13','7b9b13':'7♭9♭13',
+  '13b9':'13♭9','7#9b13':'7♯9♭13','7#5#9':'7♯5♯9','7alt':'7alt (altered)'
+};
+/** @param {string} suffix @returns {string} */
+export function chordLabel(suffix){ return CHORD_LABELS[suffix] || suffix; }

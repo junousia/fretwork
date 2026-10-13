@@ -73,6 +73,12 @@ export function board(chord,sug,mode,flats,opts={}){
     g+=`<circle cx="${x}" cy="${y}" r="12.5" fill="${fill}" stroke="#2A170F" stroke-width="1"${op}/>`;
     g+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="${label.length>2?10:11.5}" font-weight="600" fill="${tc}" font-family="inherit"${op}>${esc(label)}</text>`;
   }
+  // Click targets for entering notes (the Identify tab): one transparent cell per
+  // string and fret, 0 being the open string. Listeners are delegated by the caller.
+  if(opts.hitAreas) for(let s=0;s<strings;s++) for(let f=0;f<=FRETS;f++){
+    const x=f===0?NUT-40:NUT+(f-1)*FW, w=f===0?38:FW;
+    g+=`<rect class="hit" data-s="${s}" data-f="${f}" x="${R(x,w)}" y="${TOP+s*GAP-GAP/2}" width="${w}" height="${GAP}" fill="transparent" style="cursor:pointer"/>`;
+  }
   if(ring) ring.f.forEach((f,s)=>{ if(f>=0&&f<=FRETS) g+=`<circle cx="${X(f===0?NUT-20:NUT+(f-0.5)*FW)}" cy="${TOP+s*GAP}" r="17" fill="none" stroke="#fff" stroke-width="3"/>`; });
   return g+'</svg>';
 }

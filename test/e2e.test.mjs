@@ -46,6 +46,29 @@ async function run(browser, origin, label) {
   assert((await page.textContent('.bcount')).includes('match'), `${label}: builder filters the list`);
   await page.click('#ch-bclear');
 
+  // identify tab: click an open C chord onto the board, read the match, open it in Chords
+  await page.click('a[data-tab="identify"]');
+  await page.waitForSelector('#view-identify rect.hit');
+  assert((await page.textContent('#id-result')).includes('No notes marked'), `${label}: identify starts empty`);
+  for (const [str, fret] of [[1, 1], [3, 2], [4, 3]]) await page.click(`#view-identify rect.hit[data-s="${str}"][data-f="${fret}"]`, { force: true });
+  await page.click('#view-identify rect.hit[data-s="0"][data-f="0"]', { force: true });
+  await page.click('#view-identify rect.hit[data-s="2"][data-f="0"]', { force: true });
+  const first = await page.textContent('#id-matches .match .nm');
+  assert(first === 'C', `${label}: clicked notes identify as C (got ${first})`);
+  assert((await page.$$('#view-identify .board svg circle[r="12.5"]:not([opacity])')).length === 5, `${label}: the five marked notes are drawn`);
+  await page.selectOption('#view-identify select[data-s="5"]', '0');
+  assert((await page.textContent('#id-matches .match .nm')) === 'C/E', `${label}: adding the open low E makes it C/E`);
+  await page.click('#id-play');
+  await page.click('#id-clear');
+  assert((await page.textContent('#id-result')).includes('No notes marked'), `${label}: Clear empties the board`);
+  await page.selectOption('#view-identify select[data-s="0"]', '0'); await page.selectOption('#view-identify select[data-s="1"]', '0');
+  await page.selectOption('#view-identify select[data-s="2"]', '0'); await page.selectOption('#view-identify select[data-s="3"]', '2'); await page.selectOption('#view-identify select[data-s="4"]', '2'); await page.selectOption('#view-identify select[data-s="5"]', '0');
+  assert((await page.textContent('#id-matches .match .nm')) === 'Em', `${label}: per-string selects work (Em)`);
+  await page.click('#id-matches .match a.open');
+  await page.waitForSelector('#view-chords:not([hidden])');
+  assert((await page.textContent('#view-chords .chordhead h2')).startsWith('E '), `${label}: Open in Chords selects the chord`);
+  assert((await page.getAttribute('#ch-roots .chip[aria-pressed="true"]', 'data-r')) === '4', `${label}: Chords root is E`);
+
   // scales tab: position selector
   await page.click('a[data-tab="scales"]');
   await page.click('#sc-posseg button[data-pos="3"]');

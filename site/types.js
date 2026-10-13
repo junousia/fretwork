@@ -110,6 +110,7 @@ export {};
  * @property {Voicing} [voicing]        dim everything but this fingering; draws barre and X marks
  * @property {Voicing} [voicingRing]    ring this fingering without dimming anything else
  * @property {boolean} [fingerLabels]   label the fingering's dots with finger numbers
+ * @property {boolean} [hitAreas]       add a clickable cell (class "hit", data-s, data-f) per string and fret
  * @property {boolean} [leftHanded]     mirror the neck
  * @property {number} [capo]            draw a capo bar instead of the nut
  */
