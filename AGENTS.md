@@ -264,6 +264,16 @@ these on ~3,700 solos across all tunings, capos, styles and densities (notes in 
 >=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
 generator, not a performer: no bends, slides or feel yet.
 
+### Sharing a tab
+
+`tab-share.js` (pure): `#tab?i=&t=&cp=&lh=&d=<base64url json>`. `d` is a compact JSON (`v:1`, `n` title, `b` bpm,
+`r` bars as `[chords, notes]` with notes `[at,len,s,f,code]`, technique `code` = link h1/s2 + bend*10 + vibrato 100,
+`o` voicings, `g` generator settings incl. seed). Decoding is untrusted-input safe: it rebuilds the object and runs it
+through `normalizeTab`, caps sizes, validates the generator settings one by one. The Tab view applies a link at
+mount and on `hashchange` via `openShared`: it pushes the shared tab onto the undo history (so Undo restores the
+user's own), applies the setup/generator settings, and tidies the long hash away. `app.js` applies the setup
+before the views mount, like Progressions links.
+
 ### Evolve
 
 `intensityAt(evolve, bar, bars)` (0.1-1; 'arc' peaks ~70% in and falls, 'build' rises to the last bar, the last bar is

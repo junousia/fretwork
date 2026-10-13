@@ -5,9 +5,12 @@ import { mount as mountIdentify } from './view-identify.js';
 import { mount as mountTab } from './view-tab.js';
 import { FAMILIES, MAX_CAPO, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { decodeProgression, tabOf } from './share.js';
+import { decodeTabLink } from './tab-share.js';
 
 // A shared link may carry the instrument; apply it before anything renders.
 { const sh = decodeProgression(location.hash); if (sh && tabOf(location.hash) === 'progressions') applySetup({ instrument: sh.instrument || 'guitar', tuning: sh.tuning || 'standard', capo: sh.capo || 0, leftHanded: sh.leftHanded === true }); }
+
+{ const tl = tabOf(location.hash) === 'tab' ? decodeTabLink(location.hash) : null; if (tl) applySetup({ instrument: tl.setup.instrument || 'guitar', tuning: tl.setup.tuning || 'standard', capo: tl.setup.capo || 0, leftHanded: tl.setup.leftHanded === true }); }
 
 const instSwitch = document.getElementById('instrument-switch');
 const tuningSel = /** @type {HTMLSelectElement} */ (document.getElementById('tuning-select'));
