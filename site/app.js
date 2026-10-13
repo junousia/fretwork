@@ -1,22 +1,27 @@
 import { mount as mountProgressions } from './view-progressions.js';
 import { mount as mountScales } from './view-scales.js';
 import { mount as mountChords } from './view-chords.js';
-import { getInstrumentId, setInstrument } from './instrument.js';
+import { FAMILIES, MAX_CAPO, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { decodeProgression, tabOf } from './share.js';
 
 // A shared link may carry the instrument; apply it before anything renders.
-{ const sh = decodeProgression(location.hash); if (sh && sh.instrument && tabOf(location.hash) === 'progressions') setInstrument(sh.instrument); }
+{ const sh = decodeProgression(location.hash); if (sh && tabOf(location.hash) === 'progressions') applySetup({ instrument: sh.instrument || 'guitar', tuning: sh.tuning || 'standard', capo: sh.capo || 0, leftHanded: sh.leftHanded === true }); }
 
 const instSwitch = document.getElementById('instrument-switch');
-function syncInstrumentButtons(){
-  const id = getInstrumentId();
-  instSwitch.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.inst === id)));
+const tuningSel = document.getElementById('tuning-select'), capoSel = document.getElementById('capo-select'), lefty = document.getElementById('lefty-toggle');
+capoSel.innerHTML = Array.from({ length: MAX_CAPO + 1 }, (_, n) => `<option value="${n}">${n ? 'Capo at fret ' + n : 'No capo'}</option>`).join('');
+function syncSetupControls(){
+  const s = getSetup();
+  instSwitch.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.inst === s.instrument)));
+  tuningSel.innerHTML = FAMILIES[s.instrument].tunings.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  tuningSel.value = s.tuning; capoSel.value = String(s.capo); lefty.checked = s.leftHanded;
 }
-instSwitch.querySelectorAll('button').forEach(b => b.onclick = () => {
-  setInstrument(b.dataset.inst);
-  syncInstrumentButtons();
-});
-syncInstrumentButtons();
+instSwitch.querySelectorAll('button').forEach(b => b.onclick = () => applySetup({ instrument: b.dataset.inst }));
+tuningSel.onchange = () => applySetup({ tuning: tuningSel.value });
+capoSel.onchange = () => applySetup({ capo: +capoSel.value });
+lefty.onchange = () => applySetup({ leftHanded: lefty.checked });
+onInstrumentChange(syncSetupControls);
+syncSetupControls();
 
 const LAST_TAB_KEY = 'gtr-last-tab';
 const TABS = ['progressions', 'scales', 'chords'];

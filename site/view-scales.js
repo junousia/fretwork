@@ -48,7 +48,7 @@ export function mount(root){
     const inst = getInstrument();
     const positions = getPositions(scale.iv, state.root, inst.tuning);
     if(state.position !== 'all' && !positions.some(p => p.n === state.position)) state.position = 'all';
-    const boardOpts = { tuning: inst.tuning, stringWidths: inst.stringWidths, showPositions: true, positions };
+    const boardOpts = { tuning: inst.tuning, stringWidths: inst.stringWidths, showPositions: true, positions, leftHanded: inst.leftHanded, capo: inst.capo };
     if(state.position !== 'all'){
       const idx = Math.max(0, positions.findIndex(p => p.n === state.position));
       const p = positions[idx];

@@ -25,6 +25,9 @@ export function encodeProgression(s) {
   q.set('c', (s.text || '').trim().replace(/\s+/g, ' '));
   if (s.key && s.key !== 'auto') q.set('k', s.key);
   if (s.instrument && s.instrument !== 'guitar') q.set('i', s.instrument);
+  if (s.tuning && s.tuning !== 'standard') q.set('t', s.tuning);
+  if (Number.isInteger(s.capo) && s.capo > 0) q.set('cp', String(s.capo));
+  if (s.leftHanded) q.set('lh', '1');
   const extra = {};
   for (const f of ['pick', 'pos', 'vo']) if (s[f] && Object.keys(s[f]).length) extra[f] = s[f];
   if (Object.keys(extra).length) q.set('x', b64.enc(JSON.stringify(extra)));
@@ -44,6 +47,11 @@ export function decodeProgression(hashOrQuery) {
   if (k && KEY_RE.test(k)) out.key = k;
   const i = q.get('i');
   if (i === 'guitar' || i === 'ukulele') out.instrument = i;
+  const t = q.get('t');
+  if (t && /^[a-z0-9-]{1,24}$/.test(t)) out.tuning = t;
+  const cp = q.get('cp');
+  if (cp && /^([1-9]|1[0-2])$/.test(cp)) out.capo = +cp;
+  if (q.get('lh') === '1') out.leftHanded = true;
   const x = q.get('x');
   if (x) {
     try {

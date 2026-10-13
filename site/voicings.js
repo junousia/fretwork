@@ -6,6 +6,9 @@ import { esc } from './theory.js';
 
 let data = null, pending = null;
 
+// Tests inject the dataset instead of fetching it.
+export function useVoicingData(d) { data = d; }
+
 export function loadVoicings() {
   if (data) return Promise.resolve(data);
   pending ||= fetch('./data/voicings.json')
@@ -15,10 +18,32 @@ export function loadVoicings() {
   return pending;
 }
 
-// Voicings for a chord, lowest on the neck first. [] until loaded or when
-// the dataset has none for this chord type.
-export function getVoicings(instrumentId, root, suffix) {
-  return data?.[instrumentId]?.[`${root}|${suffix}`] || [];
+// Voicings for a chord on an instrument (as returned by getInstrument()),
+// lowest on the neck first. [] until loaded or when none apply.
+//
+// The data is for standard tuning only, but a stored shape also works in
+// another tuning whenever every string the shape PLAYS is shifted by the same
+// number of semitones T from standard (muted strings may differ): capo c is
+// T=c, half-step-down is T=11, baritone ukulele T=7, and Drop D keeps every
+// shape that leaves the low string unplayed. A shape for root R-T in standard
+// tuning then sounds chord root R. Extra low strings (7-string) stay muted.
+export function getVoicings(inst, root, suffix) {
+  const std = data?.[inst.id];
+  if (!std) return [];
+  const n = inst.standardPcs.length, m = inst.tuning.length;
+  const out = [], seen = new Set();
+  for (let T = 0; T < 12; T++) {
+    for (const v of std[`${(root - T + 12) % 12}|${suffix}`] || []) {
+      const fits = v.f.every((f, j) => f < 0 || inst.tuning[j] === (inst.standardPcs[j] + T) % 12);
+      if (!fits) continue;
+      const pad = Array(Math.max(0, m - n)).fill(-1);
+      const shaped = { f: [...v.f, ...pad], g: [...v.g, ...pad.map(() => 0)], b: v.b };
+      const key = JSON.stringify(shaped);
+      if (!seen.has(key)) { seen.add(key); out.push(shaped); }
+    }
+  }
+  const low = v => Math.min(...v.f.filter(f => f > 0), 99);
+  return out.sort((a, b) => low(a) - low(b));
 }
 
 export function voicingLabel(v) {
@@ -29,20 +54,21 @@ export function voicingLabel(v) {
 
 // Small chord box: strings left (lowest) to right (highest), nut or base-fret
 // label, dots with finger numbers, barre bar, x / o markers above.
-export function voicingDiagram(v, { size = 1, label = true } = {}) {
+export function voicingDiagram(v, { size = 1, label = true, mirror = false } = {}) {
   const n = v.f.length, played = v.f.filter(f => f > 0);
   const maxF = played.length ? Math.max(...played) : 0, minF = played.length ? Math.min(...played) : 1;
   const base = maxF <= 4 ? 1 : minF;
   const rows = Math.max(4, maxF - base + 1);
   const SG = 14, FH = 16, L = 22, T = 22;
   const W = L + (n - 1) * SG + 14, H = T + rows * FH + 8;
-  const sx = j => L + (n - 1 - j) * SG; // tuning index 0 = highest string = rightmost
+  // tuning index 0 = highest string = rightmost (leftmost when mirrored for left-handed players)
+  const sx = j => mirror ? L + j * SG : L + (n - 1 - j) * SG;
   let g = `<svg class="vdiag" width="${W * size}" height="${H * size}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label ? voicingLabel(v) : 'chord voicing')}">`;
   for (let j = 0; j < n; j++) g += `<line x1="${sx(j)}" y1="${T}" x2="${sx(j)}" y2="${T + rows * FH}" stroke="currentColor" stroke-width="1" opacity=".55"/>`;
-  for (let r = 0; r <= rows; r++) g += `<line x1="${sx(n - 1)}" y1="${T + r * FH}" x2="${sx(0)}" y2="${T + r * FH}" stroke="currentColor" stroke-width="${r === 0 && base === 1 ? 3 : 1}" opacity="${r === 0 && base === 1 ? 1 : .55}"/>`;
-  if (base > 1) g += `<text x="${L - 8}" y="${T + FH * 0.7}" text-anchor="end" font-size="9" fill="currentColor" font-family="inherit">${base}</text>`;
+  for (let r = 0; r <= rows; r++) g += `<line x1="${Math.min(sx(0), sx(n - 1))}" y1="${T + r * FH}" x2="${Math.max(sx(0), sx(n - 1))}" y2="${T + r * FH}" stroke="currentColor" stroke-width="${r === 0 && base === 1 ? 3 : 1}" opacity="${r === 0 && base === 1 ? 1 : .55}"/>`;
+  if (base > 1) g += `<text x="${mirror ? L + (n - 1) * SG + 8 : L - 8}" y="${T + FH * 0.7}" text-anchor="${mirror ? 'start' : 'end'}" font-size="9" fill="currentColor" font-family="inherit">${base}</text>`;
   const cy = f => T + (f - base + 0.5) * FH;
-  if (v.b) g += `<rect x="${sx(v.b.to) - 5}" y="${cy(v.b.fret) - 6}" width="${sx(v.b.from) - sx(v.b.to) + 10}" height="12" rx="6" fill="currentColor" opacity=".85"/>`;
+  if (v.b) g += `<rect x="${Math.min(sx(v.b.to), sx(v.b.from)) - 5}" y="${cy(v.b.fret) - 6}" width="${Math.abs(sx(v.b.from) - sx(v.b.to)) + 10}" height="12" rx="6" fill="currentColor" opacity=".85"/>`;
   v.f.forEach((f, j) => {
     const x = sx(j);
     if (f < 0) g += `<text x="${x}" y="${T - 7}" text-anchor="middle" font-size="9" fill="currentColor" font-family="inherit">×</text>`;

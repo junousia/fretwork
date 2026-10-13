@@ -92,19 +92,19 @@ export function mount(root){
     const chord = { root: state.root, iv, name };
     const sug = { s: { iv, name: labelFor(state.suffix) } };
     const inst = getInstrument();
-    const voicings = getVoicings(inst.id, state.root, state.suffix);
+    const voicings = getVoicings(inst, state.root, state.suffix);
     if(loaded && state.voicing !== 'all' && !voicings[state.voicing - 1]) state.voicing = 'all';
     const vo = state.voicing === 'all' ? null : (voicings[state.voicing - 1] || null);
     if(!vo && state.labels === 'fingers') state.labels = 'notes';
-    const boardOpts = { tuning: inst.tuning, stringWidths: inst.stringWidths };
+    const boardOpts = { tuning: inst.tuning, stringWidths: inst.stringWidths, leftHanded: inst.leftHanded, capo: inst.capo };
     if(vo){ boardOpts.voicing = vo; boardOpts.fingerLabels = state.labels === 'fingers'; }
     const voBtns = ['all', ...voicings.map((_, i) => i + 1)].map(v =>
       `<button type="button" data-vo="${v}" title="${v === 'all' ? 'Every chord tone on the neck' : esc(voicingLabel(voicings[v - 1]))}" aria-pressed="${state.voicing === v}">${v === 'all' ? 'All' : v}</button>`).join('');
     const voRow = voicings.length
       ? `<div class="row"><label class="keylab">Voicing <div class="seg" id="ch-voseg" role="group" aria-label="Chord voicing">${voBtns}</div></label>
           ${vo ? `<span class="vometa">${esc(voicingLabel(vo))}${vo.b ? ' \u00b7 barre' : ''}</span>` : ''}</div>
-         ${vo ? `<div class="vobig">${voicingDiagram(vo, { size: 1.8 })}</div>` : ''}`
-      : (loaded ? `<p class="hint">No stored fingering for this chord type - the neck shows every chord tone.</p>` : '');
+         ${vo ? `<div class="vobig">${voicingDiagram(vo, { size: 1.8, mirror: inst.leftHanded })}</div>` : ''}`
+      : (loaded ? `<p class="hint">No stored fingering for this chord in this tuning - the neck shows every chord tone.</p>` : '');
     let h = `<h3 class="bh">Build a chord</h3>${builderHtml()}
       <div class="chordhead"><h2>${esc(spell(state.root, false))} ${esc(labelFor(state.suffix))}</h2><p>Tones ${esc(iv.map(x => spell(state.root + x, false)).join(' '))}</p></div>
       <div class="boardbar"><div class="scaletitle">${esc(name)}</div>

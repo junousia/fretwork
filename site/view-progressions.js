@@ -1,5 +1,5 @@
 import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, play, chordMidiNotes, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
-import { getInstrument, getInstrumentId, setInstrument, onInstrumentChange } from './instrument.js';
+import { getInstrument, getInstrumentId, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
 import { startProgression } from './player.js';
@@ -62,7 +62,8 @@ export function mount(root){
   function sharedState(){
     const names=new Set(parsed.map(c=>c.name));
     const keep=(o,pick)=>Object.fromEntries(Object.entries(o).filter(([k])=>!parsed.length||pick(k)));
-    return {text:state.text,key:state.key,instrument:getInstrumentId(),pick:keep(state.pick,k=>+k<parsed.length),
+    const su=getSetup();
+    return {text:state.text,key:state.key,instrument:su.instrument,tuning:su.tuning,capo:su.capo,leftHanded:su.leftHanded,pick:keep(state.pick,k=>+k<parsed.length),
       pos:keep(state.pos,k=>names.has(k.split('|')[0])),vo:keep(state.vo,k=>names.has(k))};
   }
   function syncUrl(){
@@ -109,7 +110,7 @@ export function mount(root){
     strip.innerHTML=parsed.map((c,i)=>{
       const p=pickFor(i);
       const vc=voicingChoice(i);
-      return `<button class="chip" type="button" data-i="${i}" aria-pressed="${i===state.sel}"><b>${esc(c.name)}</b>${vc.idx>=0?voicingDiagram(vc.list[vc.idx],{size:.85,label:false}):''}<span>${p?esc(p.s.short):'No match'}</span></button>`;
+      return `<button class="chip" type="button" data-i="${i}" aria-pressed="${i===state.sel}"><b>${esc(c.name)}</b>${vc.idx>=0?voicingDiagram(vc.list[vc.idx],{size:.85,label:false,mirror:getInstrument().leftHanded}):''}<span>${p?esc(p.s.short):'No match'}</span></button>`;
     }).join('');
     strip.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{state.sel=+b.dataset.i;render();});
     markPlaying();
@@ -128,7 +129,7 @@ export function mount(root){
   // best fits the selected scale position(s), else the lowest on the neck.
   function voicingChoice(i){
     const info=posInfo(i); if(!info) return {list:[],idx:-1,info:null};
-    const {c,inst,positions,cur,pCur}=info, list=getVoicings(inst.id,c.root,c.suf);
+    const {c,inst,positions,cur,pCur}=info, list=getVoicings(inst,c.root,c.suf);
     if(!list.length) return {list,idx:-1,info};
     const ov=state.vo[c.name]; if(Number.isInteger(ov)&&list[ov]) return {list,idx:ov,info};
     if(pCur==='all') return {list,idx:0,info};
@@ -163,7 +164,7 @@ export function mount(root){
     let pCur=state.pos[posKey]??'all';
     if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
     else if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
-    const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths};
+    const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths,leftHanded:inst.leftHanded,capo:inst.capo};
     let runNotes=null; // MIDI list: the actual notes of the selected position(s)
     if(pCur!=='all'){
       const idxs=(Array.isArray(pCur)?pCur:[pCur]).map(n=>positions.findIndex(p=>p.n===n));
@@ -180,7 +181,7 @@ export function mount(root){
     const voRow=vo?`<div class="row"><label class="keylab">Voicing <div class="seg" id="pr-voseg" role="group" aria-label="Chord voicing">${vc.list.map((v,k)=>
         `<button type="button" data-vo="${k}" title="${esc(voicingLabel(v))}" aria-pressed="${k===vc.idx}">${k+1}</button>`).join('')}</div></label>
         <span class="vometa">${esc(voicingLabel(vo))}${vo.b?' \u00b7 barre':''}</span></div>
-      <div class="vobig">${voicingDiagram(vo,{size:1.5})}</div>`:'';
+      <div class="vobig">${voicingDiagram(vo,{size:1.5,mirror:inst.leftHanded})}</div>`:'';
     h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
         <button type="button" data-l="notes" aria-pressed="${state.labels==='notes'}">Note names</button>
@@ -271,9 +272,9 @@ export function mount(root){
   window.addEventListener('hashchange',()=>{
     if(tabOf(location.hash)!=='progressions') return;
     const sh=decodeProgression(location.hash); if(!sh) return;
-    if(encodeProgression({...sh,instrument:sh.instrument||getInstrumentId()})===encodeProgression(sharedState())) return;
+    if(encodeProgression({...sh,instrument:sh.instrument||'guitar'})===encodeProgression(sharedState())) return;
     stopPlayback(); applyShared(sh); prog.value=state.text;
-    if(sh.instrument&&sh.instrument!==getInstrumentId()) setInstrument(sh.instrument);
+    applySetup({instrument:sh.instrument||'guitar',tuning:sh.tuning||'standard',capo:sh.capo||0,leftHanded:sh.leftHanded===true});
     render();
   });
   render();

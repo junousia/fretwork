@@ -24,7 +24,10 @@ no build step, no accounts, no tracking.
   the scale position to match, and "Play" strums the actual fretted notes.
 - **Chord builder** - toggle minor, 7, maj7, sus4, 9, b5 ... and the chord list narrows to what
   matches; impossible combinations are greyed out.
-- **Guitar and ukulele**, labelled by note name, interval or finger, with audio playback.
+- **Guitar and ukulele** with 14 tunings (drop D, DADGAD, open G/D/E, half/whole step down,
+  7-string, low-G, baritone ...), a **capo** and a **left-handed** (mirrored) neck. Chord shapes are
+  reused wherever they are really valid in the chosen tuning. Labelled by note name, interval or
+  finger, with audio playback.
 - **Installable and offline** (PWA), responsive from phone to desktop.
 
 | Chords | Scales on a phone |
