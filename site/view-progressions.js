@@ -2,7 +2,8 @@ import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPosition
 import { getInstrument, getInstrumentId, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
-import { startProgression } from './player.js';
+import { startProgression, playNotes } from './player.js';
+import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
@@ -186,7 +187,8 @@ export function mount(root){
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
         <button type="button" data-l="notes" aria-pressed="${state.labels==='notes'}">Note names</button>
         <button type="button" data-l="intervals" aria-pressed="${state.labels==='intervals'}">Intervals</button></div>
-        <button type="button" class="play" id="pr-play">Play chord and scale</button></div></div>
+        <button type="button" class="play" id="pr-play">Play chord and scale</button>
+        <button type="button" class="share" id="pr-arpplay" title="The chord tones shown: inside the selected position, else around the chosen fingering">Play arpeggio</button></div></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="pr-posseg" role="group" aria-label="Fretboard position">${['all',...positions.map(p=>p.n)].map(p=>
         `<button type="button" data-pos="${p}" title="${p==='all'?'Whole neck':'Toggle this position'}" aria-pressed="${p==='all'?pCur==='all':(Array.isArray(pCur)?pCur.includes(p):pCur===p)}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
       ${voRow}
@@ -221,6 +223,12 @@ export function mount(root){
       }
       save();renderDetail();
     });
+    // Arpeggio: the chord tones inside the selected scale position, else the
+    // arpeggio shape around the chosen fingering.
+    const arpBtn=detail.querySelector('#pr-arpplay');
+    const chordPcs=c.iv.map(x=>(c.root+x)%12);
+    const arpSets=boardOpts.brightSets?arpeggioInSets(boardOpts.brightSets,inst,chordPcs):(vo?arpeggioAround(vo,inst,chordPcs):null);
+    if(arpSets&&arpeggioNotes(arpSets,inst).length) arpBtn.onclick=()=>playNotes(upAndDown(arpeggioNotes(arpSets,inst))); else arpBtn.disabled=true;
     detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset,runNotes,vo?vo.f.map((f,j)=>f>=0?inst.midi[j]+f:null).filter(m=>m!==null):null);
   }
 

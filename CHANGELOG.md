@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Arpeggios: degree chords (triads or 7ths) coloured inside a scale position, an arpeggio shape around
+  any chord fingering, and Play arpeggio buttons in Scales, Chords and Progressions.
+
 - Tunings (14 presets for guitar, 7-string and ukulele), capo, and a left-handed mirrored neck;
   the setup is saved and travels in share links.
 

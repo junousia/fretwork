@@ -15,6 +15,14 @@ function click(ac, t, accent) {
   o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.05);
 }
 
+// Play a list of MIDI notes one after another (an arpeggio or run).
+export function playNotes(notes, step = 0.18) {
+  const ac = audioContext();
+  if (!ac) return;
+  const t = ac.currentTime + 0.05;
+  notes.forEach((m, i) => note(mtof(m), t + i * step, 0.7, 0.15));
+}
+
 // opts: {chords: [{midi:[...]}], bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
 // returns {stop()}.
 export function startProgression(opts) {

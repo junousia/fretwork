@@ -49,6 +49,24 @@ async function run(browser, origin, label) {
   const bright = await page.$$eval('#view-scales .board svg circle[r="12.5"]:not([opacity])', c => c.length);
   assert(bright > 5, `${label}: a scale position lights its notes (${bright})`);
 
+  // arpeggios: degree chord inside a scale position (Scales), shape around a fingering (Chords)
+  await page.click('#sc-arpseg button[data-k="4"]');
+  const arpTone = await page.$$eval('#view-scales .board svg circle[r="12.5"][fill="#E3A21A"]:not([opacity]), #view-scales .board svg circle[r="12.5"][fill="#C23B2E"]:not([opacity])', c => c.length);
+  assert(arpTone >= 3, `${label}: the V arpeggio lights chord tones inside the position (${arpTone})`);
+  assert((await page.textContent('#view-scales .legend')).includes('Arpeggio'), `${label}: legend names the arpeggio`);
+  assert(await page.isEnabled('#sc-arpplay'), `${label}: Play arpeggio is enabled with a position selected`);
+  await page.click('#sc-arpplay');
+  await page.click('#sc-arpseg button[data-k="none"]');
+  await page.click('a[data-tab="chords"]');
+  await page.click('#ch-voseg button[data-vo="2"]');
+  const onlyFingering = await page.$$eval('#view-chords .board svg circle[r="12.5"]:not([opacity])', c => c.length);
+  await page.check('#ch-arp');
+  const shape = await page.$$eval('#view-chords .board svg circle[r="12.5"]:not([opacity])', c => c.length);
+  assert(shape > onlyFingering, `${label}: the arpeggio shape shows more chord tones than the fingering alone (${shape} > ${onlyFingering})`);
+  await page.click('#ch-arpplay');
+  await page.uncheck('#ch-arp');
+  await page.click('a[data-tab="scales"]');
+
   // progressions: chip diagrams
   await page.click('a[data-tab="progressions"]');
   await page.waitForSelector('#pr-strip .chip .vdiag');

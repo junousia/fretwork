@@ -1,5 +1,7 @@
 import { SCALES, SHARP, getPositions, positionFrets, spell, board, play, esc } from './theory.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
+import { degreeChord, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
+import { playNotes } from './player.js';
 
 const STORE_KEY = 'gtr-scales-v1';
 
@@ -25,7 +27,7 @@ export function mount(root){
 
   const rootsEl = root.querySelector('#sc-roots'), detail = root.querySelector('#sc-detail');
 
-  const state = { root: 9, scaleId: SCALES[0].id, labels: 'notes', position: 'all' }; // default A, Ionian, whole neck
+  const state = { root: 9, scaleId: SCALES[0].id, labels: 'notes', position: 'all', arp: null, sev: false }; // default A, Ionian, whole neck
   try{
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if(saved) Object.assign(state, saved);
@@ -43,8 +45,18 @@ export function mount(root){
     rootsEl.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.r === state.root)));
     const scale = SCALES.find(s => s.id === state.scaleId) || SCALES[0];
     const triad = triadFromScale(scale);
-    const chord = { root: state.root, iv: triad, name: spell(state.root, false) };
-    const sug = { s: scale };
+    let chord = { root: state.root, iv: triad, name: spell(state.root, false) };
+    let sug = { s: scale };
+    // Arpeggio: the chord stacked in thirds on a scale degree (seven-note scales),
+    // its tones coloured inside the scale. The board colours relative to the chord
+    // root, so the scale is re-based onto that root.
+    const arpOk = new Set(scale.iv).size === 7;
+    const dc = arpOk && Number.isInteger(state.arp) ? degreeChord(scale.iv, state.arp, state.sev) : null;
+    if(dc){
+      const croot = (state.root + dc.root) % 12;
+      chord = { root: croot, iv: dc.iv, name: spell(croot, false) + (dc.key ?? '') };
+      sug = { s: { ...scale, iv: scale.iv.map(x => (x - dc.root + 12) % 12) } };
+    }
     const inst = getInstrument();
     const positions = getPositions(scale.iv, state.root, inst.tuning);
     if(state.position !== 'all' && !positions.some(p => p.n === state.position)) state.position = 'all';
@@ -57,6 +69,15 @@ export function mount(root){
     }
     let runNotes = null; // MIDI list: the actual notes of the selected position
     if(boardOpts.brightSets) runNotes = inst.midi.flatMap((open, j) => [...boardOpts.brightSets[j]].map(f => open + f));
+    const chordPcs = chord.iv.map(x => (chord.root + x) % 12);
+    const arpNotes = dc && boardOpts.brightSets ? arpeggioNotes(arpeggioInSets(boardOpts.brightSets, inst, chordPcs), inst) : [];
+    const arpRow = !arpOk ? '' : `<div class="row"><label class="keylab">Arpeggio <div class="seg" id="sc-arpseg" role="group" aria-label="Arpeggio chord">
+        <button type="button" data-k="none" aria-pressed="${!dc}">None</button>${[0, 1, 2, 3, 4, 5, 6].map(k => {
+          const d = degreeChord(scale.iv, k, state.sev);
+          return `<button type="button" data-k="${k}" title="${esc(spell(state.root + d.root, false) + (d.key ?? ''))}" aria-pressed="${state.arp === k}">${esc(d.numeral)}</button>`; }).join('')}</div></label>
+        <label class="chk"><input type="checkbox" id="sc-sev"${state.sev ? ' checked' : ''}> 7ths</label>
+        <button type="button" class="share" id="sc-arpplay"${arpNotes.length ? '' : ' disabled'} title="${dc ? 'Plays the arpeggio notes shown in the selected position' : 'Pick an arpeggio and a position'}">Play arpeggio</button>
+        ${dc ? `<span class="vometa">${esc(dc.numeral)} = ${esc(chord.name)} (${esc(chord.iv.map(x => spell(chord.root + x, false)).join(' '))})</span>` : ''}</div>`;
     const posButtons = ['all', ...positions.map(p => p.n)].map(p =>
       `<button type="button" data-pos="${p}" aria-pressed="${state.position === p}">${p === 'all' ? 'All' : p}</button>`
     ).join('');
@@ -67,8 +88,9 @@ export function mount(root){
           <button type="button" data-l="intervals" aria-pressed="${state.labels === 'intervals'}">Intervals</button></div>
           <button type="button" class="play" id="sc-play">Play scale</button></div></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="sc-posseg" role="group" aria-label="Fretboard position">${posButtons}</div></label></div>
+      ${arpRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, state.labels, false, boardOpts)}</div>
-      <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Triad note (1, 3, 5)</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
+      <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>${dc ? 'Arpeggio chord tone' : 'Triad note (1, 3, 5)'}</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
       <h3>All scales</h3><div class="scales">`;
     SCALES.forEach(s => {
       h += `<button type="button" class="srow" data-id="${s.id}" aria-pressed="${s.id === state.scaleId}">
@@ -82,6 +104,9 @@ export function mount(root){
     detail.querySelector('#sc-posseg').querySelectorAll('button').forEach(b => b.onclick = () => {
       const v = b.dataset.pos; state.position = v === 'all' ? 'all' : +v; save(); render();
     });
+    detail.querySelectorAll('#sc-arpseg button').forEach(b => b.onclick = () => { state.arp = b.dataset.k === 'none' ? null : +b.dataset.k; save(); render(); });
+    const sev = detail.querySelector('#sc-sev'); if(sev) sev.onchange = () => { state.sev = sev.checked; save(); render(); };
+    const ap = detail.querySelector('#sc-arpplay'); if(ap) ap.onclick = () => playNotes(upAndDown(arpNotes));
     detail.querySelector('#sc-play').onclick = () => play(chord, scale, inst.audioOffset, runNotes);
   }
 
