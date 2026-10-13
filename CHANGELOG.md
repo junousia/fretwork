@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Layout: tablets keep the bottom tab bar (the side rail is only for wide mouse-driven screens), and
+  tuning / capo / left-handed moved behind a menu button so they take no screen space until needed.
+
 - New **Identify** tab: mark notes on the fretboard (click, or per-string selects) and see which chords
   fit - ranked, with slash chords and omitted tones, Play, and "Open in Chords". Validated against all
   3,263 stored fingerings.
