@@ -47,10 +47,12 @@ body{margin:0;background:var(--bg);color:var(--ink);
 /* The side rail is for desktops (wide, mouse); tablets and phones keep the bottom bar. */
 @media (min-width:1100px) and (pointer:fine){
   .shell{flex-direction:row}
-  .tabbar{position:sticky;top:0;align-self:flex-start;flex-direction:column;bottom:auto;left:auto;right:auto;
-    width:188px;height:100vh;border-top:0;border-right:1px solid var(--line);padding:24px 0 0;order:1}
-  .tabbar .tab{text-align:left;padding:12px 22px;font-size:.95rem;display:flex;align-items:center;gap:10px}
-  .tabbar .tab .ic{margin-bottom:0}
+  /* slim rail: tabs stacked at the top, icon over a small label, not stretched to the full height */
+  .tabbar{position:sticky;top:0;align-self:flex-start;flex-direction:column;align-items:stretch;gap:2px;bottom:auto;left:auto;right:auto;
+    width:84px;height:auto;min-height:100vh;border-top:0;border-right:1px solid var(--line);padding:14px 6px 0;order:1}
+  .tabbar .tab{flex:none;text-align:center;padding:10px 2px 8px;font-size:.72rem;border-radius:10px}
+  .tabbar .tab:hover{background:var(--bg)}
+  .tabbar .tab[aria-current="page"]{background:var(--bg)}
   .views{order:2}
   .view{padding:32px 32px 56px}
 }
