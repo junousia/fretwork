@@ -1,6 +1,6 @@
 import { parseChord, detectKey, suggest, keyName, spell, chordFlats, esc } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
-import { board } from './board.js';
+import { board, fitBoard, voicingSpan } from './board.js';
 import { play, chordMidiNotes } from './audio.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
 import { getInstrument, getInstrumentId, getSetup, applySetup, onInstrumentChange } from './instrument.js';
@@ -8,7 +8,7 @@ import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
 import { startProgression, playNotes } from './player.js';
 import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
-import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
+import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
 
@@ -32,31 +32,32 @@ export function mount(root){
       <textarea id="pr-prog" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
       <div class="row">
         <label class="keylab">Key <select id="pr-key"></select></label>
-      </div>
-      <div class="examples" id="pr-examples">Try one:</div>
-      <div class="row">
-        <label class="keylab">Common progressions <select id="pr-libprog"></select></label>
-        <label class="keylab">in <select id="pr-libkey"></select></label>
+        <label class="keylab">Load <select id="pr-libprog" aria-label="Load an example or common progression"></select></label>
+        <label class="keylab" id="pr-libkeylab" hidden>in <select id="pr-libkey"></select></label>
       </div>
       <p id="pr-err" class="err" hidden></p>
     </section>
     <div class="transport" role="group" aria-label="Playback and sharing">
       <button type="button" class="play" id="pr-run">\u25B6 Play progression</button>
-      <label class="keylab">Tempo <input id="pr-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
-      <label class="keylab">Beats per chord <select id="pr-beats"><option>1</option><option>2</option><option>4</option><option>8</option></select></label>
-      <label class="chk"><input type="checkbox" id="pr-loop"> Loop</label>
-      <label class="chk"><input type="checkbox" id="pr-metro"> Click</label>
       <button type="button" class="share" id="pr-share">Copy link</button>
       <span class="vometa" id="pr-msg" role="status" aria-live="polite"></span>
     </div>
+    <details class="fold" id="pr-opts"><summary>Tempo and playback</summary>
+      <div class="transport">
+        <label class="keylab">Tempo <input id="pr-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
+        <label class="keylab">Beats per chord <select id="pr-beats"><option>1</option><option>2</option><option>4</option><option>8</option></select></label>
+        <label class="chk"><input type="checkbox" id="pr-loop"> Loop</label>
+        <label class="chk"><input type="checkbox" id="pr-metro"> Click</label>
+      </div>
+    </details>
     <nav class="strip" id="pr-strip" aria-label="Chords in the progression"></nav>
     <section id="pr-detail"></section>
     <p class="foot">Separate chords with spaces. Understands names like C, Am, F#m7b5, Bb7, Ebmaj7, G7b9, Dsus4, Cdim7 and slash chords like G/B. Use the arrow keys to step through the chords.</p>
   `;
 
   const prog=root.querySelector('#pr-prog'), keySel=root.querySelector('#pr-key'), strip=root.querySelector('#pr-strip'),
-        detail=root.querySelector('#pr-detail'), err=root.querySelector('#pr-err'), ex=root.querySelector('#pr-examples'),
-        libProgSel=root.querySelector('#pr-libprog'), libKeySel=root.querySelector('#pr-libkey');
+        detail=root.querySelector('#pr-detail'), err=root.querySelector('#pr-err'),
+        libProgSel=root.querySelector('#pr-libprog'), libKeySel=root.querySelector('#pr-libkey'), libKeyLab=root.querySelector('#pr-libkeylab');
 
   const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{},vo:{},bpm:90,beats:4,loop:true,metro:false};
   try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{},vo:saved.vo||{},bpm:clampBpm(saved.bpm??90),beats:clampBeats(saved.beats),loop:saved.loop!==false,metro:!!saved.metro});}catch(e){}
@@ -78,16 +79,23 @@ export function mount(root){
   function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos,vo:state.vo,bpm:state.bpm,beats:state.beats,loop:state.loop,metro:state.metro}));}catch(e){} syncUrl();}
 
   prog.value=state.text;
-  EXAMPLES.forEach(([label,text])=>{const b=document.createElement('button');b.type='button';b.textContent=label;
-    b.onclick=()=>{stopPlayback();prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();};ex.appendChild(b);});
+  // Tempo and playback options start folded on phones, open where there is room.
+  const optsEl=root.querySelector('#pr-opts'); optsEl.open=matchMedia('(min-width:760px)').matches;
 
-  libProgSel.innerHTML=PROGRESSION_LIBRARY.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('');
+  // One menu for both the fixed examples and the common progressions (which are
+  // transposed into the key chosen next to it).
+  libProgSel.innerHTML='<option value="">Choose\u2026</option>'
+    +`<optgroup label="Examples">${EXAMPLES.map(([label],i)=>`<option value="e${i}">${esc(label)}</option>`).join('')}</optgroup>`
+    +`<optgroup label="Common progressions">${PROGRESSION_LIBRARY.map((p,i)=>`<option value="p${i}">${esc(p.name)}</option>`).join('')}</optgroup>`;
   let libKeyHtml='';
   for(const mode of /** @type {('major'|'minor')[]} */ (['major','minor'])) for(let t=0;t<12;t++){const k={t,mode};libKeyHtml+=`<option value="${t}:${mode}">${esc(keyName(k))}</option>`;}
   libKeySel.innerHTML=libKeyHtml; libKeySel.value='0:major';
   function applyLibrary(){
-    const tpl=PROGRESSION_LIBRARY[+libProgSel.value]; const [t,mode]=libKeySel.value.split(':');
-    const text=progressionText(tpl,{t:+t,mode});
+    const v=libProgSel.value; libKeyLab.hidden=!v.startsWith('p');
+    if(!v) return;
+    let text;
+    if(v[0]==='e') text=EXAMPLES[+v.slice(1)][1];
+    else { const tpl=PROGRESSION_LIBRARY[+v.slice(1)]; const [t,mode]=libKeySel.value.split(':'); text=progressionText(tpl,{t:+t,mode}); }
     stopPlayback();prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();
   }
   libProgSel.addEventListener('change',applyLibrary);
@@ -158,6 +166,8 @@ export function mount(root){
     return best;
   }
   function pickFor(i){const list=sugs[i]; if(!list||!list.length) return null; const id=state.pick[i]; return list.find(x=>x.s.id===id)||list[0];}
+  let refit=()=>{};
+  root.addEventListener('fw-shown',()=>refit());
   function renderDetail(){
     const i=state.sel, c=parsed[i], list=sugs[i], cur=pickFor(i), flats=chordFlats(c,key);
     const tones=c.iv.map(x=>spell(c.root+x,flats)).join(' ');
@@ -183,10 +193,7 @@ export function mount(root){
     }
     const vc=voicingChoice(i), vo=vc.idx>=0?vc.list[vc.idx]:null;
     if(vo) boardOpts.voicingRing=vo;
-    const voRow=vo?`<div class="row"><label class="keylab">Voicing <div class="seg" id="pr-voseg" role="group" aria-label="Chord voicing">${vc.list.map((v,k)=>
-        `<button type="button" data-vo="${k}" title="${esc(voicingLabel(v))}" aria-pressed="${k===vc.idx}">${k+1}</button>`).join('')}</div></label>
-        <span class="vometa">${esc(voicingLabel(vo))}${vo.b?' \u00b7 barre':''}</span></div>
-      <div class="vobig">${voicingDiagram(vo,{size:1.5,mirror:inst.leftHanded})}</div>`:'';
+    const voRow=vo?`<h3 class="vh">Voicings <span class="hint">tap one to use it here and in the playback</span></h3>${voicingGallery(vc.list,vc.idx,{id:'pr-voseg',mirror:inst.leftHanded})}`:'';
     h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
         <button type="button" data-l="notes" aria-pressed="${state.labels==='notes'}">Note names</button>
@@ -208,6 +215,8 @@ export function mount(root){
     h+='</div>';
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
+    const span=boardOpts.dimRange||(vo?voicingSpan(vo):null);
+    refit=()=>fitBoard(detail.querySelector('.board'),span,inst.leftHanded); refit();
     detail.querySelectorAll('.seg button').forEach(b=>{ if(b.dataset.l) b.onclick=()=>{state.labels=b.dataset.l;save();renderDetail();};});
     detail.querySelectorAll('#pr-voseg button').forEach(b=>b.onclick=()=>{
       const k=+b.dataset.vo; state.vo[c.name]=k;
@@ -237,7 +246,7 @@ export function mount(root){
   }
 
   let deb;
-  prog.addEventListener('input',()=>{clearTimeout(deb);deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
+  prog.addEventListener('input',()=>{clearTimeout(deb);libProgSel.value=''; libKeyLab.hidden=true; deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
   keySel.addEventListener('change',()=>{state.key=keySel.value;save();render();});
   document.addEventListener('keydown',e=>{
     if(root.hidden) return;

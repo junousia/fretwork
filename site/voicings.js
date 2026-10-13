@@ -94,3 +94,14 @@ export function voicingDiagram(v, { size = 1, label = true, mirror = false } = {
   });
   return g + '</svg>';
 }
+
+/**
+ * Every voicing as a row of tappable chord boxes (the pressed one is the selection).
+ * @param {Voicing[]} list @param {number} selected index into list, or -1 for none
+ * @param {{id:string, base?:number, mirror?:boolean}} o base = the number data-vo starts at
+ * @returns {string}
+ */
+export function voicingGallery(list, selected, { id, base = 0, mirror = false }) {
+  return `<div class="vogal" id="${id}" role="group" aria-label="Chord voicing">${list.map((v, k) =>
+    `<button type="button" class="chip vobtn" data-vo="${k + base}" title="${esc(voicingLabel(v))}" aria-pressed="${k === selected}">${voicingDiagram(v, { label: false, mirror })}<span>${esc(voicingLabel(v))}${v.b ? ' \u00b7 barre' : ''}</span></button>`).join('')}</div>`;
+}

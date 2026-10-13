@@ -146,3 +146,27 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .srow.match{cursor:default}
 .srow .lab{color:var(--muted);font-weight:400}
 .srow .open{margin-left:10px;text-decoration:none;display:inline-block}
+
+/* ---- Compact layout: folds, voicing gallery, phone-only pickers ---- */
+.phoneonly{display:none}
+.fold{margin:12px 0}
+.fold>summary{cursor:pointer;font-weight:600;padding:8px 0;list-style:none}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::before{content:"\25B8";display:inline-block;width:1.1em;color:var(--muted)}
+.fold[open]>summary::before{content:"\25BE"}
+.fold .transport{margin:4px 0 0}
+.fold .bcount{font-weight:400}
+.vogal{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:thin}
+.vobtn{text-align:center}
+.vobtn .vdiag{margin:2px auto}
+.vh{font-size:1.05rem;margin:14px 0 2px}
+.vh .hint{font-weight:400;margin-left:8px}
+@media (max-width:759px){
+  .lead,.foot{display:none}
+  .rootpicker,.desk{display:none}
+  .row.phoneonly select,#pr-libprog{max-width:10rem}
+  .row.phoneonly{display:flex}
+  .view{padding-top:14px}
+  h1{margin-bottom:.5rem}
+}
+[hidden]{display:none!important}

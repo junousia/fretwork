@@ -162,6 +162,32 @@ async function run(browser, origin, label) {
   const bar = await tbp.$eval('.tabbar', el => { const r = el.getBoundingClientRect(); return { top: r.top, w: r.width, vw: innerWidth, vh: innerHeight }; });
   assert(bar.w === bar.vw && bar.top > bar.vh / 2, `${label}: on a tablet the tab bar is a full-width bottom bar`);
   await tab.close();
+  // phone: choosing a scale position scrolls the neck so that position is on screen
+  const ph = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const pp = await ph.newPage();
+  await pp.goto(origin + '#scales', { waitUntil: 'networkidle' });
+  for (const n of [1, 4, 7]) {
+    await pp.click(`#sc-posseg button[data-pos="${n}"]`);
+    const vis = await pp.evaluate(() => {
+      const box = document.querySelector('#view-scales .board').getBoundingClientRect();
+      const dots = [...document.querySelectorAll('#view-scales .board svg circle[r="12.5"]:not([opacity])')].map(c => c.getBoundingClientRect());
+      return { n: dots.length, inView: dots.filter(d => d.left >= box.left - 1 && d.right <= box.right + 1).length };
+    });
+    assert(vis.n > 5 && vis.inView >= vis.n * 0.6, `${label}: phone, position ${n} is scrolled into view (${vis.inView}/${vis.n} notes visible)`);
+  }
+  // phone: the root and scale pickers are selects; the long chord-builder starts folded
+  assert(await pp.isVisible('#sc-rootsel') && await pp.isHidden('#sc-roots'), `${label}: phone uses a root drop-down`);
+  await pp.goto(origin + '#chords', { waitUntil: 'networkidle' });
+  assert(await pp.$eval('#ch-builder', d => !d.open), `${label}: phone starts with the chord builder folded`);
+  await ph.close();
+  // the Load menu holds both the examples and the common progressions
+  await page.click('a[data-tab="progressions"]');
+  await page.selectOption('#pr-libprog', 'e1');
+  assert((await page.inputValue('#pr-prog')) === 'Dm7 G7 Cmaj7', `${label}: choosing an example loads it`);
+  assert(await page.isHidden('#pr-libkey'), `${label}: the key picker is only for common progressions`);
+  await page.selectOption('#pr-libprog', 'p0');
+  assert(await page.isVisible('#pr-libkey'), `${label}: common progressions get a key picker`);
+  await page.fill('#pr-prog', 'Dm7 G7 Cmaj7'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
   await page.check('#lefty-toggle', { force: true }).catch(() => {});
   await page.uncheck('#lefty-toggle'); await page.selectOption('#capo-select', '0'); await page.selectOption('#tuning-select', 'standard');
 

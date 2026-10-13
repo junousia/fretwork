@@ -4,12 +4,36 @@ import { STRING_WIDTHS, TUNING, esc, ivLabel, spell } from './music.js';
 
 /** @typedef {import('./types.js').BoardOptions} BoardOptions */
 
+const FRET_W=56, NUT_X=44; // geometry shared with fitBoard()
+
+/** First and last fret of per-string fret sets, or null if empty. @param {Set<number>[]} sets @returns {{s:number,e:number}|null} */
+export function setsSpan(sets){ let s=99,e=-1; sets.forEach(x=>x.forEach(f=>{ s=Math.min(s,f); e=Math.max(e,f); })); return e<0?null:{s,e}; }
+/** First and last played fret of a voicing, or null. @param {{f:number[]}} v @returns {{s:number,e:number}|null} */
+export function voicingSpan(v){ const fs=v.f.filter(f=>f>=0); return fs.length?{s:Math.min(...fs),e:Math.max(...fs)}:null; }
+
+/**
+ * Scroll a board container sideways so the given frets are centred in view
+ * (on a phone the neck is wider than the screen). No span scrolls back to the nut.
+ * @param {Element|null} el the .board element @param {{s:number,e:number}|null|undefined} span @param {boolean} [leftHanded]
+ */
+export function fitBoard(el, span, leftHanded=false){
+  if(!el||!(el instanceof HTMLElement)||!el.clientWidth) return;
+  const svg=el.querySelector('svg'); if(!svg) return;
+  const W=svg.viewBox.baseVal.width;
+  let x=0;
+  if(span){
+    const a=NUT_X+(Math.max(span.s,1)-1)*FRET_W-(span.s===0?40:0), b=NUT_X+span.e*FRET_W;
+    x=(a+b)/2; if(leftHanded) x=W-x;
+  }else if(leftHanded) x=W;
+  el.scrollLeft=span||leftHanded?Math.max(0,x-el.clientWidth/2):0;
+}
+
 /** The fretboard SVG as a string. @param {{root:number, iv:number[], name:string}} chord colours are relative to its root @param {{s:{iv:number[], name:string}}} sug the scale (or chord tones) whose notes are drawn @param {string} mode "notes" or "intervals" labels @param {boolean} flats spell with flats @param {BoardOptions} [opts] @returns {string} */
 export function board(chord,sug,mode,flats,opts={}){
   const tuning=opts.tuning||TUNING, sw=opts.stringWidths||STRING_WIDTHS;
   const FRETS=15;
   const strings=tuning.length, center=(strings-1)/2;
-  const FW=56,NUT=44,TOP=opts.showPositions?34:26,GAP=30;
+  const FW=FRET_W,NUT=NUT_X,TOP=opts.showPositions?34:26,GAP=30;
   const W=NUT+FRETS*FW+14,H=TOP+(strings-1)*GAP+52;
   // Left-handed: the whole neck is mirrored (nut on the right). X maps an x
   // coordinate, R maps a rect's left edge given its width. Text stays upright.
@@ -79,6 +103,6 @@ export function board(chord,sug,mode,flats,opts={}){
     const x=f===0?NUT-40:NUT+(f-1)*FW, w=f===0?38:FW;
     g+=`<rect class="hit" data-s="${s}" data-f="${f}" x="${R(x,w)}" y="${TOP+s*GAP-GAP/2}" width="${w}" height="${GAP}" fill="transparent" style="cursor:pointer"/>`;
   }
-  if(ring) ring.f.forEach((f,s)=>{ if(f>=0&&f<=FRETS) g+=`<circle cx="${X(f===0?NUT-20:NUT+(f-0.5)*FW)}" cy="${TOP+s*GAP}" r="17" fill="none" stroke="#fff" stroke-width="3"/>`; });
+  if(ring) ring.f.forEach((f,s)=>{ if(f>=0&&f<=FRETS) g+=`<circle cx="${X(f===0?NUT-20:NUT+(f-0.5)*FW)}" cy="${TOP+s*GAP}" r="15" fill="none" stroke="#fff" stroke-width="2.5"/>`; });
   return g+'</svg>';
 }
