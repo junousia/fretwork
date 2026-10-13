@@ -115,7 +115,7 @@ export function mount(root){
           <button type="button" class="share" id="ch-arpplay">Play arpeggio</button>` : ''}</div>
          ${vo ? `<div class="vobig">${voicingDiagram(vo, { size: 1.8, mirror: inst.leftHanded })}</div>` : ''}`
       : (loaded ? `<p class="hint">No stored fingering for this chord in this tuning - the neck shows every chord tone.</p>` : '');
-    let h = `<h3 class="bh">Build a chord</h3>${builderHtml()}
+    let h = `<h2 class="bh">Build a chord</h2>${builderHtml()}
       <div class="chordhead"><h2>${esc(spell(state.root, false))} ${esc(labelFor(state.suffix))}</h2><p>Tones ${esc(iv.map(x => spell(state.root + x, false)).join(' '))}</p></div>
       <div class="boardbar"><div class="scaletitle">${esc(name)}</div>
         <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">

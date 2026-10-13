@@ -2,3 +2,4 @@ node_modules/
 voicing-drops.txt
 .DS_Store
 *.log
+.lighthouseci/

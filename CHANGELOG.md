@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Startup builds only the visible tab (Lighthouse performance 0.86 -> 1.0).
+- Quality gates in CI: axe accessibility on every tab (light/dark, desktop/phone), Chrome PWA
+  installability, Lighthouse thresholds, SVG golden snapshots of key shapes, CodeQL.
+- Accessibility fixes: setup bar is a landmark, heading order on the Chords tab.
+
 - Arpeggios: degree chords (triads or 7ths) coloured inside a scale position, an arpeggio shape around
   any chord fingering, and Play arpeggio buttons in Scales, Chords and Progressions.
 

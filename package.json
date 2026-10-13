@@ -11,14 +11,17 @@
   },
   "scripts": {
     "start": "node tools/serve.mjs",
-    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/setup.test.mjs && node test/arpeggio.test.mjs && node test/site.test.mjs",
+    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/setup.test.mjs && node test/arpeggio.test.mjs && node test/golden.test.mjs && node test/site.test.mjs",
     "build:voicings": "node tools/build-voicings.mjs",
-    "test:e2e": "node test/e2e.test.mjs"
+    "test:e2e": "node test/e2e.test.mjs",
+    "test:a11y": "node test/a11y.test.mjs",
+    "test:golden:update": "UPDATE_GOLDEN=1 node test/golden.test.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "playwright": "^1.64.0"
   }
 }

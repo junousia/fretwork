@@ -184,6 +184,21 @@ those are allowed. Re-run the build only if updating the dataset.
   is covered by the e2e test. Tempo/beats/loop/click changes take effect on the next Play.
   `audioContext()` and `chordMidiNotes()` in `theory.js` are the shared audio helpers.
 
+## Quality gates
+
+- `npm test` (plain Node, no deps): theory/position/voicing/builder invariants, share + player logic,
+  tunings, arpeggios, **SVG golden snapshots** (`test/golden/*.svg`, exact markup of key fretboards
+  and chord boxes - unintentional shape/colour/mirror changes fail with a line-level message;
+  intentional ones: `npm run test:golden:update` and review the diff in the PR), and the shipped-site
+  checks (manifest, service-worker file list, nothing external, relative paths, nginx mime/gzip).
+- `npm run test:e2e` (Playwright): drives the app at `/` and `/fretwork/`, offline, sharing, playback.
+- `npm run test:a11y` (axe-core): every tab, light + dark, desktop + phone, plus Chrome's own
+  installability check. Contrast, labels and landmarks currently pass - keep it that way.
+- CI also runs Lighthouse (`lighthouserc.json`: performance >= 0.9, accessibility >= 0.95, best
+  practices >= 0.9, SEO >= 0.9; currently all 1.0) and CodeQL.
+- **Performance rule:** only the visible tab is mounted at startup (`ensureMounted` in `app.js`);
+  mounting all three cost ~300 ms of blocking time and doubled the DOM. Keep new views lazy.
+
 ## Chord builder (Chords tab)
 
 Toggles above the chord header (`FEATURE_GROUPS` / `chordFeatures` in

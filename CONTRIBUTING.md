@@ -3,8 +3,8 @@
 Thanks for helping. The short version: open a pull request against `main`.
 
 1. Fork or branch, make a focused change.
-2. `npm test` must pass (add or update tests for behaviour you change). For UI changes also run
-   `npm run test:e2e` and look at it in a browser at desktop and phone width.
+2. `npm test` must pass (this includes SVG golden snapshots in `test/golden/`: if you changed a shape on purpose, run `npm run test:golden:update` and review the diff) (add or update tests for behaviour you change). For UI changes also run
+   `npm run test:e2e` and `npm run test:a11y` and look at it in a browser at desktop and phone width.
 3. Open a PR using the template. CI runs the same tests; `main` only accepts PRs that pass and
    have been reviewed. Merging publishes the site to GitHub Pages.
 
