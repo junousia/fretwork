@@ -166,6 +166,16 @@ async function run(browser, origin, label) {
   assert((g1.match(/ /g) || []).length > 20, `${label}: generate fills the tab (${g1.split(' ').length} notes)`);
   await page.click('#tb-gen-go');
   assert((await frets()) === g1, `${label}: the same seed gives the same solo`);
+  // evolve: the solo builds up over the song (busier and higher) when asked, and stays level when steady
+  await page.selectOption('#tb-density', 'busy'); await page.selectOption('#tb-gentech', 'off');
+  const perThird = async () => page.$$eval('#tb-surface .fret', e => { const t = [0, 0, 0]; e.forEach(x => { t[Math.min(2, Math.floor(+x.dataset.bar / 4))]++; }); return t; });
+  await page.selectOption('#tb-evolve', 'build'); await page.click('#tb-gen-go');
+  const built = await perThird();
+  assert(built[2] > built[0] * 1.2, `${label}: with Build up the end is busier than the start (notes per third ${built})`);
+  await page.selectOption('#tb-evolve', 'off'); await page.click('#tb-gen-go');
+  const level = await perThird();
+  assert(Math.abs(level[2] - level[0]) < level[0] * 0.5, `${label}: Steady does not build (${level})`);
+  await page.selectOption('#tb-evolve', 'arc'); await page.selectOption('#tb-density', 'medium');
   await page.selectOption('#tb-gentech', 'lots'); await page.click('#tb-gen-go');
   assert((await page.$$('#tb-surface .tablink, #tb-surface .tabbend')).length > 3, `${label}: generating with techniques on adds hammer-ons, slides, bends or vibrato`);
   await page.selectOption('#tb-gentech', 'off'); await page.click('#tb-gen-go');

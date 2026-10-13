@@ -133,6 +133,7 @@ export function rng(seed) {
  * @property {string} style  'follow' | 'pent' | 'blues'
  * @property {string} density 'sparse' | 'medium' | 'busy'
  * @property {string} [feel] 'straight' | 'shuffle' | 'triplet' | 'funk' (default straight)
+ * @property {string} [evolve] 'off' (default) | 'build' | 'arc': the solo develops over the song (see `intensityAt`)
  * @property {string} [techniques] 'off' (default) | 'some' | 'lots': hammer-ons, pull-offs, slides, bends and vibrato
  * @property {number} seed
  * @property {Key} [key] default: detected from the chords, else A minor
@@ -150,6 +151,7 @@ export function rng(seed) {
  * @property {number[]} scalePcs
  * @property {number} position   1-based position number
  * @property {Set<number>[]} frets the notes of that position, per string
+ * @property {number} intensity  0-1: how far the solo has built up at this bar (1 for every bar when evolve is off)
  */
 
 /** @param {number[]} iv @returns {boolean} */
@@ -169,6 +171,26 @@ function autoScale(style, chord, key, dominants) {
   }
   const best = suggest(/** @type {any} */ (chord), key)[0];
   return { scaleId: best ? best.s.id : 'minpent', root: chord.root };
+}
+
+/** How the solo develops. */
+export const EVOLVES = [
+  { id: 'off', name: 'Steady' },
+  { id: 'build', name: 'Build up' },
+  { id: 'arc', name: 'Arc (up, then settle)' },
+];
+
+/**
+ * How built-up the solo is at a bar, 0-1: it drives the register (which position), how busy the rhythm is (up to the
+ * chosen density) and how often techniques appear. 'build' rises all the way to the last bar before the ending;
+ * 'arc' rises to a peak about two thirds in and then settles; the last bar always comes down a little.
+ * @param {string} evolve @param {number} bar @param {number} bars @returns {number}
+ */
+export function intensityAt(evolve, bar, bars) {
+  if (evolve !== 'build' && evolve !== 'arc') return 1;
+  const x = bars > 1 ? bar / (bars - 1) : 0.5;
+  const i = evolve === 'build' ? 0.15 + 0.85 * x : x <= 0.7 ? 0.15 + 0.85 * (x / 0.7) : 1 - 0.7 * ((x - 0.7) / 0.3);
+  return bars > 1 && bar === bars - 1 ? Math.min(i, 0.4) : Math.max(0.1, Math.min(1, i));
 }
 
 /**
@@ -202,6 +224,8 @@ export function soloContext(bars, style, keyOpt) {
 export function generateSolo(o) {
   const rand = rng(o.seed);
   const feel = o.feel && RHYTHMS[o.feel] ? o.feel : 'straight';
+  const evolve = o.evolve === 'build' || o.evolve === 'arc' ? o.evolve : 'off';
+  const BANDS = /** @type {const} */ (['sparse', 'medium', 'busy']), peak = Math.max(0, BANDS.indexOf(/** @type {any} */ (o.density)));
   const pick = /** @template T @param {T[]} arr @returns {T} */ arr => arr[Math.floor(rand() * arr.length)];
   const nStr = o.inst.midi.length;
   // --- the chord in effect over every stretch of every bar ---
@@ -248,8 +272,16 @@ export function generateSolo(o) {
     // positions the user allowed for this chord (1-based); none given or none valid = any
     const allowed = (seg.pref.positions || []).map(n => n - 1).filter(k => k >= 0 && k < positions.length);
     const usable = allowed.length ? allowed : positions.map((_, k) => k);
+    const inten = intensityAt(evolve, bar, o.bars.length);
     let pos;
-    if (prevPos >= 0 && prevScale === scaleId && prevRoot === root && usable.includes(prevPos)) pos = prevPos;
+    if (evolve !== 'off' && !allowed.length) { // the register follows the build-up: low early, high at the peak
+      const lo = Math.min(...centers), hi = Math.max(...centers), target = lo + inten * (hi - lo);
+      // move at most one position per bar while the scale stays (so the hand never has to jump), else stay near where it was
+      const same = prevPos >= 0 && prevScale === scaleId && prevRoot === root;
+      let pool = same ? usable.filter(k => Math.abs(k - prevPos) <= 1) : usable.filter(k => prevPos < 0 || Math.abs(centers[k] - prevCenter) <= 4);
+      if (!pool.length) pool = usable;
+      pos = pool.map(k => ({ k, d: Math.abs(centers[k] - target) })).sort((a, b) => a.d - b.d)[0].k;
+    } else if (prevPos >= 0 && prevScale === scaleId && prevRoot === root && usable.includes(prevPos)) pos = prevPos;
     else {
       const order = usable.map(k => ({ k, d: Math.abs(centers[k] - prevCenter) })).sort((a, b) => a.d - b.d);
       pos = si === 0 && order.length > 1 && rand() < 0.4 ? order[1].k : order[0].k;
@@ -261,7 +293,7 @@ export function generateSolo(o) {
     fretSets.forEach((set, s) => set.forEach(f => { const m = o.inst.midi[s] + f; byPitch.set(m, [...(byPitch.get(m) || []), { s, f }]); }));
     const pitches = [...byPitch.keys()].sort((a, b) => a - b);
     const chordPcs = [...new Set(chord.iv.map(x => (chord.root + x) % 12))];
-    info.push({ bar, from: seg.from, to: seg.to, chord: chord.name, chordPcs, scaleId, root, scalePcs: [...new Set(scale.iv.map(x => (x + root) % 12))], position: positions[pos].n, frets: fretSets });
+    info.push({ bar, from: seg.from, to: seg.to, chord: chord.name, chordPcs, scaleId, root, scalePcs: [...new Set(scale.iv.map(x => (x + root) % 12))], position: positions[pos].n, frets: fretSets, intensity: inten });
     if (!pitches.length) return;
     const all = pitches.map((_, i) => i);
     const isTone = (/** @type {number} */ i) => chordPcs.includes(pitches[i] % 12);
@@ -278,8 +310,11 @@ export function generateSolo(o) {
       let r;
       if (last) r = (FINALS[feel] || FINALS.straight)[o.density === 'sparse' ? 'sparse' : 'normal'];
       else {
-        const pool = (RHYTHMS[feel] || RHYTHMS.straight)[/** @type {'sparse'|'medium'|'busy'} */ (o.density)] || RHYTHMS.straight.medium;
-        if (k === 0) { phraseRhythm = pick(pool); motifRhythm = phraseRhythm; motifOffsets = null; r = phraseRhythm; }
+        // busier bars as the solo builds, up to the density that was asked for
+        const band = BANDS[Math.min(peak, Math.round(inten * peak))];
+        const pool = (RHYTHMS[feel] || RHYTHMS.straight)[band] || RHYTHMS.straight.medium;
+        if (!pool.includes(phraseRhythm)) { motifRhythm = null; motifOffsets = null; } // the motif was from another band
+        if (k === 0 || !pool.includes(phraseRhythm)) { phraseRhythm = pick(pool); motifRhythm = phraseRhythm; motifOffsets = null; r = phraseRhythm; }
         else if (k === 1) r = rand() < 0.7 ? phraseRhythm : pick(pool);
         else if (k === 2) r = pick(pool.filter(x => x !== phraseRhythm)) || phraseRhythm;
         else r = rand() < 0.5 ? phraseRhythm : pick(pool);
@@ -342,8 +377,12 @@ export function generateSolo(o) {
       }
       // never leap more than a major sixth, and never sound the same note three times running
       if (!(lastSeg && lastOn) && !(firstOn && prevMidi < 0)) {
-        const from = n > 0 ? idxs[n - 1] : cur0;
-        while (idx !== from && Math.abs(pitches[idx] - pitches[from]) > 9) idx += from > idx ? 1 : -1;
+        const fromPitch = n > 0 ? pitches[idxs[n - 1]] : prevMidi >= 0 ? prevMidi : pitches[cur0];
+        for (let guard = 0; Math.abs(pitches[idx] - fromPitch) > 9 && guard < 40; guard++) {
+          const nx = idx + (pitches[idx] > fromPitch ? -1 : 1);
+          if (nx < 0 || nx > pitches.length - 1) break;
+          idx = nx;
+        }
         if (n >= 1 && idx === idxs[n - 1] && (n >= 2 ? idxs[n - 2] === idx : sameAsPrev2(idx))) idx = clampIdx(idx + (rand() < 0.5 ? 1 : -1));
       }
       idxs.push(idx);
@@ -364,7 +403,7 @@ export function generateSolo(o) {
     });
   });
   const level = o.techniques === 'lots' ? 2 : o.techniques === 'some' ? 1 : 0;
-  if (level) addTechniques(outBars, info, o.style, o.inst.midi, level, rand);
+  if (level) addTechniques(outBars, info, o.style, o.inst.midi, level, rand, evolve !== 'off');
   return { bars: outBars, info, key };
 }
 
@@ -373,13 +412,14 @@ export function generateSolo(o) {
  * / slide joins two neighbouring notes on one string a few frets apart; a bend is written one or two semitones LOWER
  * than the scale note it arrives at (so the sounding pitch stays in the scale and the position), on the high strings
  * of a guitar only; vibrato goes on long notes, and most often on the last one. No note takes part in two links.
- * @param {TabNote[][]} bars @param {SegmentInfo[]} info @param {string} style @param {number[]} midi open-string notes @param {number} level 1 some, 2 lots @param {() => number} rand
+ * @param {TabNote[][]} bars @param {SegmentInfo[]} info @param {string} style @param {number[]} midi open-string notes @param {number} level 1 some, 2 lots @param {() => number} rand @param {boolean} evolving techniques are rarer early in the solo and more frequent at its peak
  */
-function addTechniques(bars, info, style, midi, level, rand) {
+function addTechniques(bars, info, style, midi, level, rand, evolving) {
   const nStr = midi.length;
   const pSlide = level === 2 ? 0.3 : 0.15, pHammer = level === 2 ? 0.6 : 0.35, pVib = level === 2 ? 0.6 : 0.35, pVibEnd = level === 2 ? 0.85 : 0.6;
   const pBend = (/** @type {Record<string, number>} */ ({ blues: 0.2, pent: 0.1, follow: 0.05 })[style] ?? 0.05) * level;
   bars.forEach((notes, bi) => {
+    const m = evolving ? 0.5 + (info.find(x => x.bar === bi)?.intensity ?? 1) : 1; // 0.6 early, 1.5 at the peak
     /** @type {Set<TabNote>} */ const joined = new Set();
     for (const a of notes) {
       const b = linkedNext(notes, a);
@@ -387,20 +427,20 @@ function addTechniques(bars, info, style, midi, level, rand) {
       const d = Math.abs(b.f - a.f);
       if (d < 1 || d > 5 || a.len > 12) continue;
       const r = rand();
-      if (r < pSlide && a.len >= 6) a.link = 's';
-      else if (r < pSlide + pHammer && d <= 4) a.link = 'h';
+      if (r < pSlide * m && a.len >= 6) a.link = 's';
+      else if (r < (pSlide + pHammer) * m && d <= 4) a.link = 'h';
       else continue;
       joined.add(a); joined.add(b);
     }
     notes.forEach((n, i) => {
       if (joined.has(n)) return;
       const seg = info.find(x => x.bar === bi && n.at >= x.from && n.at < x.to);
-      if (nStr >= 6 && n.len >= 6 && n.s < nStr - 2 && n.f >= 1 && seg && rand() < pBend * (seg.chordPcs.includes((midi[n.s] + n.f) % 12) ? 2 : 1)) { // bends that arrive on a chord tone are twice as likely
+      if (nStr >= 6 && n.len >= 6 && n.s < nStr - 2 && n.f >= 1 && seg && rand() < pBend * m * (seg.chordPcs.includes((midi[n.s] + n.f) % 12) ? 2 : 1)) { // bends that arrive on a chord tone are twice as likely
         const bend = n.f >= 2 && rand() < 0.7 ? 2 : 1;
         n.f -= bend; n.bend = bend;
       }
       const lastNote = bi === bars.length - 1 && i === notes.length - 1;
-      if (n.len >= 12 && rand() < (lastNote ? pVibEnd : pVib)) n.vib = true;
+      if (n.len >= 12 && rand() < (lastNote ? pVibEnd : pVib * m)) n.vib = true;
     });
   });
 }

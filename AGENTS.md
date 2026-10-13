@@ -264,6 +264,15 @@ these on ~3,700 solos across all tunings, capos, styles and densities (notes in 
 >=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
 generator, not a performer: no bends, slides or feel yet.
 
+### Evolve
+
+`intensityAt(evolve, bar, bars)` (0.1-1; 'arc' peaks ~70% in and falls, 'build' rises to the last bar, the last bar is
+<= 0.4) drives three things per bar: the position (target centre fret between the lowest and highest position of
+the scale; moves at most ONE position per bar while the scale stays, so there is never a leap; positions the user
+set on a chord marker win), the rhythm band (`BANDS[round(intensity * peak)]` where peak is the chosen density, so
+it never gets busier than asked) and the technique probabilities (x 0.5 + intensity). `evolve: 'off'` leaves
+everything as before (intensity 1, same RNG use), so older tests double as the regression check.
+
 ### Techniques
 
 A `TabNote` may carry `link` ('h' = hammer-on/pull-off, direction from the frets; 's' = slide) into the NEXT note

@@ -2,7 +2,7 @@ import { esc, parseChord } from './music.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
-import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS } from './solo.js';
+import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES } from './solo.js';
 import { SWINGS } from './transport.js';
 import { keyName, spell, suggest, SC } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
@@ -67,6 +67,7 @@ export function mount(root){
       <div class="row">
         <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Notes <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab" title="How the solo develops over the song: higher and busier towards a peak">Evolve <select id="tb-evolve">${EVOLVES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
         <label class="keylab">Key <select id="tb-key"></select></label>
@@ -99,7 +100,7 @@ export function mount(root){
         tripCb = $('#tb-trip'), techSeg = $('#tb-tech'), backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
 
   // --- state ---------------------------------------------------------------
-  const opts = { backing: true, metro: true, loop: false, unit: 1, tech: 'some', triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
+  const opts = { backing: true, metro: true, loop: false, unit: 1, tech: 'some', evolve: 'arc', triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
   /** @type {Record<string, any>} */ let stored = {};
   try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* defaults */ }
   if (stored.opts && typeof stored.opts === 'object') {
@@ -113,6 +114,7 @@ export function mount(root){
     if (['off', 'some', 'lots'].includes(stored.opts.tech)) opts.tech = stored.opts.tech;
     if (SWINGS.some(x => x.id === stored.opts.swing)) opts.swing = stored.opts.swing;
     if (FEELS.some(x => x.id === stored.opts.feel)) opts.feel = stored.opts.feel;
+    if (EVOLVES.some(x => x.id === stored.opts.evolve)) opts.evolve = stored.opts.evolve;
   }
   /** One undo history per instrument: frets mean different notes on different strings. */
   const histories = {};
@@ -426,6 +428,7 @@ export function mount(root){
   progKey.innerHTML = keyHtml; progKey.value = '9:minor';
   keySel.innerHTML = `<option value="auto">Auto (from the chords)</option>${keyHtml}`;
   const feelSel = $('#tb-feel'), swingSel = $('#tb-swing');
+  const evSel = $('#tb-evolve'); evSel.value = opts.evolve; evSel.onchange = () => { opts.evolve = evSel.value; persist(); };
   const gtSel = $('#tb-gentech'); gtSel.value = opts.tech; gtSel.onchange = () => { opts.tech = gtSel.value; persist(); };
   feelSel.value = opts.feel; swingSel.value = opts.swing;
   feelSel.onchange = () => { opts.feel = feelSel.value; persist(); };
@@ -449,7 +452,7 @@ export function mount(root){
     const inst = getInstrument();
     const [t, mode] = opts.key === 'auto' ? [] : opts.key.split(':');
     const res = generateSolo({
-      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, techniques: opts.tech, seed: opts.seed,
+      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, techniques: opts.tech, evolve: opts.evolve, seed: opts.seed,
       key: opts.key === 'auto' ? undefined : { t: +t, mode: /** @type {'major'|'minor'} */ (mode) },
     });
     let next = clearNotes(tab());
