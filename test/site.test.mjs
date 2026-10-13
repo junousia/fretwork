@@ -52,7 +52,8 @@ for (const f of files.filter(f => /\.(js|css|html)$/.test(f))) {
 }
 // nginx must serve the manifest with the right type and compress the JSON
 const ng = fs.readFileSync(new URL('../nginx.conf', import.meta.url), 'utf8');
-assert(/application\/manifest\+json\s+webmanifest/.test(ng), 'nginx.conf must map .webmanifest to application/manifest+json');
+assert(/\.webmanifest[\s\S]*default_type\s+application\/manifest\+json/.test(ng), 'nginx.conf must serve .webmanifest as application/manifest+json');
+assert(!/^\s*types\s*\{/m.test(ng), 'nginx.conf must not use a types {} block: it REPLACES the whole mime table (everything would download); test/nginx.test.mjs checks the real image');
 assert(/gzip_types[^;]*application\/json/.test(ng), 'nginx.conf must gzip application/json (voicings.json)');
 
 // fonts are self-hosted
