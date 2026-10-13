@@ -3,7 +3,7 @@
 // in the middle of a bar): notes are in the scale and the position, chord tones land
 // where they should, leaps are limited, changes are approached, the ending is the
 // root, and the same seed gives the same solo.
-import { generateSolo, STYLES, DENSITIES } from '../site/solo.js';
+import { generateSolo, STYLES, DENSITIES, FEELS, RHYTHMS, FINALS } from '../site/solo.js';
 import { parseChord, suggest } from '../site/music.js';
 import { FAMILIES } from '../site/instrument.js';
 import { STEPS, MAX_FRET } from '../site/tab.js';
@@ -16,7 +16,7 @@ const PROGS = {
   blues: one('A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7'),
   pop: one('C G Am F C G F C'),
   minor: one('Am Dm E7 Am'),
-  mid: [{ chords: [{ at: 0, name: 'Dm7' }, { at: 8, name: 'G7' }] }, { chords: [{ at: 0, name: 'Cmaj7' }, { at: 12, name: 'A7' }] }, { chords: [{ at: 4, name: 'Dm7' }] }, { chords: [{ at: 0, name: 'G7' }, { at: 8, name: 'Cmaj7' }] }],
+  mid: [{ chords: [{ at: 0, name: 'Dm7' }, { at: 24, name: 'G7' }] }, { chords: [{ at: 0, name: 'Cmaj7' }, { at: 36, name: 'A7' }] }, { chords: [{ at: 12, name: 'Dm7' }] }, { chords: [{ at: 0, name: 'G7' }, { at: 24, name: 'Cmaj7' }] }],
   nochords: [{ chords: [] }, { chords: [] }, { chords: [] }, { chords: [] }],
 };
 const insts = [];
@@ -28,7 +28,7 @@ const std = insts.find(i => i.name === 'guitar/standard/capo0');
 const uke = insts.find(i => i.name === 'ukulele/standard/capo0');
 
 // --- determinism and variety
-const run = (bars, inst, style, density, seed) => generateSolo({ bars, inst, style, density, seed });
+const run = (bars, inst, style, density, seed, feel = 'straight') => generateSolo({ bars, inst, style, density, seed, feel });
 const A = run(PROGS.jazz, std, 'follow', 'medium', 42), B = run(PROGS.jazz, std, 'follow', 'medium', 42), C = run(PROGS.jazz, std, 'follow', 'medium', 43);
 assert(JSON.stringify(A.bars) === JSON.stringify(B.bars), 'the same seed gives the same solo');
 assert(JSON.stringify(A.bars) !== JSON.stringify(C.bars), 'a different seed gives a different solo');
@@ -39,21 +39,22 @@ assert(distinct >= 28, `30 seeds give ${distinct} different solos`);
 const stat = { n: 0, firstOn: 0, firstTone: 0, strong: 0, strongTone: 0, steps: 0, bigLeaps: 0, approach: 0, approachOk: 0, triples: 0, combos: 0, notes: 0, bars: 0 };
 const cases = [];
 for (const inst of insts) for (const style of STYLES) for (const density of DENSITIES) for (const [pn, bars] of Object.entries(PROGS)) {
-  const seeds = inst === std || inst === uke ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2];
-  for (const seed of seeds) cases.push({ inst, style: style.id, density: density.id, pn, bars, seed });
+  const full = inst === std || inst === uke;
+  const seeds = full ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2];
+  for (const seed of seeds) cases.push({ inst, style: style.id, density: density.id, pn, bars, seed, feel: FEELS[full ? seed % 4 : (insts.indexOf(inst) + seed) % 4].id });
 }
 for (const c of cases) {
   let r;
-  try { r = run(c.bars, c.inst, c.style, c.density, c.seed); } catch (e) { assert(false, `${c.inst.name} ${c.style} ${c.density} ${c.pn} seed ${c.seed} threw ${e.message}`); continue; }
+  try { r = run(c.bars, c.inst, c.style, c.density, c.seed, c.feel); } catch (e) { assert(false, `${c.inst.name} ${c.style} ${c.density} ${c.pn} seed ${c.seed} threw ${e.message}`); continue; }
   stat.combos++;
-  const tag = `${c.inst.name} ${c.style}/${c.density}/${c.pn}/${c.seed}`;
+  const tag = `${c.inst.name} ${c.style}/${c.density}/${c.feel}/${c.pn}/${c.seed}`;
   assert(r.bars.length === c.bars.length, `${tag}: one list of notes per bar`);
   const lastSeg = r.info[r.info.length - 1];
   let prevNote = null;
   r.bars.forEach((notes, bi) => {
     stat.bars++; stat.notes += notes.length;
     // valid, ordered, non-overlapping on a string
-    for (const n of notes) assert(n.s >= 0 && n.s < c.inst.midi.length && n.f >= 0 && n.f <= MAX_FRET && n.at >= 0 && n.at + n.len <= STEPS && n.len >= 1, `${tag}: bar ${bi} has an invalid note ${JSON.stringify(n)}`);
+    for (const n of notes) assert(n.s >= 0 && n.s < c.inst.midi.length && n.f >= 0 && n.f <= MAX_FRET && n.at >= 0 && n.at + n.len <= STEPS && n.len >= 1 && (c.feel === 'shuffle' || c.feel === 'triplet' ? n.at % 4 === 0 : n.at % 3 === 0), `${tag}: bar ${bi} has an invalid note ${JSON.stringify(n)}`);
     for (let i = 1; i < notes.length; i++) assert(notes[i].at >= notes[i - 1].at + notes[i - 1].len, `${tag}: bar ${bi} notes overlap in time`);
     const segs = r.info.filter(s => s.bar === bi);
     segs.forEach((seg, si) => {
@@ -67,7 +68,7 @@ for (const c of cases) {
       const hasTones = seg.chordPcs.some(pc => [...Array(c.inst.midi.length).keys()].some(s => [...seg.frets[s]].some(f => (c.inst.midi[s] + f) % 12 === pc)));
       const pitch = n => c.inst.midi[n.s] + n.f;
       if (hasTones) { stat.firstOn++; if (seg.chordPcs.includes(pitch(mine[0]) % 12)) stat.firstTone++; }
-      mine.forEach(n => { if (n.at % 4 === 0 && hasTones) { stat.strong++; if (seg.chordPcs.includes(pitch(n) % 12)) stat.strongTone++; } });
+      mine.forEach(n => { if (n.at % 12 === 0 && hasTones) { stat.strong++; if (seg.chordPcs.includes(pitch(n) % 12)) stat.strongTone++; } });
     });
     // melodic motion within the whole solo (in order)
     for (const n of notes) {
@@ -105,8 +106,30 @@ assert(pct(stat.bigLeaps, stat.steps) <= 0.08, 'leaps over a fifth are rare');
 assert(pct(stat.approachOk, stat.approach) >= 0.8, 'chord changes are approached from within a tone of a new chord tone');
 assert(stat.triples / Math.max(1, stat.steps) < 0.01, 'a note is rarely repeated three times in a row');
 
+// --- the feels: every rhythm template is valid and on its feel's grid
+for (const f of FEELS) {
+  for (const d of ['sparse', 'medium', 'busy']) {
+    const pool = RHYTHMS[f.id][d];
+    assert(pool.length >= 3, `${f.id}/${d} has at least three rhythms`);
+    for (const r of pool) {
+      assert(r.every(([a, l], i) => a >= 0 && l >= 2 && a + l <= STEPS && (i === 0 || a >= r[i - 1][0] + r[i - 1][1])), `${f.id}/${d}: rhythm ${JSON.stringify(r)} is ordered, non-overlapping and inside the bar`);
+      assert(r.every(([a]) => (f.id === 'shuffle' || f.id === 'triplet' ? a % 4 === 0 : a % 3 === 0)), `${f.id}/${d}: onsets sit on the ${f.id} grid`);
+    }
+  }
+  const avgN = d => RHYTHMS[f.id][d].reduce((n, r) => n + r.length, 0) / RHYTHMS[f.id][d].length;
+  assert(avgN('sparse') < avgN('medium') && avgN('medium') < avgN('busy'), `${f.id}: sparser rhythms have fewer notes (${avgN('sparse')}, ${avgN('medium')}, ${avgN('busy')})`);
+  for (const k of ['sparse', 'normal']) { const r = FINALS[f.id][k]; assert(r[r.length - 1][0] + r[r.length - 1][1] === STEPS && r[r.length - 1][1] >= 12, `${f.id}: the final bar ends on a long note that reaches the bar line (${k})`); }
+}
+{ // feels really feel different: shuffle has long-short pairs, triplet runs have three per beat
+  const sh = run(PROGS.blues, std, 'blues', 'medium', 3, 'shuffle'), tr = run(PROGS.blues, std, 'blues', 'busy', 3, 'triplet'), st = run(PROGS.blues, std, 'blues', 'medium', 3, 'straight');
+  const pairs = sh.bars.flat().filter(n => n.at % 12 === 8 && n.len === 4).length;
+  assert(pairs >= 6, `shuffle writes long-short pairs (${pairs} short notes on the third triplet)`);
+  assert(tr.bars.flat().filter(n => n.len === 4).length > 30, 'triplet feel writes runs of triplet eighths');
+  assert(st.bars.flat().every(n => n.at % 3 === 0), 'straight feel stays on the sixteenth grid');
+}
+
 // --- density really changes the number of notes
-const avg = d => { let n = 0, b = 0; for (let s = 1; s <= 20; s++) { const r = run(PROGS.pop, std, 'pent', d, s); r.bars.forEach(x => { n += x.length; b++; }); } return n / b; };
+const avg = d => { let n = 0, b = 0; for (let s = 1; s <= 20; s++) { const r = run(PROGS.pop, std, 'pent', d, s, 'straight'); r.bars.forEach(x => { n += x.length; b++; }); } return n / b; };
 const [sp, me, bu] = ['sparse', 'medium', 'busy'].map(avg);
 assert(sp < me && me < bu && sp >= 2 && sp <= 5 && bu >= 8, `notes per bar: sparse ${sp.toFixed(1)}, medium ${me.toFixed(1)}, busy ${bu.toFixed(1)}`);
 
@@ -159,8 +182,8 @@ assert(sp < me && me < bu && sp >= 2 && sp <= 5 && bu >= 8, `notes per bar: spar
   const junk = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'nope', positions: [99, -1] }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
   assert(junk.info[0].scaleId && junk.bars[0].length > 0, 'an unknown scale or position falls back to automatic');
   // same chord, same choices, back to back in one bar: one stretch; different choices: two
-  const same = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent' }, { at: 8, name: 'Am', scale: 'minpent' }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
-  const diff = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent' }, { at: 8, name: 'Am', scale: 'aeolian' }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
+  const same = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent' }, { at: 24, name: 'Am', scale: 'minpent' }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
+  const diff = generateSolo({ bars: [{ chords: [{ at: 0, name: 'Am', scale: 'minpent' }, { at: 24, name: 'Am', scale: 'aeolian' }] }], inst: std, style: 'follow', density: 'medium', seed: 1 });
   assert(same.info.length === 1 && diff.info.length === 2 && diff.info[1].scaleId === 'aeolian', 'identical neighbouring markers are one stretch; different choices start a new one');
   console.log(`marker choices: ${checked} cases checked`);
 }

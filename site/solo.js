@@ -13,7 +13,7 @@
 // The same seed always gives the same solo.
 import { SC, CHORDS, parseChord, suggest, detectKey, isDominantish } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
-import { STEPS } from './tab.js';
+import { STEPS, BEAT } from './tab.js';
 
 /** @typedef {import('./types.js').TabNote} TabNote */
 /** @typedef {{t:number, mode:'major'|'minor'}} Key */
@@ -29,33 +29,96 @@ export const DENSITIES = [
   { id: 'busy', name: 'Busy' },
 ];
 
-/** Rhythm one bar at a time: [start, length] in sixteenths; gaps are rests. @type {Record<string, number[][][]>} */
-const RHYTHMS = {
-  sparse: [
-    [[0, 4], [4, 2], [6, 2], [8, 8]],
-    [[0, 6], [6, 2], [8, 4], [12, 4]],
-    [[0, 8], [8, 4], [12, 4]],
-    [[0, 4], [6, 2], [8, 4], [12, 2], [14, 2]],
-    [[0, 2], [4, 4], [8, 6], [14, 2]],
-  ],
-  medium: [
-    [[0, 2], [2, 2], [4, 2], [6, 2], [8, 4], [12, 2], [14, 2]],
-    [[0, 3], [3, 3], [6, 2], [8, 2], [10, 2], [12, 4]],
-    [[0, 2], [2, 2], [4, 4], [8, 2], [10, 2], [12, 2], [14, 2]],
-    [[0, 4], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
-    [[0, 2], [2, 2], [4, 2], [8, 2], [10, 2], [12, 4]],
-  ],
-  busy: [
-    [[0, 2], [2, 2], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
-    [[0, 2], [2, 2], [4, 1], [5, 1], [6, 1], [7, 1], [8, 2], [10, 2], [12, 1], [13, 1], [14, 1], [15, 1]],
-    [[0, 1], [1, 1], [2, 1], [3, 1], [4, 2], [6, 2], [8, 4], [12, 2], [14, 2]],
-    [[0, 2], [2, 1], [3, 1], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
-  ],
+/** How the line is felt. Every feel is a set of one-bar rhythms in 48ths of a bar (a quarter is 12). */
+export const FEELS = [
+  { id: 'straight', name: 'Straight eighths' },
+  { id: 'shuffle', name: 'Shuffle / swing' },
+  { id: 'triplet', name: 'Triplets (12/8)' },
+  { id: 'funk', name: 'Sixteenths (funk)' },
+];
+
+/** Rhythms written in sixteenths ([start, length]; gaps are rests), scaled to the 48-step bar. @param {number[][]} r @returns {number[][]} */
+const x3 = r => r.map(([a, l]) => [a * 3, l * 3]);
+/**
+ * A bar made of four beats, each one of: P = a long-short pair (a triplet quarter then a triplet eighth - the
+ * shuffle), T = three triplet eighths, Q = a quarter, L = just the long half of a pair, R = a rest.
+ * @param {string} beats e.g. 'PPQL' @returns {number[][]}
+ */
+function fromBeats(beats) {
+  /** @type {number[][]} */ const out = [];
+  [...beats].forEach((c, i) => {
+    const b = i * 12;
+    if (c === 'P') out.push([b, 8], [b + 8, 4]);
+    else if (c === 'T') out.push([b, 4], [b + 4, 4], [b + 8, 4]);
+    else if (c === 'Q') out.push([b, 12]);
+    else if (c === 'L') out.push([b, 8]);
+  });
+  return out;
+}
+
+/** @typedef {{sparse:number[][][], medium:number[][][], busy:number[][][]}} RhythmPool */
+/** @type {Record<string, RhythmPool>} */
+export const RHYTHMS = {
+  straight: {
+    sparse: [
+      [[0, 4], [4, 2], [6, 2], [8, 8]],
+      [[0, 6], [6, 2], [8, 4], [12, 4]],
+      [[0, 8], [8, 4], [12, 4]],
+      [[0, 4], [6, 2], [8, 4], [12, 2], [14, 2]],
+      [[0, 2], [4, 4], [8, 6], [14, 2]],
+    ].map(x3),
+    medium: [
+      [[0, 2], [2, 2], [4, 2], [6, 2], [8, 4], [12, 2], [14, 2]],
+      [[0, 3], [3, 3], [6, 2], [8, 2], [10, 2], [12, 4]],
+      [[0, 2], [2, 2], [4, 4], [8, 2], [10, 2], [12, 2], [14, 2]],
+      [[0, 4], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
+      [[0, 2], [2, 2], [4, 2], [8, 2], [10, 2], [12, 4]],
+    ].map(x3),
+    busy: [
+      [[0, 2], [2, 2], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
+      [[0, 2], [2, 2], [4, 1], [5, 1], [6, 1], [7, 1], [8, 2], [10, 2], [12, 1], [13, 1], [14, 1], [15, 1]],
+      [[0, 1], [1, 1], [2, 1], [3, 1], [4, 2], [6, 2], [8, 4], [12, 2], [14, 2]],
+      [[0, 2], [2, 1], [3, 1], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
+    ].map(x3),
+  },
+  shuffle: {
+    sparse: ['QPQL', 'LRQP', 'QQPR', 'QLQP'].map(fromBeats),
+    medium: ['PPQP', 'PLPQ', 'QPPP', 'PPPL'].map(fromBeats),
+    busy: ['PPPP', 'PTPP', 'PPPT', 'PPTP'].map(fromBeats),
+  },
+  triplet: {
+    sparse: ['QTQR', 'TRQQ', 'QQTL', 'QRTQ'].map(fromBeats),
+    medium: ['TTQT', 'TQTT', 'TTTQ', 'QTTT'].map(fromBeats),
+    busy: ['TTTT', 'TPTT', 'TTPT', 'TTTP'].map(fromBeats),
+  },
+  funk: {
+    sparse: [
+      [[0, 2], [3, 1], [6, 2], [10, 3], [14, 2]],
+      [[0, 3], [4, 2], [8, 3], [12, 1], [14, 2]],
+      [[2, 2], [6, 2], [8, 1], [11, 1], [14, 2]],
+      [[0, 1], [3, 3], [8, 2], [11, 1], [14, 1]],
+    ].map(x3),
+    medium: [
+      [[0, 1], [2, 1], [4, 2], [6, 1], [8, 2], [10, 1], [12, 2], [14, 1]],
+      [[0, 2], [3, 1], [4, 1], [6, 2], [8, 1], [11, 1], [12, 2], [14, 2]],
+      [[0, 1], [3, 1], [4, 2], [7, 1], [8, 2], [10, 2], [12, 1], [15, 1]],
+      [[0, 1], [2, 1], [3, 1], [6, 2], [8, 1], [10, 1], [11, 1], [14, 2]],
+    ].map(x3),
+    busy: [
+      [[0, 1], [1, 1], [3, 1], [4, 1], [6, 1], [7, 1], [8, 1], [9, 1], [11, 1], [12, 1], [14, 1], [15, 1]],
+      [[0, 1], [2, 1], [3, 1], [4, 1], [6, 1], [8, 1], [10, 1], [11, 1], [12, 1], [14, 1], [15, 1]],
+      [[0, 1], [1, 1], [2, 1], [4, 1], [5, 1], [6, 1], [8, 1], [9, 1], [10, 1], [12, 1], [13, 1], [14, 1]],
+      [[0, 2], [2, 1], [3, 1], [4, 1], [5, 1], [8, 2], [10, 1], [11, 1], [12, 1], [13, 1], [14, 2]],
+    ].map(x3),
+  },
 };
-/** The last bar: a run into a long final note. @type {number[][]} */
-const FINAL = [[0, 2], [2, 2], [4, 2], [6, 2], [8, 8]];
-/** @type {Record<string, number[][]>} */
-const FINAL_BY_DENSITY = { sparse: [[0, 4], [4, 4], [8, 8]], medium: FINAL, busy: FINAL };
+/** The last bar of a solo: a run into a long final note, per feel (the sparse one is simpler). @type {Record<string, {sparse:number[][], normal:number[][]}>} */
+export const FINALS = {
+  straight: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 6], [6, 6], [12, 6], [18, 6], [24, 24]] },
+  shuffle: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 8], [8, 4], [12, 8], [20, 4], [24, 24]] },
+  triplet: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 4], [4, 4], [8, 4], [12, 12], [24, 24]] },
+  funk: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 3], [6, 3], [12, 3], [18, 3], [24, 24]] },
+};
 
 /** Small seeded generator (mulberry32). @param {number} seed @returns {() => number} */
 export function rng(seed) {
@@ -69,6 +132,7 @@ export function rng(seed) {
  * @property {{midi:number[], tuning:number[]}} inst open-string MIDI notes and pitch classes, top string first (capo included)
  * @property {string} style  'follow' | 'pent' | 'blues'
  * @property {string} density 'sparse' | 'medium' | 'busy'
+ * @property {string} [feel] 'straight' | 'shuffle' | 'triplet' | 'funk' (default straight)
  * @property {number} seed
  * @property {Key} [key] default: detected from the chords, else A minor
  */
@@ -136,6 +200,7 @@ export function soloContext(bars, style, keyOpt) {
  */
 export function generateSolo(o) {
   const rand = rng(o.seed);
+  const feel = o.feel && RHYTHMS[o.feel] ? o.feel : 'straight';
   const pick = /** @template T @param {T[]} arr @returns {T} */ arr => arr[Math.floor(rand() * arr.length)];
   const nStr = o.inst.midi.length;
   // --- the chord in effect over every stretch of every bar ---
@@ -210,9 +275,9 @@ export function generateSolo(o) {
     if (!rhythmOf[bar]) {
       const k = bar % 4, last = bar === lastBar;
       let r;
-      if (last) r = FINAL_BY_DENSITY[o.density] || FINAL;
+      if (last) r = (FINALS[feel] || FINALS.straight)[o.density === 'sparse' ? 'sparse' : 'normal'];
       else {
-        const pool = RHYTHMS[o.density] || RHYTHMS.medium;
+        const pool = (RHYTHMS[feel] || RHYTHMS.straight)[/** @type {'sparse'|'medium'|'busy'} */ (o.density)] || RHYTHMS.straight.medium;
         if (k === 0) { phraseRhythm = pick(pool); motifRhythm = phraseRhythm; motifOffsets = null; r = phraseRhythm; }
         else if (k === 1) r = rand() < 0.7 ? phraseRhythm : pick(pool);
         else if (k === 2) r = pick(pool.filter(x => x !== phraseRhythm)) || phraseRhythm;
@@ -236,7 +301,7 @@ export function generateSolo(o) {
     const changing = !!nextSeg && (nextSeg.chord.root !== chord.root || nextSeg.chord.iv.join() !== chord.iv.join());
     /** @type {number[]} */ const idxs = [];
     rhythm.forEach(([at], n) => {
-      const strong = at % 4 === 0, firstOn = n === 0, lastOn = n === rhythm.length - 1;
+      const strong = at % BEAT === 0, firstOn = n === 0, lastOn = n === rhythm.length - 1;
       // the walk is pulled gently back to the middle of the position so it does not drift to one end
       const mid = (pitches.length - 1) / 2;
       if (lastSeg && lastOn) { // the final note: the root of the last chord

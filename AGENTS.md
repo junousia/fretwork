@@ -231,7 +231,9 @@ those are allowed. Re-run the build only if updating the dataset.
 
 ## Tab editor (Tab tab)
 
-`tab.js` is the single model every tab feature uses (editor, playback, and later the solo generator
+`tab.js` is the single model every tab feature uses (48 steps per 4/4 bar: quarter 12, sixteenth 3, eighth
+triplet 4 - `STEPS`/`BEAT`/`SIXTEENTH`; older saved tabs have no `res` and are converted x3 by `normalizeTab`;
+triplet lengths are `TRIPLET_OF`, and `gridFor` is the click grid for a length) (editor, playback, and later the solo generator
 and PDF export): a `Tab` is bars of 16 sixteenth-note steps; a `TabNote` is `{at, len, s, f}` (string 0
 = top string, fret counts from the capo). All edits are pure functions returning a new Tab, so undo
 is a stack of snapshots (`createHistory`). A string rings one note at a time: `putNote` shortens the
@@ -261,6 +263,16 @@ the generator and the plan panel so the preview matches what is generated. `test
 these on ~3,700 solos across all tunings, capos, styles and densities (notes in scale and position,
 >=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
 generator, not a performer: no bends, slides or feel yet.
+
+### Feels, swing and PDF
+
+`FEELS` in `solo.js` pick the rhythm pool (`RHYTHMS[feel][density]`, `FINALS[feel]`): straight and funk
+sit on sixteenths, shuffle writes long-short pairs (`fromBeats`: P = 8+4 steps, T = three 4s, Q = a
+quarter) and triplet writes runs of triplet eighths - all on the 4-step triplet grid. `swung()` in
+`transport.js` is the playback-only swing mapping (beats never move); it does not change the notes.
+The PDF is the browser's own print: the Tab view builds `#print-sheet` on `beforeprint` (title, meta,
+chord boxes from `tab.voicings`, one SVG per row of bars so rows never split) and `@media print` hides
+the app. Test it by dispatching `beforeprint` + `page.emulateMedia({media:'print'})` + `page.pdf()`.
 
 ## Chord identifier (Identify tab)
 

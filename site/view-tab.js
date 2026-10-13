@@ -2,14 +2,15 @@ import { esc, parseChord } from './music.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
-import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES } from './solo.js';
+import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS } from './solo.js';
+import { SWINGS } from './transport.js';
 import { keyName, spell, suggest, SC } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
 import { board, fitBoard } from './board.js';
 import { chordMidiNotes } from './audio.js';
 import { startTab } from './player.js';
 import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, setChordPlan, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering, tabEvents,
-  stepSeconds, normalizeTab, createHistory, tabToText, STEPS, MAX_FRET, LENGTHS, LENGTH_NAMES } from './tab.js';
+  stepSeconds, normalizeTab, createHistory, tabToText, STEPS, BEAT, MAX_FRET, LENGTHS, LENGTH_NAMES, TRIPLET_OF, gridFor } from './tab.js';
 import { tabSvg, barsPerRowFor, stepPos } from './tab-view.js';
 
 const STORE_KEY = 'fw-tabs';
@@ -25,9 +26,11 @@ export function mount(root){
       <button type="button" class="share" id="tb-undo">Undo</button>
       <button type="button" class="share" id="tb-redo">Redo</button>
       <label class="keylab">Tempo <input id="tb-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
+      <button type="button" class="share" id="tb-pdf" title="Print the tab with its chord boxes - choose Save as PDF in the print dialog">Export PDF</button>
     </div>
     <div class="row">
       <label class="keylab">Note <div class="seg" id="tb-len" role="group" aria-label="Note length">${LENGTH_NAMES.map((n, i) => `<button type="button" data-len="${i}" aria-pressed="false">${n}</button>`).join('')}</div></label>
+      <label class="chk" title="Three in the time of two (1/16, 1/8, 1/4 and 1/2 notes)"><input type="checkbox" id="tb-trip"> Triplet</label>
     </div>
     <div class="row">
       <label class="keylab">Chord at bar <span id="tb-barno">1</span>, beat <span id="tb-beat">1</span> <input id="tb-chord" type="text" size="7" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Am7"></label>
@@ -56,6 +59,7 @@ export function mount(root){
       <div class="row">
         <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Notes <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Key <select id="tb-key"></select></label>
         <label class="keylab">Seed <input id="tb-seed" type="number" min="1" max="999999" step="1" inputmode="numeric"></label>
       </div>
@@ -70,6 +74,7 @@ export function mount(root){
         <label class="chk"><input type="checkbox" id="tb-backing"> Play the bar chords</label>
         <label class="chk"><input type="checkbox" id="tb-metro"> Click</label>
         <label class="chk"><input type="checkbox" id="tb-loop"> Loop</label>
+        <label class="keylab" title="Plays straight eighths long-short. Notes written as triplets are not changed.">Swing <select id="tb-swing">${SWINGS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
       </div>
       <div class="row">
         <label class="keylab">Title <input id="tb-title" type="text" size="22" maxlength="80" autocomplete="off"></label>
@@ -82,10 +87,10 @@ export function mount(root){
   const $ = sel => root.querySelector(sel);
   const surface = $('#tb-surface'), playBtn = $('#tb-play'), undoBtn = $('#tb-undo'), redoBtn = $('#tb-redo'), bpmIn = $('#tb-bpm'),
         lenSeg = $('#tb-len'), chordIn = $('#tb-chord'), barNo = $('#tb-barno'), msg = $('#tb-msg'), titleIn = $('#tb-title'),
-        backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
+        tripCb = $('#tb-trip'), backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
 
   // --- state ---------------------------------------------------------------
-  const opts = { backing: true, metro: true, loop: false, unit: 1, style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
+  const opts = { backing: true, metro: true, loop: false, unit: 1, triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
   /** @type {Record<string, any>} */ let stored = {};
   try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* defaults */ }
   if (stored.opts && typeof stored.opts === 'object') {
@@ -95,6 +100,9 @@ export function mount(root){
     if (typeof stored.opts.key === 'string' && /^(auto|\d+:(major|minor))$/.test(stored.opts.key)) opts.key = stored.opts.key;
     if (Number.isInteger(stored.opts.seed) && stored.opts.seed > 0 && stored.opts.seed <= 999999) opts.seed = stored.opts.seed;
     if (Number.isInteger(stored.opts.unit) && stored.opts.unit >= 0 && stored.opts.unit < LENGTHS.length) opts.unit = stored.opts.unit;
+    opts.triplet = stored.opts.triplet === true;
+    if (SWINGS.some(x => x.id === stored.opts.swing)) opts.swing = stored.opts.swing;
+    if (FEELS.some(x => x.id === stored.opts.feel)) opts.feel = stored.opts.feel;
   }
   /** One undo history per instrument: frets mean different notes on different strings. */
   const histories = {};
@@ -114,7 +122,9 @@ export function mount(root){
   let player = null, playStep = -1;
 
   // --- editing -------------------------------------------------------------
-  const unitLen = () => LENGTHS[opts.unit];
+  /** The length notes are entered with: the straight length, or its triplet when the Triplet box is on and it has one. */
+  const unitLen = () => (opts.triplet && TRIPLET_OF[LENGTHS[opts.unit]]) || LENGTHS[opts.unit];
+  const snap = () => { const g = gridFor(unitLen()); cursor.at = Math.floor(cursor.at / g) * g; };
   function commit(t){ hist.push(t); persist(); }
   function clampCursor(){
     const n = getInstrument().midi.length;
@@ -181,14 +191,15 @@ export function mount(root){
     const inst = getInstrument();
     clampCursor();
     perRow = barsPerRowFor(surface.clientWidth || 360);
-    surface.innerHTML = tabSvg(tab(), inst, { perRow, cursor, editable: true });
+    surface.innerHTML = tabSvg(tab(), inst, { perRow, cursor: { ...cursor, w: unitLen() }, editable: true, grid: gridFor(unitLen()) });
+    tripCb.checked = opts.triplet && !!TRIPLET_OF[LENGTHS[opts.unit]]; tripCb.disabled = !TRIPLET_OF[LENGTHS[opts.unit]];
     if (playStep >= 0) drawPlayhead(playStep);
     undoBtn.disabled = !hist.canUndo; redoBtn.disabled = !hist.canRedo;
     lenSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.len === opts.unit)));
     if (document.activeElement !== bpmIn) bpmIn.value = String(tab().bpm);
     if (document.activeElement !== titleIn) titleIn.value = tab().title;
     barNo.textContent = String(cursor.bar + 1);
-    $('#tb-beat').textContent = String(1 + cursor.at / 4);
+    $('#tb-beat').textContent = String(Math.round((1 + cursor.at / BEAT) * 100) / 100);
     const c = chordAt(tab(), cursor.bar, cursor.at)?.name ?? '';
     if (document.activeElement !== chordIn) chordIn.value = c;
     chordIn.setAttribute('aria-invalid', String(!!chordIn.value && !parseChord(chordIn.value)));
@@ -238,7 +249,7 @@ export function mount(root){
     const ids = suggest(chord, ctx.key).map(x => x.s.id);
     for (const x of ['minpent', 'majpent', 'blues']) if (!ids.includes(x)) ids.push(x);
     const nameOf = (/** @type {string} */ id) => `${spell(chord.root, false)} ${SC[id].name}`;
-    const where = `${m.name} (bar ${m.bar + 1}, beat ${1 + m.at / 4})`;
+    const where = `${m.name} (bar ${m.bar + 1}, beat ${Math.round((1 + m.at / BEAT) * 100) / 100})`;
     const summary = `Scale and position \u00b7 ${esc(where)}: ${esc(scale.short || scale.name)}${chosen.length ? ', position ' + chosen.join(' + ') : ''}`;
     const chordPcs = chord.iv.map(x => (chord.root + x) % 12);
     const bchord = { root: eff.root, iv: chordPcs.map(pc => (pc - eff.root + 12) % 12), name: m.name };
@@ -297,13 +308,37 @@ export function mount(root){
     const inst = getInstrument();
     setRunning(true);
     player = startTab({
-      events: tabEvents(tab(), inst), chords: opts.backing ? chordsToPlay(inst) : [], totalSteps: tab().bars.length * STEPS,
+      events: tabEvents(tab(), inst), chords: opts.backing ? chordsToPlay(inst) : [], totalSteps: tab().bars.length * STEPS, beat: BEAT, swing: SWINGS.find(x => x.id === opts.swing)?.long ?? 0.5,
       stepSec: stepSeconds(tab().bpm), loop: opts.loop, metronome: opts.metro,
       onStep: step => { playStep = step; if (step >= 0) drawPlayhead(step); else surface.querySelector('.tabplayhead')?.remove(); },
       onEnd: () => { player = null; setRunning(false); },
     });
   }
   function setRunning(on){ playBtn.textContent = on ? '■ Stop' : '▶ Play'; playBtn.setAttribute('aria-pressed', String(on)); }
+
+  // --- PDF: the browser prints a sheet built from the same tab (Save as PDF in the print dialog) ---
+  /** @type {HTMLElement|null} */ let sheet = null;
+  function buildSheet(){
+    const inst = getInstrument(), t = tab(), PER_ROW = barsPerRowFor(718); // an A4/Letter portrait page
+    const names = chordsUsed(t);
+    const boxes = names.map(name => {
+      const { list, k } = voicingOf(inst, name), v = list[k];
+      return `<figure class="print-chord"><b>${esc(name)}</b>${v ? voicingDiagram(v, { size: 1.15, label: false, mirror: inst.leftHanded }) : '<div class="print-nofing">no fingering</div>'}<figcaption>${v ? esc(voicingLabel(v)) + (v.b ? ' \u00b7 barre' : '') : ''}</figcaption></figure>`;
+    }).join('');
+    let rows = '';
+    for (let i = 0; i < t.bars.length; i += PER_ROW) rows += `<div class="print-row">${tabSvg({ ...t, bars: t.bars.slice(i, i + PER_ROW) }, inst, { perRow: PER_ROW, numberFrom: i + 1 })}</div>`;
+    const meta = [inst.name, inst.tuningName, inst.capo ? `capo ${inst.capo}` : '', `${t.bpm} BPM`].filter(Boolean).join(' \u00b7 ');
+    const el = document.createElement('div');
+    el.id = 'print-sheet';
+    el.innerHTML = `<h1>${esc(t.title || 'Untitled tab')}</h1><p class="print-meta">${esc(meta)}</p>${boxes ? `<div class="print-chords">${boxes}</div>` : ''}${rows}<p class="print-foot">Made with Fretwork</p>`;
+    return el;
+  }
+  window.addEventListener('beforeprint', () => {
+    if (root.hidden) return;
+    sheet?.remove(); sheet = buildSheet(); document.body.appendChild(sheet); document.body.classList.add('printing');
+  });
+  window.addEventListener('afterprint', () => { document.body.classList.remove('printing'); sheet?.remove(); sheet = null; });
+  $('#tb-pdf').onclick = () => { cancelPending(); stopPlay(); window.print(); };
 
   // --- wiring ------------------------------------------------------------------
   surface.addEventListener('click', e => {
@@ -321,12 +356,13 @@ export function mount(root){
     if (b.dataset.d !== undefined) typeDigit(+b.dataset.d); else key(b.dataset.k, null);
   });
   lenSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
-    cancelPending(); opts.unit = +b.dataset.len;
+    cancelPending(); opts.unit = +b.dataset.len; snap();
     const t = setLength(tab(), cursor.bar, cursor.at, cursor.s, unitLen());
     if (t !== tab()) hist.push(t);
     persist(); render();
   });
   playBtn.onclick = () => { cancelPending(); togglePlay(); };
+  tripCb.onchange = () => { cancelPending(); opts.triplet = tripCb.checked; snap(); persist(); render(); };
   undoBtn.onclick = () => { cancelPending(); hist.undo(); persist(); render(); };
   redoBtn.onclick = () => { cancelPending(); hist.redo(); persist(); render(); };
   bpmIn.onchange = () => { commit(setBpm(tab(), bpmIn.value)); bpmIn.value = String(tab().bpm); if (player) stopPlay(); render(); };
@@ -352,6 +388,10 @@ export function mount(root){
   for (const mode of /** @type {('major'|'minor')[]} */ (['major', 'minor'])) for (let t = 0; t < 12; t++) keyHtml += `<option value="${t}:${mode}">${esc(keyName({ t, mode }))}</option>`;
   progKey.innerHTML = keyHtml; progKey.value = '9:minor';
   keySel.innerHTML = `<option value="auto">Auto (from the chords)</option>${keyHtml}`;
+  const feelSel = $('#tb-feel'), swingSel = $('#tb-swing');
+  feelSel.value = opts.feel; swingSel.value = opts.swing;
+  feelSel.onchange = () => { opts.feel = feelSel.value; persist(); };
+  swingSel.onchange = () => { opts.swing = swingSel.value; persist(); };
   styleSel.value = opts.style; densSel.value = opts.density; keySel.value = opts.key; seedIn.value = String(opts.seed);
   styleSel.onchange = () => { opts.style = styleSel.value; persist(); render(); };
   densSel.onchange = () => { opts.density = densSel.value; persist(); };
@@ -371,7 +411,7 @@ export function mount(root){
     const inst = getInstrument();
     const [t, mode] = opts.key === 'auto' ? [] : opts.key.split(':');
     const res = generateSolo({
-      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, seed: opts.seed,
+      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, seed: opts.seed,
       key: opts.key === 'auto' ? undefined : { t: +t, mode: /** @type {'major'|'minor'} */ (mode) },
     });
     let next = clearNotes(tab());

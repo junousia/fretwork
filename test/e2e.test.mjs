@@ -77,22 +77,22 @@ async function run(browser, origin, label) {
   await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="5"]');
   await page.keyboard.press('3'); await page.waitForTimeout(800);
   await page.keyboard.press('5'); await page.waitForTimeout(800);
-  assert((await frets()) === '3@0.0.5 5@0.2.5', `${label}: typed frets land on the clicked string, one eighth apart (${await frets()})`);
+  assert((await frets()) === '3@0.0.5 5@0.6.5', `${label}: typed frets land on the clicked string, one eighth apart (${await frets()})`);
   await page.keyboard.press('1'); await page.keyboard.press('2'); await page.waitForTimeout(800);
-  assert((await frets()).endsWith('12@0.4.5'), `${label}: two digits typed together make fret 12`);
+  assert((await frets()).endsWith('12@0.12.5'), `${label}: two digits typed together make fret 12`);
   await page.keyboard.press('Control+z');
-  assert((await frets()) === '3@0.0.5 5@0.2.5', `${label}: undo removes the whole two-digit entry`);
+  assert((await frets()) === '3@0.0.5 5@0.6.5', `${label}: undo removes the whole two-digit entry`);
   await page.keyboard.press('Control+y');
-  assert((await frets()).endsWith('12@0.4.5'), `${label}: redo brings it back`);
+  assert((await frets()).endsWith('12@0.12.5'), `${label}: redo brings it back`);
   await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('0'); await page.waitForTimeout(800);
-  assert((await frets()).includes('0@0.4.4'), `${label}: arrows move the cursor (string up, one eighth back)`);
+  assert((await frets()).includes('0@0.12.4'), `${label}: arrows move the cursor (string up, one eighth back)`);
   await page.click('#tb-len button[data-len="3"]');                  // quarter notes from here on
   await page.click('#tb-surface .tabhit[data-bar="1"][data-at="0"][data-s="2"]');
   await page.keyboard.press('7'); await page.waitForTimeout(800); await page.keyboard.press('9'); await page.waitForTimeout(800);
-  assert((await frets()).endsWith('7@1.0.2 9@1.4.2'), `${label}: quarter notes advance four steps`);
+  assert((await frets()).endsWith('7@1.0.2 9@1.12.2'), `${label}: quarter notes advance one beat`);
   await page.keyboard.press('Backspace');                                // empty cell: steps back one quarter, onto the 9
   await page.click('#tb-pad button[data-d="5"]'); await page.waitForTimeout(800);
-  assert((await frets()).includes('5@1.4.2') && !(await frets()).includes('9@1.4.2'), `${label}: Backspace stepped back and the number pad replaced the 9 with a 5`);
+  assert((await frets()).includes('5@1.12.2') && !(await frets()).includes('9@1.12.2'), `${label}: Backspace stepped back and the number pad replaced the 9 with a 5`);
   await page.fill('#tb-chord', 'Em7'); await page.press('#tb-chord', 'Tab');
   assert((await page.textContent('#tb-surface .tabchord')) === 'Em7', `${label}: the bar chord is drawn above the bar`);
   await page.fill('#tb-chord', 'Xyz'); await page.press('#tb-chord', 'Tab');
@@ -113,8 +113,19 @@ async function run(browser, origin, label) {
   assert((await page.$$eval('#tb-surface svg:first-child .tabline', e => e.length)) % 4 === 0 && (await page.$$eval('#tb-surface .tabname', e => [...new Set(e.map(x => x.textContent))].join(''))) === 'AECG' && (await frets()) === '', `${label}: the ukulele has its own four-string tab`);
   await page.click('button[data-inst="guitar"]');
   assert((await frets()) === before, `${label}: switching back restores the guitar tab`);
+  // triplets: three eighth triplets fill one beat, with a bracket; the cursor snaps to the triplet grid
+  await page.click('#tb-len button[data-len="1"]');                  // eighths
+  await page.check('#tb-trip');
+  await page.click('#tb-surface .tabhit[data-bar="3"][data-at="0"][data-s="1"]');
+  assert((await page.$$('#tb-surface .tabhit[data-bar="3"][data-s="1"]')).length === 12, `${label}: triplet eighths put 12 click cells in a bar`);
+  for (const d of ['1', '2', '3']) { await page.keyboard.press(d); await page.waitForTimeout(800); }
+  assert((await frets()).includes('1@3.0.1 2@3.4.1 3@3.8.1'), `${label}: three triplet eighths sit four steps apart (${await frets()})`);
+  assert((await page.$$('#tb-surface .tabtuplet')).length === 1 && (await page.textContent('#tb-surface .tabtupletnum')) === '3', `${label}: the triplet group has a bracket with a 3`);
+  await page.uncheck('#tb-trip');
+  assert((await page.$$('#tb-surface .tabhit[data-bar="3"][data-s="1"]')).length === 16, `${label}: straight notes go back to sixteenth cells`);
+  await page.selectOption('#tb-swing', 'shuffle'); await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
   // chords can sit at any step; the chords used are gathered above the tab with a fingering
-  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="8"][data-s="2"]');
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="24"][data-s="2"]');
   await page.fill('#tb-chord', 'D7'); await page.press('#tb-chord', 'Tab');
   assert((await page.textContent('#tb-beat')) === '3', `${label}: the chord field names the beat of the cursor`);
   const chordXs = await page.$$eval('#tb-surface .tabchord', e => e.map(x => `${x.textContent}@${Math.round(+x.getAttribute('x'))}`));
@@ -135,6 +146,11 @@ async function run(browser, origin, label) {
   assert((g1.match(/ /g) || []).length > 20, `${label}: generate fills the tab (${g1.split(' ').length} notes)`);
   await page.click('#tb-gen-go');
   assert((await frets()) === g1, `${label}: the same seed gives the same solo`);
+  await page.selectOption('#tb-feel', 'shuffle'); await page.click('#tb-gen-go');
+  const offs = await page.$$eval('#tb-surface .fret', e => e.map(x => +x.dataset.at % 12));
+  assert(offs.filter(x => x === 8).length >= 4 && offs.every(x => x % 4 === 0), `${label}: the shuffle feel writes long-short pairs on the triplet grid`);
+  await page.selectOption('#tb-feel', 'straight');
+  await page.click('#tb-gen-go');
   await page.click('#tb-gen-new');
   assert((await frets()) !== g1 && (await page.inputValue('#tb-seed')) !== '4242', `${label}: Another one gives a different solo and a new seed`);
   assert((await page.textContent('#tb-genmsg')).includes('Seed'), `${label}: the seed is shown`);
@@ -160,6 +176,27 @@ async function run(browser, origin, label) {
   await page.click('#tb-undo'); await page.click('#tb-undo');
   assert((await frets()) !== '' , `${label}: undo steps back through generated solos`);
   await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
+  // PDF export: the print sheet has the title, every chord box once, and the tab in rows that are not split
+  assert(await page.isVisible('#tb-pdf'), `${label}: there is an Export PDF button`);
+  await page.fill('#tb-title', 'Blues in A'); await page.press('#tb-title', 'Tab');
+  const usedChords = await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent));
+  const barCount = await page.$$eval('#tb-surface .tabchord', e => e.length);
+  await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
+  await page.emulateMedia({ media: 'print' });
+  assert(await page.isHidden('.app') && await page.isVisible('#print-sheet'), `${label}: printing hides the app and shows the sheet`);
+  assert((await page.textContent('#print-sheet h1')) === 'Blues in A' && (await page.textContent('#print-sheet .print-meta')).includes('90 BPM'), `${label}: the sheet has the title and the tempo`);
+  assert((await page.$$eval('#print-sheet .print-chord b', e => e.map(x => x.textContent))).join() === usedChords.join(), `${label}: the sheet shows each chord used once, with its box (${usedChords})`);
+  assert((await page.$$('#print-sheet .print-chord .vdiag')).length === usedChords.length, `${label}: every chord box has a fingering diagram`);
+  const rows = await page.$$eval('#print-sheet .print-row', r => r.map(x => ({ w: x.querySelector('svg').getBoundingClientRect().width, h: x.getBoundingClientRect().height, bars: x.querySelectorAll('.tabbarno').length })));
+  assert(rows.length === Math.ceil(12 / 2) && rows.every(r => r.bars === 2 && r.w <= 720), `${label}: twelve bars are laid out two per row, each row narrower than a page (${rows.length} rows)`);
+  assert((await page.$$eval('#print-sheet .tabbarno', e => e.map(x => x.textContent))).join() === '1,2,3,4,5,6,7,8,9,10,11,12', `${label}: bars are numbered`);
+  assert((await page.$$('#print-sheet .tabhit, #print-sheet .tabcursor')).length === 0, `${label}: the sheet has no editing cells or cursor`);
+  const pdf = await page.pdf({ format: 'A4', printBackground: true });
+  const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  assert(pdf.slice(0, 5).toString() === '%PDF-' && pages >= 2 && pages <= 3, `${label}: the PDF is a real PDF of ${pages} pages`);
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await page.emulateMedia({ media: 'screen' });
+  assert(await page.isVisible('.app') && (await page.$$('#print-sheet')).length === 0, `${label}: after printing the app is back and the sheet is gone`);
 
   // scales tab: position selector
   await page.click('a[data-tab="scales"]');

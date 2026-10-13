@@ -66,7 +66,7 @@ const cases = {
   'c-major-chord-box-barre-left-handed': () => voicingDiagram(getVoicings(G, 0, '')[1], { mirror: true }),
   'identify-open-c': () => board({ root: 0, iv: CHORDS[''], name: 'C' }, { s: { iv: [0], name: 'the marked notes' } }, 'notes', false,
     { tuning: G.tuning, hitAreas: true, voicing: { f: [0, 1, 0, 2, 3, -1], g: [0, 0, 0, 0, 0, 0], b: null } }),
-  'tab-riff': () => { let t = emptyTab(2); for (const [bar, at, st, f, len] of [[0, 0, 5, 0, 2], [0, 2, 5, 3, 2], [0, 4, 4, 0, 4], [0, 8, 3, 2, 3], [0, 11, 2, 0, 1], [0, 12, 0, 12, 4], [1, 0, 1, 3, 8]]) t = putNote(t, bar, at, st, f, len); t = putChord(t, 0, 0, 'Em'); t = putChord(t, 0, 8, 'D'); t = putChord(t, 1, 0, 'C'); return tabSvg(t, G, { perRow: 2, cursor: { bar: 1, at: 8, s: 1 } }); },
+  'tab-riff': () => { let t = emptyTab(2); for (const [bar, at, st, f, len] of [[0, 0, 5, 0, 6], [0, 6, 5, 3, 6], [0, 12, 4, 0, 12], [0, 24, 3, 2, 9], [0, 33, 2, 0, 3], [0, 36, 0, 12, 12], [1, 0, 1, 3, 24], [1, 24, 2, 5, 4], [1, 28, 2, 7, 4], [1, 32, 2, 8, 4], [1, 36, 3, 7, 12]]) t = putNote(t, bar, at, st, f, len); t = putChord(t, 0, 0, 'Em'); t = putChord(t, 0, 24, 'D'); t = putChord(t, 1, 0, 'C'); return tabSvg(t, G, { perRow: 2, cursor: { bar: 1, at: 24, s: 1 } }); },
   'am7-chord-box-open': () => voicingDiagram(getVoicings(G, 9, 'm7')[0], { label: false }),
 };
 

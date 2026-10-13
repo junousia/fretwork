@@ -9,17 +9,29 @@ import { SC } from './music.js';
 /** @typedef {import('./types.js').TabNote} TabNote */
 /** @typedef {import('./types.js').TabChord} TabChord */
 
-export const STEPS = 16;          // sixteenth notes per bar (4/4)
+// 48 steps per 4/4 bar: a quarter is 12, an eighth 6, a sixteenth 3, an eighth triplet 4, a sixteenth
+// triplet 2 - the smallest grid that holds straight and triplet notes exactly.
+export const STEPS = 48;
+export const BEAT = 12;           // steps per quarter note
+export const SIXTEENTH = 3;
+/** Which `res` a Tab object is in: older saved tabs (no res) used 16 steps per bar and are converted when read. */
+export const RES = 48;
 export const MAX_FRET = 24;
 export const MAX_BARS = 64;
 export const MAX_CHORDS_PER_BAR = 8;
-/** Note lengths on offer, in steps: 1/16, 1/8, dotted 1/8, 1/4, dotted 1/4, 1/2, dotted 1/2, whole. */
-export const LENGTHS = [1, 2, 3, 4, 6, 8, 12, 16];
+/** Straight note lengths on offer, in steps: 1/16, 1/8, dotted 1/8, 1/4, dotted 1/4, 1/2, dotted 1/2, whole. */
+export const LENGTHS = [3, 6, 9, 12, 18, 24, 36, 48];
 export const LENGTH_NAMES = ['1/16', '1/8', '1/8.', '1/4', '1/4.', '1/2', '1/2.', '1'];
+/** The triplet version of a straight length (three in the time of two): 1/16, 1/8, 1/4 and 1/2 have one. @type {Record<number, number>} */
+export const TRIPLET_OF = { 3: 2, 6: 4, 12: 8, 24: 16 };
+/** Lengths that are triplets. */
+export const TRIPLET_LENGTHS = Object.values(TRIPLET_OF);
+/** The grid a note of this length is placed on: triplets on their own length, everything else on sixteenths. @param {number} len @returns {number} */
+export const gridFor = len => (TRIPLET_LENGTHS.includes(len) ? len : SIXTEENTH);
 
 /** @param {number} [nBars] @returns {Tab} */
 export function emptyTab(nBars = 4) {
-  return { title: '', bpm: 90, bars: Array.from({ length: nBars }, () => ({ chords: [], notes: [] })) };
+  return { title: '', bpm: 90, res: RES, bars: Array.from({ length: nBars }, () => ({ chords: [], notes: [] })) };
 }
 
 /** @param {TabNote[]} notes @returns {TabNote[]} notes in time order (then top string first) */
@@ -165,7 +177,7 @@ export function tabEvents(tab, inst) {
 }
 
 /** Seconds per sixteenth step at a tempo in quarter-note BPM. @param {number} bpm @returns {number} */
-export const stepSeconds = bpm => 60 / bpm / 4;
+export const stepSeconds = bpm => 60 / bpm / BEAT;
 
 /**
  * Validate and repair anything claiming to be a Tab (storage, links): unknown
@@ -174,19 +186,24 @@ export const stepSeconds = bpm => 60 / bpm / 4;
  */
 export function normalizeTab(raw) {
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.bars) || !raw.bars.length || raw.bars.length > MAX_BARS) return null;
-  let tab = { title: typeof raw.title === 'string' ? raw.title.slice(0, 80) : '', bpm: 90, bars: raw.bars.map((/** @type {any} */ _) => ({ chords: /** @type {TabChord[]} */ ([]), notes: /** @type {TabNote[]} */ ([]) })) };
+  // Tabs saved before triplets used 16 steps per bar (no `res`): every position and length is three times finer now.
+  if (raw.res !== undefined && raw.res !== 16 && raw.res !== RES) return null;
+  const k = raw.res === RES ? 1 : 3;
+  /** @type {Tab} */
+  let tab = { title: typeof raw.title === 'string' ? raw.title.slice(0, 80) : '', bpm: 90, res: RES, bars: raw.bars.map((/** @type {any} */ _) => ({ chords: /** @type {TabChord[]} */ ([]), notes: /** @type {TabNote[]} */ ([]) })) };
   tab = setBpm(tab, raw.bpm);
   raw.bars.forEach((/** @type {any} */ b, /** @type {number} */ i) => {
     if (!b || typeof b !== 'object') return;
     if (typeof b.chord === 'string') tab = putChord(tab, i, 0, b.chord); // the old one-chord-per-bar shape
     if (Array.isArray(b.chords)) for (const c of b.chords.slice(0, 32)) if (c && typeof c.name === 'string') {
-      tab = putChord(tab, i, c.at, c.name);
-      if (typeof c.scale === 'string' || Array.isArray(c.positions)) tab = setChordPlan(tab, i, c.at, { ...(typeof c.scale === 'string' ? { scale: c.scale } : {}), ...(Array.isArray(c.positions) ? { positions: c.positions.filter((/** @type {any} */ n) => typeof n === 'number') } : {}) });
+      const cat = Number.isInteger(c.at) ? c.at * k : NaN;
+      tab = putChord(tab, i, cat, c.name);
+      if (typeof c.scale === 'string' || Array.isArray(c.positions)) tab = setChordPlan(tab, i, cat, { ...(typeof c.scale === 'string' ? { scale: c.scale } : {}), ...(Array.isArray(c.positions) ? { positions: c.positions.filter((/** @type {any} */ n) => typeof n === 'number') } : {}) });
     }
-    const notes = Array.isArray(b.notes) ? b.notes.slice(0, STEPS * 12) : [];
+    const notes = Array.isArray(b.notes) ? b.notes.slice(0, 600) : [];
     for (const n of notes) {
-      if (!n || typeof n !== 'object' || !Number.isInteger(n.len) || n.len < 1 || n.len > STEPS) continue;
-      tab = putNote(tab, i, n.at, n.s, n.f, n.len);
+      if (!n || typeof n !== 'object' || !Number.isInteger(n.len) || n.len < 1 || n.len * k > STEPS || !Number.isInteger(n.at)) continue;
+      tab = putNote(tab, i, n.at * k, n.s, n.f, n.len * k);
     }
   });
   if (raw.voicings && typeof raw.voicings === 'object') {
@@ -226,13 +243,18 @@ export function stringNames(midi) {
 }
 
 /**
- * The tab as plain text (the classic ASCII layout): two characters per sixteenth,
- * as many bars per line as fit in 72 columns, chord names above each bar.
+ * The tab as plain text (the classic ASCII layout): two characters per cell, as many bars per
+ * line as fit in 72 columns, chord names above each bar. A bar is 16 cells (one per sixteenth)
+ * - or 24 cells when the tab has triplets, so every note is placed at its nearest cell
+ * (a triplet is only approximated in plain text).
  * @param {Tab} tab @param {number[]} midi open-string MIDI notes, top first @returns {string}
  */
 export function tabToText(tab, midi) {
   const names = stringNames(midi), pad = Math.max(...names.map(n => n.length));
-  const barLen = STEPS * 2, perLine = Math.max(1, Math.floor((72 - pad - 1) / (barLen + 1)));
+  const triplets = tab.bars.some(b => b.notes.some(n => n.at % SIXTEENTH !== 0 || n.len % SIXTEENTH !== 0));
+  const unit = triplets ? 2 : SIXTEENTH, cells = STEPS / unit;
+  const barLen = cells * 2, perLine = Math.max(1, Math.floor((72 - pad - 1) / (barLen + 1)));
+  const cellOf = (/** @type {number} */ at) => Math.min(cells - 1, Math.round(at / unit));
   const lines = [];
   if (tab.title) lines.push(tab.title, '');
   for (let first = 0; first < tab.bars.length; first += perLine) {
@@ -240,7 +262,7 @@ export function tabToText(tab, midi) {
     const line = Array(pad + 1 + group.length * (barLen + 1)).fill(' ');
     let any = false;
     group.forEach((b, gi) => b.chords.forEach(c => {
-      const col = pad + 1 + gi * (barLen + 1) + c.at * 2;
+      const col = pad + 1 + gi * (barLen + 1) + cellOf(c.at) * 2;
       if (line.slice(col, col + c.name.length + 1).some(ch => ch !== ' ')) return; // would run into the previous name
       [...c.name].forEach((ch, k) => { line[col + k] = ch; }); any = true;
     }));
@@ -248,9 +270,9 @@ export function tabToText(tab, midi) {
     midi.forEach((_, s) => {
       let row = names[s].padEnd(pad) + '|';
       for (const b of group) {
-        const cells = Array.from({ length: STEPS }, () => '--');
-        for (const n of b.notes) if (n.s === s) cells[n.at] = String(n.f).padEnd(2, '-');
-        row += cells.join('') + '|';
+        const out = Array.from({ length: cells }, () => '--');
+        for (const n of b.notes) if (n.s === s) out[cellOf(n.at)] = String(n.f).padEnd(2, '-');
+        row += out.join('') + '|';
       }
       lines.push(row);
     });

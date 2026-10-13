@@ -1,4 +1,4 @@
-<svg class="tabsvg" width="636" height="162" viewBox="0 0 636 162" role="img" aria-label="Tab, 2 bars">
+<svg class="tabsvg" width="636" height="174" viewBox="0 0 636 174" role="img" aria-label="Tab, 2 bars">
 <text class="tabname" x="20" y="26" text-anchor="end" font-size="11">e</text>
 <text class="tabname" x="20" y="42" text-anchor="end" font-size="11">B</text>
 <text class="tabname" x="20" y="58" text-anchor="end" font-size="11">G</text>
@@ -34,15 +34,15 @@
 <rect class="tabfretbg" x="37.5" y="95" width="11" height="14"/>
 <text class="fret" data-bar="0" data-at="0" data-s="5" x="43" y="106" text-anchor="middle" font-size="12" font-weight="600">0</text>
 <rect class="tabfretbg" x="73.5" y="95" width="11" height="14"/>
-<text class="fret" data-bar="0" data-at="2" data-s="5" x="79" y="106" text-anchor="middle" font-size="12" font-weight="600">3</text>
+<text class="fret" data-bar="0" data-at="6" data-s="5" x="79" y="106" text-anchor="middle" font-size="12" font-weight="600">3</text>
 <rect class="tabfretbg" x="109.5" y="79" width="11" height="14"/>
-<text class="fret" data-bar="0" data-at="4" data-s="4" x="115" y="90" text-anchor="middle" font-size="12" font-weight="600">0</text>
+<text class="fret" data-bar="0" data-at="12" data-s="4" x="115" y="90" text-anchor="middle" font-size="12" font-weight="600">0</text>
 <rect class="tabfretbg" x="181.5" y="63" width="11" height="14"/>
-<text class="fret" data-bar="0" data-at="8" data-s="3" x="187" y="74" text-anchor="middle" font-size="12" font-weight="600">2</text>
+<text class="fret" data-bar="0" data-at="24" data-s="3" x="187" y="74" text-anchor="middle" font-size="12" font-weight="600">2</text>
 <rect class="tabfretbg" x="235.5" y="47" width="11" height="14"/>
-<text class="fret" data-bar="0" data-at="11" data-s="2" x="241" y="58" text-anchor="middle" font-size="12" font-weight="600">0</text>
+<text class="fret" data-bar="0" data-at="33" data-s="2" x="241" y="58" text-anchor="middle" font-size="12" font-weight="600">0</text>
 <rect class="tabfretbg" x="250" y="15" width="18" height="14"/>
-<text class="fret" data-bar="0" data-at="12" data-s="0" x="259" y="26" text-anchor="middle" font-size="12" font-weight="600">12</text>
+<text class="fret" data-bar="0" data-at="36" data-s="0" x="259" y="26" text-anchor="middle" font-size="12" font-weight="600">12</text>
 <line class="tabbeat" x1="410" y1="18" x2="410" y2="106"/>
 <line class="tabbeat" x1="482" y1="18" x2="482" y2="106"/>
 <line class="tabbeat" x1="554" y1="18" x2="554" y2="106"/>
@@ -50,6 +50,23 @@
 <rect class="tabcursor" x="482" y="30" width="18" height="16" rx="3"/>
 <line class="tabstem" x1="347" y1="114" x2="347" y2="132"/>
 <circle class="tabring" cx="347" cy="136" r="3"/>
+<line class="tabstem" x1="491" y1="114" x2="491" y2="132"/>
+<line class="tabstem" x1="491" y1="132" x2="497" y2="128"/>
+<line class="tabstem" x1="515" y1="114" x2="515" y2="132"/>
+<line class="tabstem" x1="515" y1="132" x2="521" y2="128"/>
+<line class="tabstem" x1="539" y1="114" x2="539" y2="132"/>
+<line class="tabstem" x1="539" y1="132" x2="545" y2="128"/>
+<line class="tabstem" x1="563" y1="114" x2="563" y2="132"/>
+<path class="tabtuplet" d="M485 140V144H551V140" fill="none"/>
+<text class="tabtupletnum" x="518" y="155" text-anchor="middle" font-size="10" font-weight="700">3</text>
 <rect class="tabfretbg" x="341.5" y="31" width="11" height="14"/>
 <text class="fret" data-bar="1" data-at="0" data-s="1" x="347" y="42" text-anchor="middle" font-size="12" font-weight="600">3</text>
+<rect class="tabfretbg" x="485.5" y="47" width="11" height="14"/>
+<text class="fret" data-bar="1" data-at="24" data-s="2" x="491" y="58" text-anchor="middle" font-size="12" font-weight="600">5</text>
+<rect class="tabfretbg" x="509.5" y="47" width="11" height="14"/>
+<text class="fret" data-bar="1" data-at="28" data-s="2" x="515" y="58" text-anchor="middle" font-size="12" font-weight="600">7</text>
+<rect class="tabfretbg" x="533.5" y="47" width="11" height="14"/>
+<text class="fret" data-bar="1" data-at="32" data-s="2" x="539" y="58" text-anchor="middle" font-size="12" font-weight="600">8</text>
+<rect class="tabfretbg" x="557.5" y="63" width="11" height="14"/>
+<text class="fret" data-bar="1" data-at="36" data-s="3" x="563" y="74" text-anchor="middle" font-size="12" font-weight="600">7</text>
 </svg>

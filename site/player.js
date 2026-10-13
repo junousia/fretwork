@@ -3,7 +3,7 @@
 // the Web Audio clock with a short look-ahead, so timing stays steady even if
 // the page is busy; the UI is told which chord is current via onChord().
 import { audioContext, note, mtof } from './audio.js';
-import { eventsAtBeat } from './transport.js';
+import { eventsAtBeat, swung } from './transport.js';
 
 const LOOKAHEAD = 0.25, TICK_MS = 25;
 
@@ -66,12 +66,13 @@ export function startProgression(opts) {
 
 // Plays a tab: its notes on the sixteenth-note grid, optionally the bar chords
 // strummed on beat 1 and a click on every beat. opts: {events:[{step,dur,midi}],
-// chords:[{step,midi:[...]}], totalSteps, stepSec, loop, metronome, onStep(step|-1), onEnd()}.
+// chords:[{step,midi:[...]}], totalSteps, stepSec, beat (steps per beat), loop, metronome, swing (share of the beat
+// given to the first eighth, 0.5 = straight), onStep(step|-1), onEnd()}.
 // Returns {stop()}.
 export function startTab(opts) {
   const ac = audioContext();
   if (!ac || !opts.totalSteps) return { stop() {} };
-  const { stepSec, totalSteps } = opts;
+  const { stepSec, totalSteps } = opts, beat = opts.beat || 12, long = opts.swing || 0.5;
   /** @type {Map<number, {dur:number, midi:number}[]>} */
   const byStep = new Map();
   for (const e of opts.events) byStep.set(e.step, [...(byStep.get(e.step) || []), e]);
@@ -88,10 +89,13 @@ export function startTab(opts) {
     while (next * stepSec < horizon) {
       if (!opts.loop && next >= totalSteps) { if (ac.currentTime >= t0 + totalSteps * stepSec + 0.3) finish(); return; }
       const step = next % totalSteps, at = t0 + next * stepSec;
-      if (opts.metronome && step % 4 === 0) click(ac, at, step % 16 === 0);
+      if (opts.metronome && step % beat === 0) click(ac, at, step % (beat * 4) === 0);
       const chord = chordAt.get(step);
-      if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.03, Math.min(3, 16 * stepSec), 0.07));
-      for (const e of byStep.get(step) || []) note(mtof(e.midi), at, Math.max(0.12, Math.min(3, e.dur * stepSec)), 0.16);
+      if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.03, Math.min(3, 4 * beat * stepSec), 0.07));
+      for (const e of byStep.get(step) || []) {
+        const start = (swung(step, beat, long) - step) * stepSec, dur = (swung(step + e.dur, beat, long) - swung(step, beat, long)) * stepSec;
+        note(mtof(e.midi), at + start, Math.max(0.12, Math.min(3, dur)), 0.16);
+      }
       setTimeout(() => { if (!stopped) opts.onStep(step); }, Math.max(0, (at - ac.currentTime) * 1000));
       next++;
     }
