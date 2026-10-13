@@ -4,9 +4,11 @@
 // Events that fall on beat `beat` (0-based, counted from the start of the
 // run): a chord strum on the first beat of each chord, an optional click on
 // every beat (accented on the first beat of each chord).
+/** @param {number} beat @param {number} nChords @param {number} beatsPerChord @param {boolean} metronome @returns {({type:'chord', index:number}|{type:'click', accent:boolean})[]} */
 export function eventsAtBeat(beat, nChords, beatsPerChord, metronome) {
   const total = nChords * beatsPerChord;
   const inLoop = beat % total;
+  /** @type {({type:'chord', index:number}|{type:'click', accent:boolean})[]} */
   const events = [];
   const onChordStart = inLoop % beatsPerChord === 0;
   if (onChordStart) events.push({ type: 'chord', index: inLoop / beatsPerChord });
@@ -15,8 +17,11 @@ export function eventsAtBeat(beat, nChords, beatsPerChord, metronome) {
 }
 
 // Total beats of one pass through the progression.
+/** @type {(nChords:number, beatsPerChord:number) => number} */
 export const totalBeats = (nChords, beatsPerChord) => nChords * beatsPerChord;
 
 // Clamp user-entered tempo / beats to sane values.
+/** @type {(v:any) => number} */
 export const clampBpm = v => Math.min(220, Math.max(40, Math.round(+v) || 90));
+/** @type {(v:any) => number} */
 export const clampBeats = v => [1, 2, 4, 8].includes(+v) ? +v : 4;

@@ -56,6 +56,7 @@ or `docker build -t fretwork . && docker run -p 8000:8000 fretwork`.
 
 ```sh
 npm install                       # only needed for the browser test (Playwright)
+npm run typecheck                 # TypeScript over the JSDoc types (no build step)
 npm test                          # theory, arpeggios, tunings, SVG goldens, shipped site (plain Node, fast)
 npx playwright install chromium   # once
 npm run test:e2e                  # real-browser smoke test incl. offline + subpath
@@ -63,9 +64,9 @@ npm run test:a11y                 # axe accessibility (light/dark, desktop/phone
 npm run test:golden:update        # after an intentional visual change: regenerate, then review the diff
 ```
 
-Everything lives in `site/` as ES modules; there is nothing to compile. See
+Everything lives in `site/` as ES modules; there is nothing to compile (types are JSDoc, checked by `tsc --noEmit`). See
 [AGENTS.md](AGENTS.md) for the design notes - especially how scale positions and chord voicings
-are generated and why - before changing `site/theory.js`.
+are generated and why - before changing `site/positions.js` or `site/voicings.js`.
 
 Contributions go through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md).
 

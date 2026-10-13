@@ -6,31 +6,33 @@
 // no filename hashing needed - while the whole app still works with no
 // connection. Everything is relative so it also works under a subpath
 // (GitHub Pages: /fretwork/).
+/// <reference lib="webworker" />
+const sw = /** @type {ServiceWorkerGlobalScope} */ (/** @type {unknown} */ (self));
 const CACHE = 'fretwork-shell-v1';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'app.js', 'theory.js', 'instrument.js', 'voicings.js', 'share.js', 'transport.js', 'player.js', 'arpeggio.js',
+  'app.js', 'music.js', 'positions.js', 'chord-features.js', 'board.js', 'audio.js', 'progressions.js', 'instrument.js', 'voicings.js', 'share.js', 'transport.js', 'player.js', 'arpeggio.js',
   'view-progressions.js', 'view-scales.js', 'view-chords.js',
   'data/voicings.json',
   'fonts/familjen-grotesk-latin-wght-normal.woff2', 'fonts/familjen-grotesk-latin-ext-wght-normal.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+sw.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => sw.skipWaiting()));
 });
 
-self.addEventListener('activate', e => {
+sw.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+      .then(() => sw.clients.claim())
   );
 });
 
-self.addEventListener('fetch', e => {
+sw.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.method !== 'GET' || new URL(req.url).origin !== sw.location.origin) return;
   e.respondWith(
     fetch(req, { cache: 'no-cache' })
       .then(res => {

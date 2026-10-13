@@ -7,6 +7,7 @@ const assert = (c, m) => { if (!c) { console.log(`FAIL: ${m}`); failures++; } };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // --- share links ---------------------------------------------------------
+/** @type {any} */
 const full = { text: 'Am7 D7 Gmaj7 Cmaj7', key: '4:minor', instrument: 'ukulele',
   pick: { 0: 'dorian', 2: 'ionian' }, pos: { 'Am7|dorian': [3], 'D7|mixolydian': 'all' }, vo: { Am7: 2 } };
 assert(same(decodeProgression('#progressions?' + encodeProgression(full)), full), 'a full state survives encode -> decode');

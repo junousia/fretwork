@@ -23,7 +23,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Theory and shipped-site checks
+      - name: Type check (TypeScript over JSDoc, no build)
+        run: npm run typecheck
+      - name: Theory, arpeggio, tuning, golden and shipped-site checks
         run: npm test
       - name: Install browser
         run: npx playwright install --with-deps chromium

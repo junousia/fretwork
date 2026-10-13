@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Internal: `theory.js` split into `music`, `positions`, `chord-features`, `board`, `audio` and
+  `progressions` modules (behaviour unchanged - all 17 golden SVGs are byte-identical).
+- Type checking: JSDoc types checked by `tsc --noEmit` in CI; the engine modules compile with
+  `noImplicitAny` and `strictNullChecks`.
+
 - Startup builds only the visible tab (Lighthouse performance 0.86 -> 1.0).
 - Quality gates in CI: axe accessibility on every tab (light/dark, desktop/phone), Chrome PWA
   installability, Lighthouse thresholds, SVG golden snapshots of key shapes, CodeQL.

@@ -2,10 +2,32 @@
 
 This app is a vanilla-JS, no-build-step, no-framework PWA
 for guitar/ukulele theory: chord progressions, scales, and chords, each
-rendered on a shared SVG fretboard (`board()` in `site/theory.js`). Read
+rendered on a shared SVG fretboard (`board()` in `site/board.js`). Read
 this before touching `getPositions`/`positionFrets`/`board()` - the
 position/box system went through many wrong turns before landing here, and
 re-deriving it from scratch will very likely repeat them.
+
+## Code map
+
+All plain ES modules in `site/` (no build). Dependencies point one way (`music.js` is the base):
+
+| Module | Responsibility |
+| --- | --- |
+| `music.js` | note names, `SCALES`, `CHORDS`, chord parsing, chord-scale ranking, key detection, `spell`/`esc` |
+| `positions.js` | `getPositions`/`positionFrets`: the two position models, always an unbroken run by pitch |
+| `chord-features.js` | chord-builder features derived from intervals |
+| `arpeggio.js` | degree chords, arpeggios in positions / around fingerings |
+| `board.js` | the fretboard SVG (positions, fingerings, capo, left-handed mirror) |
+| `voicings.js` | chord fingering data lookup (incl. reuse in other tunings) and chord boxes |
+| `instrument.js` | setup: instrument, tuning, capo, handedness |
+| `audio.js` / `player.js` / `transport.js` | Web Audio, progression playback, beat math |
+| `share.js` / `progressions.js` | share-link codec / roman-numeral progression library |
+| `view-*.js`, `app.js`, `sw.js` | the three tabs, routing/lazy mounting, offline service worker |
+| `types.js` | JSDoc typedefs only (never loaded at runtime) |
+
+**Types:** JSDoc, checked by `npm run typecheck` (`tsc --noEmit`, no build). The engine modules are
+under `tsconfig.strict.json` (`noImplicitAny` + `strictNullChecks`) - new code in them must be fully
+typed; views, tests and tools use the looser `tsconfig.json`; `sw.js` has its own worker config.
 
 ## The position/box system (`getPositions`, `positionFrets`)
 
@@ -77,7 +99,7 @@ Windows whose top fret has no scale tone on any string are extended
 `test/theory.test.mjs` is the actual regression suite (not a print-and-read
 script - it asserts and exits non-zero on failure). Run it with
 `npm test` before shipping any change to
-`theory.js`'s scale/position logic. It checks, across all 20 scales x 12
+the scale/position logic in `positions.js`. It checks, across all 20 scales x 12
 roots x the guitar's own tuning:
 
 - **Completeness**: every scale degree is reachable somewhere in every
@@ -182,7 +204,7 @@ those are allowed. Re-run the build only if updating the dataset.
 - **Player** (`site/player.js` + `site/transport.js`): schedules on the Web Audio clock with a short
   look-ahead timer; the pure beat math (`eventsAtBeat`) is unit tested, the highlight/stop behaviour
   is covered by the e2e test. Tempo/beats/loop/click changes take effect on the next Play.
-  `audioContext()` and `chordMidiNotes()` in `theory.js` are the shared audio helpers.
+  `audioContext()` and `chordMidiNotes()` in `audio.js` are the shared audio helpers.
 
 ## Quality gates
 
@@ -202,7 +224,7 @@ those are allowed. Re-run the build only if updating the dataset.
 ## Chord builder (Chords tab)
 
 Toggles above the chord header (`FEATURE_GROUPS` / `chordFeatures` in
-`theory.js`) filter the chord-type list and build a chord: third (pick
+`chord-features.js`) filter the chord-type list and build a chord: third (pick
 one), seventh (pick one), fifth/extension/alteration flags. A chord's
 features are **derived from its intervals**, never hand-tagged, so a chord
 added to `CHORDS` appears automatically; the tagging rules are subtle (a

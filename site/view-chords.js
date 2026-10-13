@@ -1,4 +1,7 @@
-import { CHORDS, FEATURE_GROUPS, chordFeatures, SHARP, spell, board, play, esc } from './theory.js';
+import { CHORDS, SHARP, spell, esc } from './music.js';
+import { FEATURE_GROUPS, chordFeatures } from './chord-features.js';
+import { board } from './board.js';
+import { play } from './audio.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { arpeggioAround, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { playNotes } from './player.js';
@@ -21,7 +24,7 @@ const LABELS = {
 };
 function labelFor(suf){ return LABELS[suf] || suf; }
 
-// Keep insertion order from theory.js's CHORDS table - it's already grouped
+// Keep insertion order from music.js's CHORDS table - it's already grouped
 // by family (major, minor, 7ths, suspended, dominant, diminished, augmented).
 const SUFFIXES = Object.keys(CHORDS);
 const FEATS = Object.fromEntries(SUFFIXES.map(suf => [suf, chordFeatures(CHORDS[suf])]));
@@ -55,6 +58,7 @@ export function mount(root){
 
   const rootsEl = root.querySelector('#ch-roots'), detail = root.querySelector('#ch-detail');
 
+  /** @type {{root:number, suffix:string, labels:string, voicing:'all'|number, builder:string[], arp:boolean}} */
   const state = { root: 0, suffix: '', labels: 'notes', voicing: 'all', builder: [], arp: false }; // default C major
   try{
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
@@ -106,7 +110,9 @@ export function mount(root){
     const showArp = !!vo && state.arp;
     if(vo && showArp){ boardOpts.voicingRing = vo; boardOpts.brightSets = arpSets; }
     else if(vo){ boardOpts.voicing = vo; boardOpts.fingerLabels = state.labels === 'fingers'; }
-    const voBtns = ['all', ...voicings.map((_, i) => i + 1)].map(v =>
+    /** @type {('all'|number)[]} */
+    const voChoices = ['all', ...voicings.map((_, i) => i + 1)];
+    const voBtns = voChoices.map(v =>
       `<button type="button" data-vo="${v}" title="${v === 'all' ? 'Every chord tone on the neck' : esc(voicingLabel(voicings[v - 1]))}" aria-pressed="${state.voicing === v}">${v === 'all' ? 'All' : v}</button>`).join('');
     const voRow = voicings.length
       ? `<div class="row"><label class="keylab">Voicing <div class="seg" id="ch-voseg" role="group" aria-label="Chord voicing">${voBtns}</div></label>

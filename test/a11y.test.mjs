@@ -14,6 +14,7 @@ const server = spawn(process.execPath, ['tools/serve.mjs', '8120'], { cwd: root,
 await new Promise(res => server.stdout.on('data', res));
 const browser = await chromium.launch();
 
+/** @type {[string, (p: import('playwright').Page) => Promise<void>][]} */
 const states = [
   ['progressions', async p => { await p.waitForSelector('#pr-strip .vdiag'); }],
   ['progressions-position', async p => { await p.waitForSelector('#pr-posseg'); await p.click('#pr-posseg button[data-pos="3"]'); }],
@@ -21,7 +22,11 @@ const states = [
   ['chords', async p => { await p.waitForSelector('#ch-voseg'); await p.click('#ch-voseg button[data-vo="2"]'); await p.click('.bseg button[data-f="minor"]'); }],
 ];
 let checked = 0;
-for (const scheme of ['light', 'dark']) for (const [w, h, label] of [[1100, 900, 'desktop'], [390, 844, 'phone']]) {
+/** @type {('light'|'dark')[]} */
+const schemes = ['light', 'dark'];
+/** @type {[number, number, string][]} */
+const sizes = [[1100, 900, 'desktop'], [390, 844, 'phone']];
+for (const scheme of schemes) for (const [w, h, label] of sizes) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: scheme });
   const page = await ctx.newPage();
   for (const [name, setup] of states) {

@@ -1,5 +1,8 @@
 import fs from 'fs';
-import { CHORDS, FEATURE_GROUPS, chordFeatures, parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, TUNING, SCALES } from '../site/theory.js';
+import { CHORDS, parseChord, detectKey, suggest, keyName, spell, chordFlats, TUNING, SCALES } from '../site/music.js';
+import { FEATURE_GROUPS, chordFeatures } from '../site/chord-features.js';
+import { getPositions, positionFrets } from '../site/positions.js';
+import { board } from '../site/board.js';
 
 let failures = 0;
 function assert(cond, msg) {
@@ -8,7 +11,7 @@ function assert(cond, msg) {
 
 // Position/box regression tests - every scale, every root, against the
 // guitar's own tuning. Two different, both-authoritative conventions are
-// in play (see theory.js's positionFrets comment): pentatonic/hexatonic
+// in play (see positions.js's positionFrets comment): pentatonic/hexatonic
 // scales (<=6 notes) use a per-string box model with a documented
 // per-string "jog," while 7-note-and-denser scales use one uniform fret
 // window, identical on every string. Both must still guarantee every
@@ -67,6 +70,7 @@ function assert(cond, msg) {
 // what board() actually draws bright in the SVG must equal that data, so a
 // rendering cut-off (e.g. frets past the drawn neck) can't hide notes.
 {
+  /** @type {[string, number[], number[]][]} */
   const INSTR = [
     ['guitar', TUNING, [64, 59, 55, 50, 45, 40]],
     ['ukulele', [9, 4, 0, 7], [69, 64, 60, 67]],
@@ -108,7 +112,7 @@ function assert(cond, msg) {
 // exactly its dots. This guards the converted third-party data and the
 // string-order / base-fret conversion in tools/build-voicings.mjs.
 {
-  const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url)));
+  const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url), 'utf8'));
   const OPEN = { guitar: [64, 59, 55, 50, 45, 40], ukulele: [69, 64, 60, 67] };
   const TUN = { guitar: TUNING, ukulele: [9, 4, 0, 7] };
   const EXTRA = { 11: [4], 13: [5] }; // tones real voicings add that our chord table omits

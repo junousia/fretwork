@@ -2,7 +2,7 @@
 // grid, optionally looping, with an optional metronome click. Scheduling uses
 // the Web Audio clock with a short look-ahead, so timing stays steady even if
 // the page is busy; the UI is told which chord is current via onChord().
-import { audioContext, note, mtof } from './theory.js';
+import { audioContext, note, mtof } from './audio.js';
 import { eventsAtBeat } from './transport.js';
 
 const LOOKAHEAD = 0.25, TICK_MS = 25;

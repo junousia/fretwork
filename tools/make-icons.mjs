@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../site/icons');
+/** @type {[string, string, number][]} */
 const jobs = [
   ['icon.svg', 'icon-192.png', 192], ['icon.svg', 'icon-512.png', 512],
   ['icon-maskable.svg', 'icon-maskable-512.png', 512],

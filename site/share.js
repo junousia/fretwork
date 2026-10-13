@@ -6,35 +6,43 @@
 const MAX_TEXT = 400;
 const KEY_RE = /^(auto|(1[01]|[0-9]):(major|minor))$/;
 
+/** @typedef {import('./types.js').ProgressionLink} ProgressionLink */
+
 const b64 = {
+  /** @param {string} s @returns {string} */
   enc: s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+  /** @param {string} s @returns {string} */
   dec: s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/')))),
 };
 
+/** @param {any} o @returns {boolean} */
 const isPlainObj = o => o && typeof o === 'object' && !Array.isArray(o);
+/** Copy only the entries of an untrusted object that pass `valid`. @param {any} o @param {(k:string, v:any) => boolean} valid @returns {Record<string, any>} */
 const intKeyed = (o, valid) => {
+  /** @type {Record<string, any>} */
   const out = {};
   if (!isPlainObj(o)) return out;
   for (const [k, v] of Object.entries(o)) if (k !== '__proto__' && k !== 'constructor' && valid(k, v)) out[k] = v;
   return out;
 };
 
-// state: {text, key, instrument, pick, pos, vo}  ->  "c=...&k=...&x=..."
+/** State -> "c=...&k=...&x=...". @param {Partial<ProgressionLink> & {instrument?:string}} s @returns {string} */
 export function encodeProgression(s) {
   const q = new URLSearchParams();
   q.set('c', (s.text || '').trim().replace(/\s+/g, ' '));
   if (s.key && s.key !== 'auto') q.set('k', s.key);
   if (s.instrument && s.instrument !== 'guitar') q.set('i', s.instrument);
   if (s.tuning && s.tuning !== 'standard') q.set('t', s.tuning);
-  if (Number.isInteger(s.capo) && s.capo > 0) q.set('cp', String(s.capo));
+  if (s.capo !== undefined && Number.isInteger(s.capo) && s.capo > 0) q.set('cp', String(s.capo));
   if (s.leftHanded) q.set('lh', '1');
+  /** @type {Record<string, any>} */
   const extra = {};
-  for (const f of ['pick', 'pos', 'vo']) if (s[f] && Object.keys(s[f]).length) extra[f] = s[f];
+  for (const f of /** @type {const} */ (['pick', 'pos', 'vo'])) if (s[f] && Object.keys(s[f]).length) extra[f] = s[f];
   if (Object.keys(extra).length) q.set('x', b64.enc(JSON.stringify(extra)));
   return q.toString();
 }
 
-// "#progressions?c=..." or "c=..." -> validated partial state, or null
+/** "#progressions?c=..." or "c=..." -> validated state, or null. Untrusted input. @param {string|null|undefined} hashOrQuery @returns {ProgressionLink|null} */
 export function decodeProgression(hashOrQuery) {
   const raw = String(hashOrQuery || '');
   const qs = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : raw.replace(/^#/, '');
@@ -42,6 +50,7 @@ export function decodeProgression(hashOrQuery) {
   try { q = new URLSearchParams(qs); } catch (e) { return null; }
   const text = (q.get('c') || '').slice(0, MAX_TEXT);
   if (!text.trim()) return null;
+  /** @type {ProgressionLink} */
   const out = { text };
   const k = q.get('k');
   if (k && KEY_RE.test(k)) out.key = k;
@@ -67,7 +76,7 @@ export function decodeProgression(hashOrQuery) {
   return out;
 }
 
-// the tab name of a location hash: "#progressions?c=.." -> "progressions"
+/** The tab name of a location hash: "#progressions?c=.." -> "progressions". @param {string|null|undefined} hash @returns {string} */
 export function tabOf(hash) {
   return String(hash || '').replace(/^#/, '').split('?')[0];
 }

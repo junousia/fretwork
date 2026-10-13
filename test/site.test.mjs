@@ -32,7 +32,8 @@ for (const s of mf.shortcuts || []) assert(s.url.startsWith('./'), `shortcut url
 const sw = read('sw.js');
 const shell = [...sw.slice(sw.indexOf('const SHELL'), sw.indexOf('];', sw.indexOf('const SHELL'))).matchAll(/'([^']+)'/g)].map(m => m[1]).filter(x => x !== 'fretwork-shell-v1');
 for (const f of shell) assert(f === './' || files.includes(path.normalize(f)), `sw.js precaches a file that does not exist: ${f}`);
-const optional = new Set(['sw.js', 'icons/icon-maskable.svg', 'icons/icon-apple.svg', 'icons/icon-maskable-512.png', 'fonts/OFL.txt', 'data/voicings.LICENSE.txt']);
+const optional = new Set(['sw.js', 'types.js', // types.js is JSDoc typedefs only, never loaded at runtime
+   'icons/icon-maskable.svg', 'icons/icon-apple.svg', 'icons/icon-maskable-512.png', 'fonts/OFL.txt', 'data/voicings.LICENSE.txt']);
 for (const f of files) if (!shell.includes(f) && !optional.has(f)) assert(false, `${f} ships but is not in sw.js SHELL (offline would miss it)`);
 
 // index.html: manifest/icon links resolve, no external or absolute URLs

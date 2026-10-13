@@ -3,7 +3,9 @@
 // mirrored neck must be an exact mirror image.
 import fs from 'fs';
 import { FAMILIES, getInstrument, applySetup, getSetup, onInstrumentChange, MAX_CAPO } from '../site/instrument.js';
-import { getPositions, positionFrets, board, SCALES, CHORDS } from '../site/theory.js';
+import { getPositions, positionFrets } from '../site/positions.js';
+import { board } from '../site/board.js';
+import { SCALES, CHORDS } from '../site/music.js';
 import { getVoicings, useVoicingData } from '../site/voicings.js';
 import { encodeProgression, decodeProgression } from '../site/share.js';
 
@@ -44,7 +46,7 @@ const pcs = m => ((m % 12) + 12) % 12;
 }
 
 // --- 2. voicing reuse across tunings / capo ------------------------------------
-const data = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url)));
+const data = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url), 'utf8'));
 useVoicingData(data);
 {
   const EXTRA = { 11: [4], 13: [5] };
@@ -111,7 +113,7 @@ useVoicingData(data);
   assert(s.tuning === 'dadgad' && s.capo === 2 && s.leftHanded === true, 'setup is stored');
   const inst = getInstrument();
   assert(same(inst.midi, [62, 57, 55, 50, 45, 38].map(m => m + 2)) && same(inst.tuning, inst.midi.map(pcs)), 'capo raises every open string');
-  applySetup({ tuning: 'no-such', capo: 99, instrument: 'banjo', leftHanded: 'yes' });
+  applySetup(/** @type {any} */ ({ tuning: 'no-such', capo: 99, instrument: 'banjo', leftHanded: 'yes' }));
   assert(getSetup().tuning === 'dadgad' && getSetup().capo === 2 && getSetup().instrument === 'guitar' && getSetup().leftHanded === true, 'invalid values are ignored');
   applySetup({ instrument: 'ukulele' });
   assert(getSetup().tuning === 'standard', 'each instrument remembers its own tuning');

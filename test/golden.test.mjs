@@ -5,14 +5,16 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getPositions, positionFrets, board, SCALES, CHORDS, TUNING, spell } from '../site/theory.js';
+import { getPositions, positionFrets } from '../site/positions.js';
+import { board } from '../site/board.js';
+import { SCALES, CHORDS, TUNING, spell } from '../site/music.js';
 import { voicingDiagram, useVoicingData, getVoicings } from '../site/voicings.js';
 import { arpeggioAround, arpeggioInSets, degreeChord } from '../site/arpeggio.js';
 import { FAMILIES } from '../site/instrument.js';
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'golden');
 const update = !!process.env.UPDATE_GOLDEN;
-useVoicingData(JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url))));
+useVoicingData(JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url), 'utf8')));
 fs.mkdirSync(dir, { recursive: true });
 
 const scale = id => SCALES.find(s => s.id === id);
