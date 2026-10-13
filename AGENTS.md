@@ -137,6 +137,18 @@ those are allowed. Re-run the build only if updating the dataset.
   fits the 15 drawn frets, only chord tones, `board()` draws exactly its
   dots).
 
+## Sharing and playback (Progressions tab)
+
+- **Share links** (`site/share.js`, pure): `#progressions?c=<chords>&k=<key>&i=<instrument>&x=<base64url json
+  of per-chord choices>`. The address bar is kept in sync with `history.replaceState` on every
+  state change (so reload/bookmark/copy all work), and pasting a different link re-applies it. A link
+  is **untrusted input**: `decodeProgression` validates every field, caps lengths and ignores
+  `__proto__`/`constructor`; keep it that way when adding fields (extend `test/player.test.mjs`).
+- **Player** (`site/player.js` + `site/transport.js`): schedules on the Web Audio clock with a short
+  look-ahead timer; the pure beat math (`eventsAtBeat`) is unit tested, the highlight/stop behaviour
+  is covered by the e2e test. Tempo/beats/loop/click changes take effect on the next Play.
+  `audioContext()` and `chordMidiNotes()` in `theory.js` are the shared audio helpers.
+
 ## Chord builder (Chords tab)
 
 Toggles above the chord header (`FEATURE_GROUPS` / `chordFeatures` in

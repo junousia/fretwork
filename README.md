@@ -12,7 +12,9 @@ no build step, no accounts, no tracking.
 
 - **Progressions** - type a chord progression (or pick a common one and transpose it to any
   key). Each chord gets the scales that fit it, ranked for the detected key, laid out on the neck
-  with chord tones and safe landing notes marked.
+  with chord tones and safe landing notes marked. **Play it** with the chosen voicings (tempo,
+  beats per chord, loop, click) and watch the neck follow, or **copy a link** that opens the same
+  progression, scale positions and voicings for someone else.
 - **Scale positions** - pick any scale and root, then isolate one of its positions (or several).
   Pentatonic scales use the classic CAGED boxes; seven-note scales use one-finger-per-fret
   positions in the style of the Berklee/Leavitt system. Every position reads as an unbroken run

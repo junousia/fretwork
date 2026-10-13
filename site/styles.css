@@ -122,3 +122,9 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .bclear:disabled{opacity:.35;cursor:default}
 .bcount{color:var(--muted);font-size:.9rem}
 .bh{margin:14px 0 4px}
+
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:18px 0 -8px}
+.transport input[type=number]{width:4.2rem;font:inherit;padding:5px 6px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:.92rem}
+.share{font:inherit;font-size:.9rem;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+.chip.playing{outline:3px solid #E3A21A;outline-offset:2px}

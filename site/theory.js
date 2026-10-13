@@ -438,11 +438,21 @@ export function note(freq,t,dur,vol){
   o.connect(f);f.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+0.05);
 }
 export const mtof=m=>440*Math.pow(2,(m-69)/12);
+// The shared AudioContext (created on first use, from a user gesture).
+export function audioContext(){
+  try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); ac.resume(); }catch(e){ return null; }
+  return ac;
+}
+// MIDI notes of a plain (non-fretted) voicing of the chord, low to high.
+export function chordMidiNotes(chord,offset=0){
+  const base=40+offset+((chord.root-4+12)%12);
+  return [...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
+}
 export function play(chord,scale,offset=0,run=null,chordMidi=null){
-  try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); ac.resume(); }catch(e){return;}
+  if(!audioContext()) return;
   const base=40+offset+((chord.root-4+12)%12); let t=ac.currentTime+0.05;
   // chordMidi: the real fretted notes of a chosen voicing (low string first)
-  const voicing=chordMidi?[...chordMidi].sort((a,b)=>a-b):[...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
+  const voicing=chordMidi?[...chordMidi].sort((a,b)=>a-b):chordMidiNotes(chord,offset);
   voicing.forEach((m,i)=>note(mtof(m),t+i*0.03,1.8,0.11));
   t+=1.3;
   // `run`: optional explicit list of MIDI notes (the actual fretted notes of

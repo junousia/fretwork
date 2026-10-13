@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Play a whole progression with the chosen chord voicings: tempo, beats per chord, loop and click.
+  The chord strip and neck follow the playing chord.
+- Shareable links: the progression, key, instrument, scale positions and voicing choices live in
+  the URL; "Copy link" (or the share sheet on phones) shares them.
+
 ## 1.0.0
 
 First public release as Fretwork.

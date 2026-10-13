@@ -1,5 +1,8 @@
-import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, play, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
-import { getInstrument, onInstrumentChange } from './instrument.js';
+import { parseChord, detectKey, suggest, keyName, spell, chordFlats, getPositions, positionFrets, board, play, chordMidiNotes, esc, PROGRESSION_LIBRARY, progressionText } from './theory.js';
+import { getInstrument, getInstrumentId, setInstrument, onInstrumentChange } from './instrument.js';
+import { encodeProgression, decodeProgression, tabOf } from './share.js';
+import { clampBpm, clampBeats } from './transport.js';
+import { startProgression } from './player.js';
 import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
@@ -32,6 +35,15 @@ export function mount(root){
       </div>
       <p id="pr-err" class="err" hidden></p>
     </section>
+    <div class="transport" role="group" aria-label="Playback and sharing">
+      <button type="button" class="play" id="pr-run">\u25B6 Play progression</button>
+      <label class="keylab">Tempo <input id="pr-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
+      <label class="keylab">Beats per chord <select id="pr-beats"><option>1</option><option>2</option><option>4</option><option>8</option></select></label>
+      <label class="chk"><input type="checkbox" id="pr-loop"> Loop</label>
+      <label class="chk"><input type="checkbox" id="pr-metro"> Click</label>
+      <button type="button" class="share" id="pr-share">Copy link</button>
+      <span class="vometa" id="pr-msg" role="status" aria-live="polite"></span>
+    </div>
     <nav class="strip" id="pr-strip" aria-label="Chords in the progression"></nav>
     <section id="pr-detail"></section>
     <p class="foot">Separate chords with spaces. Understands names like C, Am, F#m7b5, Bb7, Ebmaj7, G7b9, Dsus4, Cdim7 and slash chords like G/B. Use the arrow keys to step through the chords.</p>
@@ -41,13 +53,27 @@ export function mount(root){
         detail=root.querySelector('#pr-detail'), err=root.querySelector('#pr-err'), ex=root.querySelector('#pr-examples'),
         libProgSel=root.querySelector('#pr-libprog'), libKeySel=root.querySelector('#pr-libkey');
 
-  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{},vo:{}};
-  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{},vo:saved.vo||{}});}catch(e){}
-  function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos,vo:state.vo}));}catch(e){}}
+  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{},vo:{},bpm:90,beats:4,loop:true,metro:false};
+  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{},vo:saved.vo||{},bpm:clampBpm(saved.bpm??90),beats:clampBeats(saved.beats),loop:saved.loop!==false,metro:!!saved.metro});}catch(e){}
+  // A shared link (#progressions?c=...) wins over the saved state.
+  function applyShared(sh){ state.text=sh.text; state.key=sh.key||'auto'; state.pick=sh.pick||{}; state.pos=sh.pos||{}; state.vo=sh.vo||{}; state.sel=0; }
+  if(tabOf(location.hash)==='progressions'){ const sh=decodeProgression(location.hash); if(sh) applyShared(sh); }
+  // Only the per-chord choices that still apply to the current chords.
+  function sharedState(){
+    const names=new Set(parsed.map(c=>c.name));
+    const keep=(o,pick)=>Object.fromEntries(Object.entries(o).filter(([k])=>!parsed.length||pick(k)));
+    return {text:state.text,key:state.key,instrument:getInstrumentId(),pick:keep(state.pick,k=>+k<parsed.length),
+      pos:keep(state.pos,k=>names.has(k.split('|')[0])),vo:keep(state.vo,k=>names.has(k))};
+  }
+  function syncUrl(){
+    if(tabOf(location.hash)!=='progressions') return;
+    try{history.replaceState(null,'','#progressions?'+encodeProgression(sharedState()));}catch(e){}
+  }
+  function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos,vo:state.vo,bpm:state.bpm,beats:state.beats,loop:state.loop,metro:state.metro}));}catch(e){} syncUrl();}
 
   prog.value=state.text;
   EXAMPLES.forEach(([label,text])=>{const b=document.createElement('button');b.type='button';b.textContent=label;
-    b.onclick=()=>{prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();};ex.appendChild(b);});
+    b.onclick=()=>{stopPlayback();prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();};ex.appendChild(b);});
 
   libProgSel.innerHTML=PROGRESSION_LIBRARY.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('');
   let libKeyHtml='';
@@ -56,7 +82,7 @@ export function mount(root){
   function applyLibrary(){
     const tpl=PROGRESSION_LIBRARY[+libProgSel.value]; const [t,mode]=libKeySel.value.split(':');
     const text=progressionText(tpl,{t:+t,mode});
-    prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();
+    stopPlayback();prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();
   }
   libProgSel.addEventListener('change',applyLibrary);
   libKeySel.addEventListener('change',applyLibrary);
@@ -86,6 +112,7 @@ export function mount(root){
       return `<button class="chip" type="button" data-i="${i}" aria-pressed="${i===state.sel}"><b>${esc(c.name)}</b>${vc.idx>=0?voicingDiagram(vc.list[vc.idx],{size:.85,label:false}):''}<span>${p?esc(p.s.short):'No match'}</span></button>`;
     }).join('');
     strip.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{state.sel=+b.dataset.i;render();});
+    markPlaying();
     renderDetail();
   }
   // Selected scale position(s) + chosen scale for chord i, or null.
@@ -197,7 +224,7 @@ export function mount(root){
   }
 
   let deb;
-  prog.addEventListener('input',()=>{clearTimeout(deb);deb=setTimeout(()=>{state.text=prog.value;state.pick={};save();render();},250);});
+  prog.addEventListener('input',()=>{clearTimeout(deb);deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
   keySel.addEventListener('change',()=>{state.key=keySel.value;save();render();});
   document.addEventListener('keydown',e=>{
     if(root.hidden) return;
@@ -205,7 +232,51 @@ export function mount(root){
     if(e.key==='ArrowRight'){state.sel=(state.sel+1)%parsed.length;render();strip.querySelector('[aria-pressed="true"]')?.focus();}
     if(e.key==='ArrowLeft'){state.sel=(state.sel-1+parsed.length)%parsed.length;render();strip.querySelector('[aria-pressed="true"]')?.focus();}
   });
+  // --- playback -----------------------------------------------------------
+  const runBtn=root.querySelector('#pr-run'), bpmIn=root.querySelector('#pr-bpm'), beatsSel=root.querySelector('#pr-beats'),
+        loopCb=root.querySelector('#pr-loop'), metroCb=root.querySelector('#pr-metro'), shareBtn=root.querySelector('#pr-share'), msg=root.querySelector('#pr-msg');
+  let player=null, playIdx=-1;
+  bpmIn.value=state.bpm; beatsSel.value=String(state.beats); loopCb.checked=state.loop; metroCb.checked=state.metro;
+  function markPlaying(){ strip.querySelectorAll('.chip').forEach((b,k)=>b.classList.toggle('playing',k===playIdx)); }
+  function stopPlayback(){ if(player){ const p=player; player=null; p.stop(); } }
+  function chordsToPlay(){
+    const inst=getInstrument();
+    return parsed.map((c,i)=>{ const vc=voicingChoice(i);
+      const midi=vc.idx>=0?vc.list[vc.idx].f.map((f,j)=>f>=0?inst.midi[j]+f:null).filter(m=>m!==null):chordMidiNotes(c,inst.audioOffset);
+      return {midi}; });
+  }
+  function setRunning(on){ runBtn.textContent=on?'\u25A0 Stop':'\u25B6 Play progression'; runBtn.setAttribute('aria-pressed',String(on)); }
+  runBtn.onclick=()=>{
+    if(player){ stopPlayback(); return; }
+    if(!parsed.length) return;
+    setRunning(true);
+    player=startProgression({chords:chordsToPlay(),bpm:state.bpm,beats:state.beats,loop:state.loop,metronome:state.metro,
+      onChord:i=>{ playIdx=i; markPlaying(); if(i>=0&&i!==state.sel){ state.sel=i; strip.querySelectorAll('.chip').forEach((b,k)=>b.setAttribute('aria-pressed',String(k===i))); renderDetail(); } },
+      onEnd:()=>{ player=null; setRunning(false); }});
+  };
+  bpmIn.onchange=()=>{ state.bpm=clampBpm(bpmIn.value); bpmIn.value=state.bpm; save(); };
+  beatsSel.onchange=()=>{ state.beats=clampBeats(beatsSel.value); save(); };
+  loopCb.onchange=()=>{ state.loop=loopCb.checked; save(); };
+  metroCb.onchange=()=>{ state.metro=metroCb.checked; save(); };
+  // Tempo/beat/loop/click changes apply from the next start (stop + play again).
+  shareBtn.onclick=async()=>{
+    const url=`${location.origin}${location.pathname}#progressions?${encodeProgression(sharedState())}`;
+    try{
+      if(navigator.share&&matchMedia('(pointer:coarse)').matches){ await navigator.share({title:'Fretwork progression',url}); msg.textContent=''; return; }
+      await navigator.clipboard.writeText(url); msg.textContent='Link copied';
+    }catch(e){ if(e&&e.name==='AbortError') return; window.prompt('Copy this link',url); }
+    setTimeout(()=>{msg.textContent='';},2500);
+  };
+  // Someone pasted a different shared link into the address bar.
+  window.addEventListener('hashchange',()=>{
+    if(tabOf(location.hash)!=='progressions') return;
+    const sh=decodeProgression(location.hash); if(!sh) return;
+    if(encodeProgression({...sh,instrument:sh.instrument||getInstrumentId()})===encodeProgression(sharedState())) return;
+    stopPlayback(); applyShared(sh); prog.value=state.text;
+    if(sh.instrument&&sh.instrument!==getInstrumentId()) setInstrument(sh.instrument);
+    render();
+  });
   render();
   loadVoicings().then(()=>render());
-  onInstrumentChange(() => { if(parsed.length) render(); });
+  onInstrumentChange(() => { stopPlayback(); if(parsed.length) render(); syncUrl(); });
 }
