@@ -137,6 +137,21 @@ those are allowed. Re-run the build only if updating the dataset.
   fits the 15 drawn frets, only chord tones, `board()` draws exactly its
   dots).
 
+## Arpeggios
+
+- `site/arpeggio.js` (pure): `degreeChord` stacks thirds on a degree of a SEVEN-note scale (named
+  via `CHORDS`, roman numeral from quality); `arpeggioInSets` = the chord tones among a position's
+  notes; `arpeggioAround(voicing)` = every chord tone in the fingering's fret window +-1 (the
+  "arpeggio shape" that goes with a chord shape; an open fingering keeps the nut);
+  `arpeggioNotes`/`upAndDown` give the playable sequence, `playNotes` (player.js) plays it.
+- The Scales view recolours the board by re-basing the scale onto the chord root (the board colours
+  relative to the chord root), so Intervals labels are then relative to that chord.
+- Test (`test/arpeggio.test.mjs`) leans on the position guarantee: every position of a seven-note
+  scale contains every degree, hence every degree chord's arpeggio is complete inside every
+  position - checked for all 15,288 (scale, root, position, chord) combinations. Some ukulele
+  fingerings legitimately have no root in their window (4 strings); the shape only has to contain
+  three distinct chord tones.
+
 ## Tunings, capo, left-handed
 
 - `site/instrument.js` holds the setup (instrument, per-instrument tuning, capo, handedness) and

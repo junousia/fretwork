@@ -1,5 +1,7 @@
 import { CHORDS, FEATURE_GROUPS, chordFeatures, SHARP, spell, board, play, esc } from './theory.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
+import { arpeggioAround, arpeggioNotes, upAndDown } from './arpeggio.js';
+import { playNotes } from './player.js';
 import { loadVoicings, getVoicings, voicingLabel, voicingDiagram } from './voicings.js';
 
 const STORE_KEY = 'gtr-chords-v1';
@@ -53,7 +55,7 @@ export function mount(root){
 
   const rootsEl = root.querySelector('#ch-roots'), detail = root.querySelector('#ch-detail');
 
-  const state = { root: 0, suffix: '', labels: 'notes', voicing: 'all', builder: [] }; // default C major
+  const state = { root: 0, suffix: '', labels: 'notes', voicing: 'all', builder: [], arp: false }; // default C major
   try{
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if(saved) Object.assign(state, saved);
@@ -97,12 +99,20 @@ export function mount(root){
     const vo = state.voicing === 'all' ? null : (voicings[state.voicing - 1] || null);
     if(!vo && state.labels === 'fingers') state.labels = 'notes';
     const boardOpts = { tuning: inst.tuning, stringWidths: inst.stringWidths, leftHanded: inst.leftHanded, capo: inst.capo };
-    if(vo){ boardOpts.voicing = vo; boardOpts.fingerLabels = state.labels === 'fingers'; }
+    // Arpeggio shape: every chord tone in the fret window of the fingering, with the
+    // fingering itself ringed; otherwise the neck dims to just the fingering.
+    const chordPcs = iv.map(x => (state.root + x) % 12);
+    const arpSets = vo ? arpeggioAround(vo, inst, chordPcs) : null;
+    const showArp = !!vo && state.arp;
+    if(vo && showArp){ boardOpts.voicingRing = vo; boardOpts.brightSets = arpSets; }
+    else if(vo){ boardOpts.voicing = vo; boardOpts.fingerLabels = state.labels === 'fingers'; }
     const voBtns = ['all', ...voicings.map((_, i) => i + 1)].map(v =>
       `<button type="button" data-vo="${v}" title="${v === 'all' ? 'Every chord tone on the neck' : esc(voicingLabel(voicings[v - 1]))}" aria-pressed="${state.voicing === v}">${v === 'all' ? 'All' : v}</button>`).join('');
     const voRow = voicings.length
       ? `<div class="row"><label class="keylab">Voicing <div class="seg" id="ch-voseg" role="group" aria-label="Chord voicing">${voBtns}</div></label>
-          ${vo ? `<span class="vometa">${esc(voicingLabel(vo))}${vo.b ? ' \u00b7 barre' : ''}</span>` : ''}</div>
+          ${vo ? `<span class="vometa">${esc(voicingLabel(vo))}${vo.b ? ' \u00b7 barre' : ''}</span>
+          <label class="chk"><input type="checkbox" id="ch-arp"${state.arp ? ' checked' : ''}> Arpeggio shape</label>
+          <button type="button" class="share" id="ch-arpplay">Play arpeggio</button>` : ''}</div>
          ${vo ? `<div class="vobig">${voicingDiagram(vo, { size: 1.8, mirror: inst.leftHanded })}</div>` : ''}`
       : (loaded ? `<p class="hint">No stored fingering for this chord in this tuning - the neck shows every chord tone.</p>` : '');
     let h = `<h3 class="bh">Build a chord</h3>${builderHtml()}
@@ -130,6 +140,8 @@ export function mount(root){
     detail.querySelectorAll('.srow').forEach(b => b.onclick = () => { state.suffix = b.dataset.suf; state.voicing = 'all'; save(); render(); });
     detail.querySelectorAll('.seg button[data-l]').forEach(b => b.onclick = () => { state.labels = b.dataset.l; save(); render(); });
     detail.querySelectorAll('#ch-voseg button').forEach(b => b.onclick = () => { const v = b.dataset.vo; state.voicing = v === 'all' ? 'all' : +v; if(v !== 'all' && state.labels === 'notes') state.labels = 'fingers'; save(); render(); });
+    const ca = detail.querySelector('#ch-arp'); if(ca) ca.onchange = () => { state.arp = ca.checked; save(); render(); };
+    const cap = detail.querySelector('#ch-arpplay'); if(cap) cap.onclick = () => playNotes(upAndDown(arpeggioNotes(arpSets, inst)));
     detail.querySelector('#ch-play').onclick = () => play(chord, { iv }, getInstrument().audioOffset, null, vo ? vo.f.map((f, j) => f >= 0 ? inst.midi[j] + f : null).filter(m => m !== null) : null);
   }
 

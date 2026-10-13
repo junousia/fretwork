@@ -22,6 +22,9 @@ no build step, no accounts, no tracking.
 - **Chord voicings** - real fingerings (about 1,600 for guitar and for ukulele) with finger
   numbers and barres, shown next to each chord and ringed on the neck. Picking a voicing moves
   the scale position to match, and "Play" strums the actual fretted notes.
+- **Arpeggios** - on any seven-note scale pick a chord stacked on a degree (I, ii ... vii, with
+  optional 7ths) and see its arpeggio inside the chosen position; on a chord fingering, switch on the
+  *arpeggio shape* to see every chord tone in its fret window. Both can be played.
 - **Chord builder** - toggle minor, 7, maj7, sus4, 9, b5 ... and the chord list narrows to what
   matches; impossible combinations are greyed out.
 - **Guitar and ukulele** with 14 tunings (drop D, DADGAD, open G/D/E, half/whole step down,
