@@ -69,6 +69,51 @@ async function run(browser, origin, label) {
   assert((await page.textContent('#view-chords .chordhead h2')).startsWith('E '), `${label}: Open in Chords selects the chord`);
   assert((await page.getAttribute('#ch-roots .chip[aria-pressed="true"]', 'data-r')) === '4', `${label}: Chords root is E`);
 
+  // tab editor: click a cell, type frets, change lengths, undo, persist, play
+  await page.click('a[data-tab="tab"]');
+  await page.waitForSelector('#tb-surface .tabhit');
+  const frets = () => page.$$eval('#tb-surface .fret', e => e.map(x => `${x.textContent}@${x.dataset.bar}.${x.dataset.at}.${x.dataset.s}`).join(' '));
+  assert((await frets()) === '', `${label}: the tab starts empty`);
+  await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="5"]');
+  await page.keyboard.press('3'); await page.waitForTimeout(800);
+  await page.keyboard.press('5'); await page.waitForTimeout(800);
+  assert((await frets()) === '3@0.0.5 5@0.2.5', `${label}: typed frets land on the clicked string, one eighth apart (${await frets()})`);
+  await page.keyboard.press('1'); await page.keyboard.press('2'); await page.waitForTimeout(800);
+  assert((await frets()).endsWith('12@0.4.5'), `${label}: two digits typed together make fret 12`);
+  await page.keyboard.press('Control+z');
+  assert((await frets()) === '3@0.0.5 5@0.2.5', `${label}: undo removes the whole two-digit entry`);
+  await page.keyboard.press('Control+y');
+  assert((await frets()).endsWith('12@0.4.5'), `${label}: redo brings it back`);
+  await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('0'); await page.waitForTimeout(800);
+  assert((await frets()).includes('0@0.4.4'), `${label}: arrows move the cursor (string up, one eighth back)`);
+  await page.click('#tb-len button[data-len="3"]');                  // quarter notes from here on
+  await page.click('#tb-surface .tabhit[data-bar="1"][data-at="0"][data-s="2"]');
+  await page.keyboard.press('7'); await page.waitForTimeout(800); await page.keyboard.press('9'); await page.waitForTimeout(800);
+  assert((await frets()).endsWith('7@1.0.2 9@1.4.2'), `${label}: quarter notes advance four steps`);
+  await page.keyboard.press('Backspace');                                // empty cell: steps back one quarter, onto the 9
+  await page.click('#tb-pad button[data-d="5"]'); await page.waitForTimeout(800);
+  assert((await frets()).includes('5@1.4.2') && !(await frets()).includes('9@1.4.2'), `${label}: Backspace stepped back and the number pad replaced the 9 with a 5`);
+  await page.fill('#tb-chord', 'Em7'); await page.press('#tb-chord', 'Tab');
+  assert((await page.textContent('#tb-surface .tabchord')) === 'Em7', `${label}: the bar chord is drawn above the bar`);
+  await page.fill('#tb-chord', 'Xyz'); await page.press('#tb-chord', 'Tab');
+  assert((await page.getAttribute('#tb-chord', 'aria-invalid')) === 'true', `${label}: an unreadable chord name is flagged`);
+  await page.fill('#tb-chord', 'Em7'); await page.press('#tb-chord', 'Tab');
+  const bars0 = (await page.$$eval('#tb-surface .tabbar', e => e.length));
+  await page.click('#tb-addbar');
+  assert((await page.$$eval('#tb-surface .tabbar', e => e.length)) > bars0 && (await page.textContent('#tb-barno')) === '3', `${label}: Add bar adds a bar after the current one`);
+  const before = await frets();
+  await page.reload({ waitUntil: 'networkidle' }); await page.click('a[data-tab="tab"]');
+  assert((await frets()) === before, `${label}: the tab is still there after a reload`);
+  await page.click('#tb-play');
+  await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 });
+  assert((await page.textContent('#tb-play')).includes('Stop'), `${label}: Play turns into Stop and a playhead runs`);
+  await page.click('#tb-play');
+  assert((await page.textContent('#tb-play')).includes('Play'), `${label}: Stop turns back into Play`);
+  await page.click('button[data-inst="ukulele"]');
+  assert((await page.$$eval('#tb-surface svg:first-child .tabline', e => e.length)) % 4 === 0 && (await page.$$eval('#tb-surface .tabname', e => [...new Set(e.map(x => x.textContent))].join(''))) === 'AECG' && (await frets()) === '', `${label}: the ukulele has its own four-string tab`);
+  await page.click('button[data-inst="guitar"]');
+  assert((await frets()) === before, `${label}: switching back restores the guitar tab`);
+
   // scales tab: position selector
   await page.click('a[data-tab="scales"]');
   await page.click('#sc-posseg button[data-pos="3"]');

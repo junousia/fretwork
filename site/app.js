@@ -2,6 +2,7 @@ import { mount as mountProgressions } from './view-progressions.js';
 import { mount as mountScales } from './view-scales.js';
 import { mount as mountChords } from './view-chords.js';
 import { mount as mountIdentify } from './view-identify.js';
+import { mount as mountTab } from './view-tab.js';
 import { FAMILIES, MAX_CAPO, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { decodeProgression, tabOf } from './share.js';
 
@@ -31,13 +32,13 @@ onInstrumentChange(syncSetupControls);
 syncSetupControls();
 
 const LAST_TAB_KEY = 'gtr-last-tab';
-const TABS = ['progressions', 'scales', 'chords', 'identify'];
+const TABS = ['progressions', 'scales', 'chords', 'identify', 'tab'];
 const views = {};
 TABS.forEach(id => { views[id] = document.getElementById('view-' + id); });
 
 // Each tab is built the first time it is shown, so startup only pays for the
 // visible one (the others would add ~1,000 DOM nodes and lots of main-thread work).
-const mounters = { progressions: mountProgressions, scales: mountScales, chords: mountChords, identify: mountIdentify };
+const mounters = { progressions: mountProgressions, scales: mountScales, chords: mountChords, identify: mountIdentify, tab: mountTab };
 const mounted = new Set();
 function ensureMounted(id){
   if(mounted.has(id)) return;

@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getPositions, positionFrets } from '../site/positions.js';
+import { emptyTab, putNote, setChord } from '../site/tab.js';
+import { tabSvg } from '../site/tab-view.js';
 import { board } from '../site/board.js';
 import { SCALES, CHORDS, TUNING, spell } from '../site/music.js';
 import { voicingDiagram, useVoicingData, getVoicings } from '../site/voicings.js';
@@ -64,6 +66,7 @@ const cases = {
   'c-major-chord-box-barre-left-handed': () => voicingDiagram(getVoicings(G, 0, '')[1], { mirror: true }),
   'identify-open-c': () => board({ root: 0, iv: CHORDS[''], name: 'C' }, { s: { iv: [0], name: 'the marked notes' } }, 'notes', false,
     { tuning: G.tuning, hitAreas: true, voicing: { f: [0, 1, 0, 2, 3, -1], g: [0, 0, 0, 0, 0, 0], b: null } }),
+  'tab-riff': () => { let t = emptyTab(2); for (const [bar, at, st, f, len] of [[0, 0, 5, 0, 2], [0, 2, 5, 3, 2], [0, 4, 4, 0, 4], [0, 8, 3, 2, 3], [0, 11, 2, 0, 1], [0, 12, 0, 12, 4], [1, 0, 1, 3, 8]]) t = putNote(t, bar, at, st, f, len); t = setChord(t, 0, 'Em'); t = setChord(t, 1, 'C'); return tabSvg(t, G, { perRow: 2, cursor: { bar: 1, at: 8, s: 1 } }); },
   'am7-chord-box-open': () => voicingDiagram(getVoicings(G, 9, 'm7')[0], { label: false }),
 };
 

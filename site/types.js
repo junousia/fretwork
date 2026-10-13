@@ -142,3 +142,17 @@ export {};
  * @property {number} capo
  * @property {boolean} leftHanded
  */
+
+/**
+ * One note on a tab: where it starts in its bar (in sixteenth-note steps),
+ * how long it lasts, and the string / fret it is played on. String 0 is the
+ * top string (as everywhere else); the fret counts from the capo.
+ * @typedef {object} TabNote
+ * @property {number} at   0..15
+ * @property {number} len  1..16 steps, never past the end of the bar
+ * @property {number} s    string index, top string = 0
+ * @property {number} f    fret, 0 = open
+ */
+
+/** @typedef {{chord:string, notes:TabNote[]}} TabBar */
+/** @typedef {{title:string, bpm:number, bars:TabBar[]}} Tab */

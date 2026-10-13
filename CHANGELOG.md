@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- New **Tab** tab: a tab editor. Notes sit on a sixteenth-note grid in 4/4 bars; click a cell and type
+  a fret, choose note lengths, add/delete bars, set a chord per bar, undo/redo, play it back (with the
+  chords and a click) and copy it as ASCII tab. One tab per instrument, saved in the browser. This is
+  the base for a solo generator and PDF export.
+
 - Phones: less scrolling to reach the fretboard. Intro text is hidden, root / chord / scale are
   drop-downs, the chord builder and tempo options are folds, and the examples are merged into one
   "Load" menu with the common progressions.
