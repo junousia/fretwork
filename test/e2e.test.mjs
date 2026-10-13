@@ -54,6 +54,40 @@ async function run(browser, origin, label) {
   await page.waitForSelector('#pr-strip .chip .vdiag');
   assert((await page.$$('#pr-strip .chip .vdiag')).length >= 3, `${label}: chord chips show fingering diagrams`);
 
+  // sharing: the URL carries the progression, key and voicing choice
+  await page.fill('#pr-prog', 'Dm7 G7 Cmaj7'); await page.waitForSelector('#pr-strip .chip:nth-child(3)');
+  await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
+  await page.click('#pr-voseg button[data-vo="2"]');
+  const shared = await page.evaluate(() => location.href);
+  assert(/#progressions\?c=Dm7\+G7\+Cmaj7/.test(shared), `${label}: address bar holds a shareable link (${shared.slice(-80)})`);
+  const other = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const op = await other.newPage();
+  await op.goto(shared, { waitUntil: 'networkidle' });
+  await op.waitForSelector('#pr-strip .chip .vdiag');
+  const names = await op.$$eval('#pr-strip .chip b', b => b.map(x => x.textContent));
+  assert(names.join(' ') === 'Dm7 G7 Cmaj7', `${label}: a fresh browser opening the link shows the progression (${names})`);
+  const picked = await op.$eval('#pr-voseg button[aria-pressed="true"]', b => b.dataset.vo);
+  assert(picked === '2', `${label}: the shared voicing choice is restored (${picked})`);
+  await other.close();
+
+  // playback: the highlighted chord advances, Stop ends it
+  await page.fill('#pr-bpm', '220'); await page.dispatchEvent('#pr-bpm', 'change');
+  await page.selectOption('#pr-beats', '1');
+  await page.click('#pr-run');
+  assert((await page.textContent('#pr-run')).includes('Stop'), `${label}: Play turns into Stop`);
+  const seen = new Set();
+  const t0 = Date.now();
+  while (Date.now() - t0 < 4000 && seen.size < 3) {
+    const i = await page.$$eval('#pr-strip .chip', cs => cs.findIndex(c => c.classList.contains('playing')));
+    if (i >= 0) seen.add(i);
+    await page.waitForTimeout(40);
+  }
+  assert(seen.size >= 3, `${label}: playback highlighted ${seen.size} different chords (expected 3)`);
+  await page.click('#pr-run');
+  await page.waitForTimeout(300);
+  assert((await page.$$('#pr-strip .chip.playing')).length === 0, `${label}: Stop clears the playing highlight`);
+  assert((await page.textContent('#pr-run')).includes('Play'), `${label}: Stop turns back into Play`);
+
   // offline: everything still works from the service worker cache
   await ctx.setOffline(true);
   await page.reload({ waitUntil: 'load' });

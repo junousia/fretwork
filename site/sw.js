@@ -9,7 +9,7 @@
 const CACHE = 'fretwork-shell-v1';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'app.js', 'theory.js', 'instrument.js', 'voicings.js',
+  'app.js', 'theory.js', 'instrument.js', 'voicings.js', 'share.js', 'transport.js', 'player.js',
   'view-progressions.js', 'view-scales.js', 'view-chords.js',
   'data/voicings.json',
   'fonts/familjen-grotesk-latin-wght-normal.woff2', 'fonts/familjen-grotesk-latin-ext-wght-normal.woff2',

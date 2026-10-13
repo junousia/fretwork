@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node tools/serve.mjs",
-    "test": "node test/theory.test.mjs && node test/site.test.mjs",
+    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/site.test.mjs",
     "build:voicings": "node tools/build-voicings.mjs",
     "test:e2e": "node test/e2e.test.mjs"
   },

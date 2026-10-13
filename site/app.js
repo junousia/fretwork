@@ -2,6 +2,10 @@ import { mount as mountProgressions } from './view-progressions.js';
 import { mount as mountScales } from './view-scales.js';
 import { mount as mountChords } from './view-chords.js';
 import { getInstrumentId, setInstrument } from './instrument.js';
+import { decodeProgression, tabOf } from './share.js';
+
+// A shared link may carry the instrument; apply it before anything renders.
+{ const sh = decodeProgression(location.hash); if (sh && sh.instrument && tabOf(location.hash) === 'progressions') setInstrument(sh.instrument); }
 
 const instSwitch = document.getElementById('instrument-switch');
 function syncInstrumentButtons(){
@@ -24,7 +28,7 @@ mountScales(views.scales);
 mountChords(views.chords);
 
 function currentTab(){
-  const h = location.hash.replace('#', '');
+  const h = tabOf(location.hash);
   return TABS.includes(h) ? h : null;
 }
 function route(){
