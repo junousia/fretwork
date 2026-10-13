@@ -88,6 +88,29 @@ async function run(browser, origin, label) {
   assert((await page.$$('#pr-strip .chip.playing')).length === 0, `${label}: Stop clears the playing highlight`);
   assert((await page.textContent('#pr-run')).includes('Play'), `${label}: Stop turns back into Play`);
 
+  // setup: tuning, capo and left-handed change the neck and travel in share links
+  await page.selectOption('#tuning-select', 'dadgad');
+  assert((await page.$$('#pr-strip .chip')).length === 3, `${label}: the chord strip still renders in DADGAD`);
+  await page.selectOption('#tuning-select', 'half-down');
+  await page.selectOption('#capo-select', '2');
+  const fretX = async n => page.evaluate(n2 => { const t = [...document.querySelectorAll('#view-progressions .board svg text')].find(x => x.textContent === n2); return +t.getAttribute('x'); }, n);
+  const normal1 = await fretX('1'), normal15 = await fretX('15');
+  assert(normal1 < normal15, `${label}: fret 1 is left of fret 15 for right-handed players`);
+  await page.check('#lefty-toggle');
+  const left1 = await fretX('1'), left15 = await fretX('15');
+  assert(left1 > left15, `${label}: left-handed mirrors the neck (fret 1 right of fret 15)`);
+  assert((await page.$$('#view-progressions .board svg title')).length > 0, `${label}: a capo bar is drawn`);
+  assert((await page.$$('#pr-strip .chip .vdiag')).length >= 1, `${label}: chip diagrams still render with a capo and half-step-down tuning`);
+  const setupUrl = await page.evaluate(() => location.href);
+  assert(/t=half-down/.test(setupUrl) && /cp=2/.test(setupUrl) && /lh=1/.test(setupUrl), `${label}: share link carries tuning, capo and handedness (${setupUrl.slice(-60)})`);
+  const third = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const tp = await third.newPage();
+  await tp.goto(setupUrl, { waitUntil: 'networkidle' });
+  assert(await tp.inputValue('#tuning-select') === 'half-down' && await tp.inputValue('#capo-select') === '2' && await tp.isChecked('#lefty-toggle'), `${label}: opening the link restores tuning, capo and handedness`);
+  await third.close();
+  await page.check('#lefty-toggle', { force: true }).catch(() => {});
+  await page.uncheck('#lefty-toggle'); await page.selectOption('#capo-select', '0'); await page.selectOption('#tuning-select', 'standard');
+
   // offline: everything still works from the service worker cache
   await ctx.setOffline(true);
   await page.reload({ waitUntil: 'load' });

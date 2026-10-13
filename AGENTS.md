@@ -137,6 +137,26 @@ those are allowed. Re-run the build only if updating the dataset.
   fits the 15 drawn frets, only chord tones, `board()` draws exactly its
   dots).
 
+## Tunings, capo, left-handed
+
+- `site/instrument.js` holds the setup (instrument, per-instrument tuning, capo, handedness) and
+  `getInstrument()` derives what the engines need: effective `tuning` (pitch classes), `midi`
+  (capo included), string widths, `standardPcs`. Tunings are lists of open-string MIDI notes, TOP
+  string first. A capo is just every open string raised, with fret numbers counted from it (the
+  board draws a capo bar instead of the nut). To add a tuning, add an entry - nothing else.
+- The scale/position engines only ever see `tuning` + `midi`, so they work in any tuning;
+  `test/setup.test.mjs` checks all 14 tunings (no missing degree, no skipped pitch, span <= 6, the
+  Leavitt norm - irregular tunings legitimately need 5-6).
+- **Voicings in other tunings** (`getVoicings(inst, root, suffix)`): the dataset is standard tuning,
+  but a stored shape is valid whenever every string it PLAYS is shifted by the same T semitones from
+  standard (muted strings may differ); it then sounds chord root R when taken from root R-T. That
+  covers capo c (T=c), half/whole step down, baritone ukulele, Drop D shapes that skip the low
+  string, and pads extra low strings muted (7-string). The test checks every reused shape against
+  the chord's tones in every tuning.
+- **Left-handed** mirrors the neck in `board()` (coordinates only; text stays upright) and the chord
+  boxes (`voicingDiagram({mirror})`). Tests compare the mirrored SVG dot-for-dot.
+- The setup is saved in localStorage (`fw-setup`) and carried in share links (`t`, `cp`, `lh`).
+
 ## Sharing and playback (Progressions tab)
 
 - **Share links** (`site/share.js`, pure): `#progressions?c=<chords>&k=<key>&i=<instrument>&x=<base64url json

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Tunings (14 presets for guitar, 7-string and ukulele), capo, and a left-handed mirrored neck;
+  the setup is saved and travels in share links.
+
 - Play a whole progression with the chosen chord voicings: tempo, beats per chord, loop and click.
   The chord strip and neck follow the playing chord.
 - Shareable links: the progression, key, instrument, scale positions and voicing choices live in
