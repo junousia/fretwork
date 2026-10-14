@@ -5,7 +5,7 @@ import { tabOf } from './share.js';
 import { playbackFold, openWhereRoom } from './playback-ui.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
-import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES } from './solo.js';
+import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES, TENSIONS } from './solo.js';
 import { SWINGS } from './transport.js';
 import { keyName, spell, suggest, SC } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
@@ -55,6 +55,7 @@ export function mount(root){
         <label class="keylab">Density <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="How the solo develops over the song: higher and busier towards a peak">Evolve <select id="tb-evolve">${EVOLVES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab" title="How much the line leans on chord tones. Real jazz solos land on a chord tone on only about half of their strong beats; the textbook rule would be nearly all of them.">Chord tones <select id="tb-tension">${TENSIONS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
         <label class="keylab">Key <select id="tb-key"></select></label>
         <label class="keylab">Seed <input id="tb-seed" type="number" min="1" max="999999" step="1" inputmode="numeric"></label>
@@ -100,7 +101,7 @@ export function mount(root){
         tripCb = $('#tb-trip'), techSeg = $('#tb-tech'), backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
 
   // --- state ---------------------------------------------------------------
-  const opts = { backing: true, metro: true, loop: false, unit: 1, tech: 'some', evolve: 'arc', repeat: /** @type {string|number} */ ('auto'), autoplay: true, triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
+  const opts = { backing: true, metro: false, loop: true, unit: 1, tech: 'some', evolve: 'gentle', tension: 'balanced', repeat: /** @type {string|number} */ ('auto'), autoplay: true, triplet: false, swing: 'straight', feel: 'mixed', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
   /** @type {Record<string, any>} */ let stored = {};
   try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* defaults */ }
   if (stored.opts && typeof stored.opts === 'object') {
@@ -115,6 +116,7 @@ export function mount(root){
     if (SWINGS.some(x => x.id === stored.opts.swing)) opts.swing = stored.opts.swing;
     if (FEELS.some(x => x.id === stored.opts.feel)) opts.feel = stored.opts.feel;
     if (EVOLVES.some(x => x.id === stored.opts.evolve)) opts.evolve = stored.opts.evolve;
+    if (TENSIONS.some(x => x.id === stored.opts.tension)) opts.tension = stored.opts.tension;
     if (stored.opts.repeat === 'auto' || [1, 2, 3, 4, 6, 8].includes(stored.opts.repeat)) opts.repeat = stored.opts.repeat;
     opts.autoplay = stored.opts.autoplay !== false;
   }
@@ -381,7 +383,7 @@ export function mount(root){
   $('#tb-pdf').onclick = () => { cancelPending(); stopPlay(); window.print(); };
 
   // --- share link: the whole tab, the instrument setup and the generator settings (seed included) ---
-  function genSettings(){ return { style: opts.style, density: opts.density, feel: opts.feel, tech: opts.tech, evolve: opts.evolve, key: opts.key, seed: opts.seed }; }
+  function genSettings(){ return { style: opts.style, density: opts.density, feel: opts.feel, tech: opts.tech, evolve: opts.evolve, tension: opts.tension, key: opts.key, seed: opts.seed }; }
   $('#tb-share').onclick = async () => {
     cancelPending();
     const url = `${location.origin}${location.pathname}#compose?${encodeTabLink({ tab: tab(), setup: getSetup(), gen: genSettings() })}`;
@@ -400,8 +402,8 @@ export function mount(root){
     hist = historyFor(getInstrument().id);
     hist.push(link.tab);
     if (link.gen) {
-      Object.assign(opts, { style: link.gen.style, density: link.gen.density, feel: link.gen.feel, tech: link.gen.tech, evolve: link.gen.evolve, key: link.gen.key, seed: link.gen.seed });
-      styleSel.value = opts.style; densSel.value = opts.density; feelSel.value = opts.feel; gtSel.value = opts.tech; evSel.value = opts.evolve; keySel.value = opts.key; seedIn.value = String(opts.seed);
+      Object.assign(opts, { style: link.gen.style, density: link.gen.density, feel: link.gen.feel, tech: link.gen.tech, evolve: link.gen.evolve, tension: link.gen.tension, key: link.gen.key, seed: link.gen.seed });
+      styleSel.value = opts.style; densSel.value = opts.density; feelSel.value = opts.feel; gtSel.value = opts.tech; evSel.value = opts.evolve; tnSel.value = opts.tension; keySel.value = opts.key; seedIn.value = String(opts.seed);
     }
     persist();
     cursor.bar = 0; cursor.at = 0; planSig = '';
@@ -462,6 +464,7 @@ export function mount(root){
   keySel.innerHTML = `<option value="auto">Auto (from the chords)</option>${keyHtml}`;
   const feelSel = $('#tb-feel'), swingSel = $('#tb-swing');
   const evSel = $('#tb-evolve'); evSel.value = opts.evolve; evSel.onchange = () => { opts.evolve = evSel.value; persist(); };
+  const tnSel = $('#tb-tension'); tnSel.value = opts.tension; tnSel.onchange = () => { opts.tension = tnSel.value; persist(); };
   const gtSel = $('#tb-gentech'); gtSel.value = opts.tech; gtSel.onchange = () => { opts.tech = gtSel.value; persist(); };
   feelSel.value = opts.feel; swingSel.value = opts.swing;
   feelSel.onchange = () => { opts.feel = feelSel.value; persist(); };
@@ -488,7 +491,7 @@ export function mount(root){
     const inst = getInstrument();
     const [t, mode] = opts.key === 'auto' ? [] : opts.key.split(':');
     const res = generateSolo({
-      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, techniques: opts.tech, evolve: opts.evolve, seed: opts.seed,
+      bars: tab().bars.map(b => ({ chords: b.chords })), inst, style: opts.style, density: opts.density, feel: opts.feel, techniques: opts.tech, evolve: opts.evolve, tension: opts.tension, seed: opts.seed,
       key: opts.key === 'auto' ? undefined : { t: +t, mode: /** @type {'major'|'minor'} */ (mode) },
     });
     let next = clearNotes(tab());

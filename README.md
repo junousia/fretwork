@@ -53,8 +53,9 @@ notes. On a seven-note scale you can colour the arpeggio of any degree chord (I,
   how the solo evolves (steady, build up, arc), techniques and a key, then press Generate. It plays inside one position
   per chord (or the scale and positions you choose per chord *occurrence*), starts chords on chord tones, moves mostly by
   step, approaches chord changes, and ends on the root. The same seed always gives the same solo.
-  It is a practice-phrase generator, not a performer: it has no feel of its own and its rules are calibrated against
-  real jazz solos only in part (see `AGENTS.md`).
+  Its defaults are calibrated against 435 real jazz solos (the Weimar Jazz Database): interval mix, rhythm, rests, momentum and
+  how often chord tones land on the beat (a *Chord tones* setting goes from textbook to free). It is still a practice-phrase
+  generator, not a performer - see `AGENTS.md` for the numbers and the limits.
 - **Play, print, share** - playback with the bar chords, a click, loop and optional swing; **Export PDF** (title, tuning,
   the chord boxes and the tab in numbered rows) via the print dialog; **Copy link** shares the whole tab with its
   settings and seed; copy as plain-text tab.

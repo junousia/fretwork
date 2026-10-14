@@ -1,16 +1,22 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 - 2026-10-14
 
-- Compose and Progressions now play the same way. Both have the same three groups in the same order: the pinned play bar
-  (Play on both; Generate, Another one, Undo, Redo on Compose), a share row (Copy link on both; Title, Export PDF and
-  Copy as text on Compose) and one "Tempo and playback" fold that starts with Tempo, Loop and Click and then has the page's own
-  controls (Beats per chord on Progressions; Play the bar chords and Swing on Compose). Compose's playback options used to
-  sit at the bottom next to Copy as text; Copy as text now sits with the other share and export buttons, and Clear notes
-  with the other editing buttons. "Play progression" is pinned while you scroll, like Play on Compose.
-- Compose: Play, Generate, Another one, Undo and Redo are pinned to the top of the page while you scroll (on a phone they
-  shrink to fit one row: "\u21bb Another", "\u21b6", "\u21b7"), so the essential controls are always within reach. The SVG bar
-  lines no longer share the navigation's `tabbar` class name.
+### Changed
+- **The solo generator is calibrated against real solos.** I measured 435 jazz solos in the Weimar Jazz Database (about 190,000
+  notes) with the same definitions as the generator and brought the defaults in line, which fixed these differences:
+  chord tones on ~98% of strong beats (real: ~52%), a new note on every beat (real: 27% of beats have none), almost only straight
+  eighths (real: 32% of notes on the beat, 25% off-beat eighths, 13% triplets, 19% sixteenths), a line that changed direction too
+  often, bars that repeated their rhythm exactly 21-31% of the time (real: 1%), an Evolve that was four times stronger than real
+  solos, and bends / hammer-ons / slides far more often than in jazz. The interval mix (steps, thirds, fourths, leaps) and the
+  number of notes per bar already matched. The numbers are now also tests, so the generator cannot drift away from them.
+- New settings: **Chord tones** (Mostly chord tones / Balanced / Free), a new default feel **Mixed (jazz)** (quarters, off-beat
+  eighths, sixteenth runs, triplets, holds and rests), and **Gentle arc** as the default Evolve (the older Arc and Build up stay).
+  Solos made with the same seed differ from before; the share link carries the new setting (older links still open).
+- Compose and Progressions play the same way: the same pinned play bar, a share row (Copy link on both; Title, Export PDF and Copy as
+  text on Compose) and one "Tempo and playback" fold that starts with Tempo, Loop and Click and then has the page's own controls.
+  Both start with Loop on and Click off. "Play progression" is pinned while you scroll, like Play on Compose, whose
+  Play, Generate, Another one, Undo and Redo stay at the top (on a phone they shrink to one row).
 
 ## 2.0.0 - 2026-10-14
 

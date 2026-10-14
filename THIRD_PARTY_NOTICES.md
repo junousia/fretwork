@@ -27,6 +27,14 @@ The plucked-guitar voice (`site/string-dsp.js`) is our own implementation of the
 algorithm (K. Karplus and A. Strong, 1983, with the extensions of D. Jaffe and J. O. Smith, 1983). No third-party audio
 code or samples are included.
 
+## Statistics from real solos - Weimar Jazz Database (ODbL / DbCL)
+
+The solo generator's defaults were tuned to statistics measured on the Weimar Jazz Database v2.1 (Jazzomat Research Project,
+Hochschule fuer Musik Franz Liszt Weimar; <https://jazzomat.hfm-weimar.de/>), released under the Open Database License 1.0 with
+contents under the Database Contents License. Only a handful of derived numbers (percentages) appear in the tests and notes; no
+solo, note or transcription from the database is included in this repository or in the app. Please cite: Pfleiderer, Frieler,
+Abesser, Zaddach, Burkhart (eds.), *Inside the Jazzomat: New Perspectives for Jazz Research*, Schott Campus, 2017.
+
 ## Concepts
 
 Scale-position conventions follow published guitar pedagogy (the CAGED pentatonic boxes and

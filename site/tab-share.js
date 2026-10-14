@@ -4,10 +4,10 @@
 // Pure functions (no DOM) so they can be unit tested. Decoding treats the URL as
 // untrusted input: anything malformed is dropped or repaired, never thrown on.
 import { normalizeTab } from './tab.js';
-import { STYLES, DENSITIES, FEELS, EVOLVES } from './solo.js';
+import { STYLES, DENSITIES, FEELS, EVOLVES, TENSIONS } from './solo.js';
 
 /** @typedef {import('./types.js').Tab} Tab */
-/** @typedef {{style:string, density:string, feel:string, tech:string, evolve:string, key:string, seed:number}} GenSettings */
+/** @typedef {{style:string, density:string, feel:string, tech:string, evolve:string, tension?:string, key:string, seed:number}} GenSettings */
 /** @typedef {{instrument?:string, tuning?:string, capo?:number, leftHanded?:boolean}} SetupLink */
 
 const MAX_QUERY = 60000, MAX_JSON = 200000;
@@ -42,7 +42,7 @@ export function encodeTabLink({ tab, setup = {}, gen }) {
     ]),
   };
   if (tab.voicings && Object.keys(tab.voicings).length) compact.o = tab.voicings;
-  if (gen) compact.g = [gen.style, gen.density, gen.feel, gen.tech, gen.evolve, gen.key, gen.seed];
+  if (gen) compact.g = [gen.style, gen.density, gen.feel, gen.tech, gen.evolve, gen.key, gen.seed, gen.tension || 'balanced'];
   q.set('d', b64.enc(JSON.stringify(compact)));
   return q.toString();
 }
@@ -86,9 +86,9 @@ export function decodeTabLink(hashOrQuery) {
   if (q.get('lh') === '1') setup.leftHanded = true;
   /** @type {GenSettings|undefined} */ let gen;
   if (isArr(c.g)) {
-    const [style, density, feel, tech, evolve, key, seed] = c.g;
+    const [style, density, feel, tech, evolve, key, seed, tension = 'balanced'] = c.g;
     if (STYLES.some(x => x.id === style) && DENSITIES.some(x => x.id === density) && FEELS.some(x => x.id === feel) && ['off', 'some', 'lots'].includes(tech)
-      && EVOLVES.some(x => x.id === evolve) && typeof key === 'string' && KEY_RE.test(key) && Number.isInteger(seed) && seed >= 1 && seed <= 999999) gen = { style, density, feel, tech, evolve, key, seed };
+      && EVOLVES.some(x => x.id === evolve) && TENSIONS.some(x => x.id === tension) && typeof key === 'string' && KEY_RE.test(key) && Number.isInteger(seed) && seed >= 1 && seed <= 999999) gen = { style, density, feel, tech, evolve, tension, key, seed };
   }
   return { tab, setup, ...(gen ? { gen } : {}) };
 }

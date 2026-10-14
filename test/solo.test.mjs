@@ -3,7 +3,7 @@
 // in the middle of a bar): notes are in the scale and the position, chord tones land
 // where they should, leaps are limited, changes are approached, the ending is the
 // root, and the same seed gives the same solo.
-import { generateSolo, STYLES, DENSITIES, FEELS, RHYTHMS, FINALS, EVOLVES, intensityAt } from '../site/solo.js';
+import { generateSolo, STYLES, DENSITIES, FEELS, RHYTHMS, FINALS, EVOLVES, TENSIONS, intensityAt, strengthOf } from '../site/solo.js';
 import { linkedNext, tabEvents, emptyTab, putNote } from '../site/tab.js';
 import { parseChord, suggest } from '../site/music.js';
 import { FAMILIES } from '../site/instrument.js';
@@ -29,7 +29,7 @@ const std = insts.find(i => i.name === 'guitar/standard/capo0');
 const uke = insts.find(i => i.name === 'ukulele/standard/capo0');
 
 // --- determinism and variety
-const run = (bars, inst, style, density, seed, feel = 'straight', techniques = 'off', evolve = 'off') => generateSolo({ bars, inst, style, density, seed, feel, techniques, evolve });
+const run = (bars, inst, style, density, seed, feel = 'straight', techniques = 'off', evolve = 'off', tension = 'balanced') => generateSolo({ bars, inst, style, density, seed, feel, techniques, evolve, tension });
 const A = run(PROGS.jazz, std, 'follow', 'medium', 42), B = run(PROGS.jazz, std, 'follow', 'medium', 42), C = run(PROGS.jazz, std, 'follow', 'medium', 43);
 assert(JSON.stringify(A.bars) === JSON.stringify(B.bars), 'the same seed gives the same solo');
 assert(JSON.stringify(A.bars) !== JSON.stringify(C.bars), 'a different seed gives a different solo');
@@ -37,25 +37,25 @@ const distinct = new Set(Array.from({ length: 30 }, (_, s) => JSON.stringify(run
 assert(distinct >= 28, `30 seeds give ${distinct} different solos`);
 
 // --- the rules, over everything
-const stat = { links: 0, bends: 0, vibs: 0, n: 0, firstOn: 0, firstTone: 0, strong: 0, strongTone: 0, steps: 0, bigLeaps: 0, approach: 0, approachOk: 0, triples: 0, combos: 0, notes: 0, bars: 0 };
+const stat = { by: Object.fromEntries(TENSIONS.map(t => [t.id, { firstOn: 0, firstTone: 0, strong: 0, strongTone: 0 }])), links: 0, bends: 0, vibs: 0, n: 0, firstOn: 0, firstTone: 0, strong: 0, strongTone: 0, steps: 0, bigLeaps: 0, approach: 0, approachOk: 0, triples: 0, combos: 0, notes: 0, bars: 0 };
 const cases = [];
 for (const inst of insts) for (const style of STYLES) for (const density of DENSITIES) for (const [pn, bars] of Object.entries(PROGS)) {
   const full = inst === std || inst === uke;
   const seeds = full ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2];
-  for (const seed of seeds) cases.push({ inst, style: style.id, density: density.id, pn, bars, seed, feel: FEELS[full ? seed % 4 : (insts.indexOf(inst) + seed) % 4].id, tech: ['off', 'some', 'lots'][(seed + insts.indexOf(inst)) % 3], evolve: EVOLVES[(seed + 2 * insts.indexOf(inst)) % 3].id });
+  for (const seed of seeds) cases.push({ inst, style: style.id, density: density.id, pn, bars, seed, feel: FEELS[full ? seed % FEELS.length : (insts.indexOf(inst) + seed) % FEELS.length].id, tension: TENSIONS[(seed + insts.indexOf(inst)) % 3].id, tech: ['off', 'some', 'lots'][(seed + insts.indexOf(inst)) % 3], evolve: EVOLVES[(seed + 2 * insts.indexOf(inst)) % 3].id });
 }
 for (const c of cases) {
   let r;
-  try { r = run(c.bars, c.inst, c.style, c.density, c.seed, c.feel, c.tech, c.evolve); } catch (e) { assert(false, `${c.inst.name} ${c.style} ${c.density} ${c.pn} seed ${c.seed} threw ${e.message}`); continue; }
+  try { r = run(c.bars, c.inst, c.style, c.density, c.seed, c.feel, c.tech, c.evolve, c.tension); } catch (e) { assert(false, `${c.inst.name} ${c.style} ${c.density} ${c.pn} seed ${c.seed} threw ${e.message}`); continue; }
   stat.combos++;
-  const tag = `${c.inst.name} ${c.style}/${c.density}/${c.feel}/${c.tech}/${c.evolve}/${c.pn}/${c.seed}`;
+  const tag = `${c.inst.name} ${c.style}/${c.density}/${c.feel}/${c.tension}/${c.tech}/${c.evolve}/${c.pn}/${c.seed}`;
   assert(r.bars.length === c.bars.length, `${tag}: one list of notes per bar`);
   const lastSeg = r.info[r.info.length - 1];
   let prevNote = null;
   r.bars.forEach((notes, bi) => {
     stat.bars++; stat.notes += notes.length;
     // valid, ordered, non-overlapping on a string
-    for (const n of notes) assert(n.s >= 0 && n.s < c.inst.midi.length && n.f >= 0 && n.f <= MAX_FRET && n.at >= 0 && n.at + n.len <= STEPS && n.len >= 1 && (c.feel === 'shuffle' || c.feel === 'triplet' ? n.at % 4 === 0 : n.at % 3 === 0), `${tag}: bar ${bi} has an invalid note ${JSON.stringify(n)}`);
+    for (const n of notes) assert(n.s >= 0 && n.s < c.inst.midi.length && n.f >= 0 && n.f <= MAX_FRET && n.at >= 0 && n.at + n.len <= STEPS && n.len >= 1 && (c.feel === 'shuffle' || c.feel === 'triplet' ? n.at % 4 === 0 : c.feel === 'mixed' ? n.at % 3 === 0 || n.at % 4 === 0 : n.at % 3 === 0), `${tag}: bar ${bi} has an invalid note ${JSON.stringify(n)}`);
     for (let i = 1; i < notes.length; i++) assert(notes[i].at >= notes[i - 1].at + notes[i - 1].len, `${tag}: bar ${bi} notes overlap in time`);
     // techniques: only where they make sense
     for (const n of notes) {
@@ -80,8 +80,8 @@ for (const c of cases) {
       }
       const hasTones = seg.chordPcs.some(pc => [...Array(c.inst.midi.length).keys()].some(s => [...seg.frets[s]].some(f => (c.inst.midi[s] + f) % 12 === pc)));
       const pitch = n => c.inst.midi[n.s] + n.f + (n.bend || 0);
-      if (hasTones) { stat.firstOn++; if (seg.chordPcs.includes(pitch(mine[0]) % 12)) stat.firstTone++; }
-      mine.forEach(n => { if (n.at % 12 === 0 && hasTones) { stat.strong++; if (seg.chordPcs.includes(pitch(n) % 12)) stat.strongTone++; } });
+      if (hasTones) { const b = stat.by[c.tension]; b.firstOn++; if (seg.chordPcs.includes(pitch(mine[0]) % 12)) b.firstTone++; }
+      mine.forEach(n => { if (n.at % 12 === 0 && hasTones) { const b = stat.by[c.tension]; b.strong++; if (seg.chordPcs.includes(pitch(n) % 12)) b.strongTone++; } });
     });
     // melodic motion within the whole solo (in order)
     for (const n of notes) {
@@ -112,9 +112,14 @@ for (const c of cases) {
   }
 }
 const pct = (a, b) => (b ? a / b : 1);
-console.log(`generator: ${stat.combos} solos, ${stat.bars} bars, ${stat.notes} notes; first note is a chord tone ${(100 * pct(stat.firstTone, stat.firstOn)).toFixed(1)}%, strong beats ${(100 * pct(stat.strongTone, stat.strong)).toFixed(1)}%, leaps over a 5th ${(100 * pct(stat.bigLeaps, stat.steps)).toFixed(1)}%, approach notes ${(100 * pct(stat.approachOk, stat.approach)).toFixed(1)}%, triple repeats ${stat.triples}`);
-assert(pct(stat.firstTone, stat.firstOn) >= 0.9, 'the first note of a chord is a chord tone');
-assert(pct(stat.strongTone, stat.strong) >= 0.55, 'most strong-beat notes are chord tones');
+console.log(`generator: ${stat.combos} solos, ${stat.bars} bars, ${stat.notes} notes; chord tones on strong beats safe/balanced/free ${['safe', 'balanced', 'free'].map(k => (100 * pct(stat.by[k].strongTone, stat.by[k].strong)).toFixed(0) + '%').join('/')}, leaps over a 5th ${(100 * pct(stat.bigLeaps, stat.steps)).toFixed(1)}%, approach notes ${(100 * pct(stat.approachOk, stat.approach)).toFixed(1)}%, triple repeats ${stat.triples}`);
+{
+  const g = k => ({ first: pct(stat.by[k].firstTone, stat.by[k].firstOn), strong: pct(stat.by[k].strongTone, stat.by[k].strong) });
+  assert(g('safe').first >= 0.97 && g('safe').strong >= 0.9, `safe: nearly every chord starts and strong beat is a chord tone (${g('safe').first.toFixed(2)} / ${g('safe').strong.toFixed(2)})`);
+  assert(g('balanced').first >= 0.85 && g('balanced').strong >= 0.6 && g('balanced').strong <= 0.88, `balanced: chords start on chord tones, about two thirds to three quarters of strong beats are (${g('balanced').first.toFixed(2)} / ${g('balanced').strong.toFixed(2)})`);
+  assert(g('free').first >= 0.5 && g('free').strong >= 0.4 && g('free').strong <= 0.68, `free: close to real solos, about half of strong beats (real 0.52): ${g('free').strong.toFixed(2)}`);
+  assert(g('safe').strong > g('balanced').strong && g('balanced').strong > g('free').strong, 'the tension setting orders them: safe > balanced > free');
+}
 assert(pct(stat.bigLeaps, stat.steps) <= 0.08, 'leaps over a fifth are rare');
 assert(pct(stat.approachOk, stat.approach) >= 0.8, 'chord changes are approached from within a tone of a new chord tone');
 assert(stat.triples / Math.max(1, stat.steps) < 0.01, 'a note is rarely repeated three times in a row');
@@ -160,6 +165,56 @@ assert(stat.triples / Math.max(1, stat.steps) < 0.01, 'a note is rarely repeated
   assert(run(PROGS.blues, std, 'blues', 'busy', 5).info.every(x => x.intensity === 1), 'steady reports full intensity');
 }
 
+// --- calibration against real solos
+// Numbers measured on the Weimar Jazz Database v2.1 (435 solos in 4/4, ~190,000 notes; scripts in the maintainer's notes), chord
+// tones = 1-3-5-7 of the chord in effect. The generator's DEFAULT settings are checked to land near them - and the textbook
+// 'safe' setting is checked to be far from them, which is why it is no longer the default.
+const REAL = { ctStrong: 0.52, ctOff: 0.48, notesPerBar: 6.37, restBeats: 0.27, posBeat: 0.32, posEighth: 0.25, posTriplet: 0.13, posSixteenth: 0.19,
+  ivStep: 0.57, ivThird: 0.27, ivFourth: 0.10, ivLeap: 0.03, dirKeep: 0.58, gapFill: 0.67, repeatPrev: 0.01, vib: 0.02, bend: 0.003, slide: 0.02, densMid: 1.11 };
+{
+  const strictTones = name => { const c = parseChord(name); if (!c) return null; const iv = [...new Set(c.iv)], has7 = iv.includes(10) || iv.includes(11); return new Set(iv.filter(x => [0, 3, 4, 6, 7, 8, 10, 11].includes(x) || (x === 9 && !has7)).map(x => (c.root + x) % 12)); };
+  const PR = { blues: PROGS.blues, autumn: one('Am7 D7 Gmaj7 Cmaj7 F#m7b5 B7 Em Em Am7 D7 Gmaj7 Cmaj7 F#m7b5 B7 Em Em'), turn: one('Dm7 G7 Cmaj7 Cmaj7 Dm7 G7 Cmaj7 A7 Dm7 G7 Cmaj7 Cmaj7 Dm7 G7 Cmaj7 Cmaj7') };
+  const measure = cfg => {
+    const A = {}; const add = (k, v = 1) => { A[k] = (A[k] || 0) + v; };
+    const thirds = [];
+    for (const bars of Object.values(PR)) for (let seed = 1; seed <= 14; seed++) {
+      const r = generateSolo({ bars, inst: std, seed, ...cfg });
+      const notes = []; r.bars.forEach((ns, bar) => ns.forEach(n => { const seg = r.info.find(x => x.bar === bar && n.at >= x.from && n.at < x.to); notes.push({ bar, at: n.at, abs: bar * 48 + n.at, pitch: std.midi[n.s] + n.f + (n.bend || 0), ct: seg ? strictTones(seg.chord) : null, link: n.link, bend: n.bend, vib: n.vib }); }));
+      notes.sort((a, b) => a.abs - b.abs); add('notes', notes.length);
+      for (const n of notes) { if (n.ct) { const hit = n.ct.has(((n.pitch % 12) + 12) % 12), st = n.at % 12 === 0; add(st ? 'cs' : 'co'); if (hit) add(st ? 'csh' : 'coh'); } const q = n.at % 12; add(q === 0 ? 'pb' : q === 6 ? 'pe' : (q === 4 || q === 8) ? 'pt' : (q === 3 || q === 9) ? 'ps' : 'px'); if (n.vib) add('vib'); if (n.bend) add('bend'); if (n.link === 's') add('slide'); }
+      let prev = null, pi = null;
+      for (const n of notes) { if (prev && n.abs - prev.abs > 0 && n.abs - prev.abs <= 12) { const iv = n.pitch - prev.pitch, a = Math.abs(iv); add(a <= 2 && a > 0 ? 'step' : a <= 4 && a > 2 ? 'third' : a <= 7 && a > 4 ? 'fourth' : a > 7 ? 'leap' : 'rep'); add('ivn'); if (pi !== null && pi !== 0 && iv !== 0) { add('dn'); if ((pi > 0) === (iv > 0)) add('ds'); } if (pi !== null && Math.abs(pi) >= 5 && iv !== 0) { add('fn'); if ((pi > 0) !== (iv > 0)) add('fb'); } pi = iv; } else pi = null; prev = n; }
+      const byBar = {}; notes.forEach(n => { (byBar[n.bar] ||= []).push(n); });
+      const idx = Object.keys(byBar).map(Number).sort((a, b) => a - b); add('bars', idx.length);
+      const seen = new Set(notes.map(n => `${n.bar}:${Math.floor(n.at / 12)}`)); add('bt', (idx[idx.length - 1] - idx[0] + 1) * 4); add('bw', seen.size);
+      const sig = {}; for (const b of idx) sig[b] = byBar[b].map(n => n.at).join(); for (const b of idx) if (sig[b - 1] !== undefined) { add('rn'); if (sig[b] === sig[b - 1]) add('rp'); }
+      const th = [0, 1, 2].map(i => idx.slice(Math.floor(i * idx.length / 3), Math.floor((i + 1) * idx.length / 3)));
+      thirds.push(th.map(t => t.reduce((n, b) => n + byBar[b].length, 0) / t.length));
+    }
+    const d = (a, b) => A[a] / A[b], mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+    return { ctStrong: d('csh', 'cs'), ctOff: d('coh', 'co'), notesPerBar: d('notes', 'bars'), restBeats: 1 - d('bw', 'bt'), posBeat: A.pb / A.notes, posEighth: A.pe / A.notes, posTriplet: A.pt / A.notes, posSixteenth: A.ps / A.notes,
+      ivStep: d('step', 'ivn'), ivThird: d('third', 'ivn'), ivFourth: d('fourth', 'ivn'), ivLeap: d('leap', 'ivn'), dirKeep: d('ds', 'dn'), gapFill: d('fb', 'fn'), repeatPrev: d('rp', 'rn'),
+      vib: (A.vib || 0) / A.notes, bend: (A.bend || 0) / A.notes, slide: (A.slide || 0) / A.notes, densMid: mean(thirds.map(t => t[1] / t[0])) };
+  };
+  const def = measure({ style: 'follow', feel: 'mixed', density: 'medium', evolve: 'gentle', tension: 'balanced', techniques: 'some' });
+  const free = measure({ style: 'follow', feel: 'mixed', density: 'medium', evolve: 'gentle', tension: 'free', techniques: 'some' });
+  const safe = measure({ style: 'follow', feel: 'straight', density: 'medium', evolve: 'off', tension: 'safe', techniques: 'off', rests: 0 });
+  const near = (k, tol) => Math.abs(def[k] - REAL[k]) <= tol;
+  const show = Object.keys(REAL).map(k => `${k} ${def[k].toFixed(2)} (real ${REAL[k]})`).join(', ');
+  console.log(`calibration (default settings vs real solos): ${show}`);
+  assert(def.ctStrong < 0.8 && def.ctStrong > 0.5, `default: chord tones on ${(100 * def.ctStrong).toFixed(0)}% of strong beats (real ${100 * REAL.ctStrong}%, the textbook line ${(100 * safe.ctStrong).toFixed(0)}%)`);
+  assert(free.ctStrong < def.ctStrong && free.ctStrong < 0.7 && safe.ctStrong > 0.9, `free is closer to real than balanced (${free.ctStrong.toFixed(2)} < ${def.ctStrong.toFixed(2)}); safe is the textbook line (${safe.ctStrong.toFixed(2)})`);
+  assert(near('ctOff', 0.12), `chord tones off the beat ${def.ctOff.toFixed(2)} vs real ${REAL.ctOff}`);
+  assert(near('notesPerBar', 1.2), `${def.notesPerBar.toFixed(1)} notes a bar vs real ${REAL.notesPerBar}`);
+  assert(def.restBeats > 0.14 && def.restBeats < 0.34 && safe.restBeats < 0.05, `${(100 * def.restBeats).toFixed(0)}% of beats have no new note (real ${100 * REAL.restBeats}%; the old generator had ${(100 * safe.restBeats).toFixed(0)}%)`);
+  assert(near('posBeat', 0.14) && near('posEighth', 0.07) && near('posTriplet', 0.06) && near('posSixteenth', 0.07), `onset positions: beat ${def.posBeat.toFixed(2)} eighth ${def.posEighth.toFixed(2)} triplet ${def.posTriplet.toFixed(2)} sixteenth ${def.posSixteenth.toFixed(2)} (real ${REAL.posBeat} ${REAL.posEighth} ${REAL.posTriplet} ${REAL.posSixteenth})`);
+  assert(near('ivStep', 0.07) && near('ivThird', 0.06) && near('ivFourth', 0.05) && def.ivLeap < 0.06, `interval mix: step ${def.ivStep.toFixed(2)} third ${def.ivThird.toFixed(2)} fourth ${def.ivFourth.toFixed(2)} leap ${def.ivLeap.toFixed(2)} (real ${REAL.ivStep} ${REAL.ivThird} ${REAL.ivFourth} ${REAL.ivLeap})`);
+  assert(near('dirKeep', 0.1) && near('gapFill', 0.12), `momentum: keeps direction ${def.dirKeep.toFixed(2)} (real ${REAL.dirKeep}), turns back after a leap ${def.gapFill.toFixed(2)} (real ${REAL.gapFill})`);
+  assert(def.repeatPrev <= 0.08, `a bar's rhythm is only rarely identical to the one before (${def.repeatPrev.toFixed(2)}, real ${REAL.repeatPrev})`);
+  assert(def.vib <= 0.05 && def.bend <= 0.02 && def.slide <= 0.04, `jazz-style techniques are as rare as in real solos: vibrato ${def.vib.toFixed(3)} bend ${def.bend.toFixed(3)} slide ${def.slide.toFixed(3)}`);
+  assert(def.densMid >= 0.98 && def.densMid <= 1.25, `a gentle arc: the middle of the solo is ${def.densMid.toFixed(2)}x as busy as the start (real ${REAL.densMid})`);
+}
+
 // --- techniques
 console.log(`techniques in the runs above: ${stat.links} links, ${stat.bends} bends, ${stat.vibs} vibratos`);
 assert(stat.links > 500 && stat.bends > 100 && stat.vibs > 500, 'the generator really uses hammer-ons/slides, bends and vibrato when asked');
@@ -190,7 +245,7 @@ for (const f of FEELS) {
     assert(pool.length >= 3, `${f.id}/${d} has at least three rhythms`);
     for (const r of pool) {
       assert(r.every(([a, l], i) => a >= 0 && l >= 2 && a + l <= STEPS && (i === 0 || a >= r[i - 1][0] + r[i - 1][1])), `${f.id}/${d}: rhythm ${JSON.stringify(r)} is ordered, non-overlapping and inside the bar`);
-      assert(r.every(([a]) => (f.id === 'shuffle' || f.id === 'triplet' ? a % 4 === 0 : a % 3 === 0)), `${f.id}/${d}: onsets sit on the ${f.id} grid`);
+      assert(r.every(([a]) => (f.id === 'shuffle' || f.id === 'triplet' ? a % 4 === 0 : f.id === 'mixed' ? a % 3 === 0 || a % 4 === 0 : a % 3 === 0)), `${f.id}/${d}: onsets sit on the ${f.id} grid`);
     }
   }
   const avgN = d => RHYTHMS[f.id][d].reduce((n, r) => n + r.length, 0) / RHYTHMS[f.id][d].length;
@@ -208,7 +263,7 @@ for (const f of FEELS) {
 // --- density really changes the number of notes
 const avg = d => { let n = 0, b = 0; for (let s = 1; s <= 20; s++) { const r = run(PROGS.pop, std, 'pent', d, s, 'straight'); r.bars.forEach(x => { n += x.length; b++; }); } return n / b; };
 const [sp, me, bu] = ['sparse', 'medium', 'busy'].map(avg);
-assert(sp < me && me < bu && sp >= 2 && sp <= 5 && bu >= 8, `notes per bar: sparse ${sp.toFixed(1)}, medium ${me.toFixed(1)}, busy ${bu.toFixed(1)}`);
+assert(sp < me && me < bu && sp >= 2 && sp <= 5 && bu >= 6.5, `notes per bar: sparse ${sp.toFixed(1)}, medium ${me.toFixed(1)}, busy ${bu.toFixed(1)}`);
 
 // --- style semantics
 {
