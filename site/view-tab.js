@@ -13,7 +13,7 @@ import { chordMidiNotes } from './audio.js';
 import { startTab } from './player.js';
 import * as T0 from './tab.js';
 import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, setChordPlan, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering, tabEvents,
-  stepSeconds, normalizeTab, createHistory, tabToText, STEPS, BEAT, MAX_FRET, LENGTHS, LENGTH_NAMES, TRIPLET_OF, gridFor, setTechnique, linkedNext, BENDS, BEND_NAMES } from './tab.js';
+  stepSeconds, normalizeTab, createHistory, tabToText, withChords, STEPS, BEAT, MAX_FRET, LENGTHS, LENGTH_NAMES, TRIPLET_OF, gridFor, setTechnique, linkedNext, BENDS, BEND_NAMES } from './tab.js';
 import { tabSvg, barsPerRowFor, stepPos } from './tab-view.js';
 
 const STORE_KEY = 'fw-tabs';
@@ -26,12 +26,37 @@ export function mount(root){
     </header>
     <div class="tabtools" role="group" aria-label="Tab tools">
       <button type="button" class="play" id="tb-play">▶ Play</button>
+      <button type="button" class="play" id="tb-gen-go" title="Write a solo over the chords (settings below)">Generate</button>
+      <button type="button" class="share" id="tb-gen-new" title="Generate again with a new seed">Another one</button>
       <button type="button" class="share" id="tb-undo">Undo</button>
       <button type="button" class="share" id="tb-redo">Redo</button>
       <label class="keylab">Tempo <input id="tb-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
       <button type="button" class="share" id="tb-share" title="A link that opens this tab (notes, chords, settings and seed) for someone else">Copy link</button>
       <button type="button" class="share" id="tb-pdf" title="Print the tab with its chord boxes - choose Save as PDF in the print dialog">Export PDF</button>
+      <span class="vometa" id="tb-genmsg" role="status" aria-live="polite"></span>
     </div>
+    <details class="fold" id="tb-gen"><summary>Solo generator settings</summary>
+      <p class="hint">Name the chords in the tab (or load a progression), then press Generate above. It replaces the notes - Undo brings yours back.</p>
+      <div class="row">
+        <label class="keylab">Chords from <select id="tb-prog" aria-label="Load a progression"></select></label>
+        <label class="keylab">in <select id="tb-progkey"></select></label>
+        <label class="keylab" title="How many times to play the progression: Auto repeats it until there are at least 8 bars">Repeat <select id="tb-repeat"><option value="auto">Auto</option>${[1, 2, 3, 4, 6, 8].map(n => `<option value="${n}">\u00d7${n}</option>`).join('')}</select></label>
+        <button type="button" class="share" id="tb-useprog">Load chords</button>
+      </div>
+      <div class="row">
+        <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab">Notes <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab" title="How the solo develops over the song: higher and busier towards a peak">Evolve <select id="tb-evolve">${EVOLVES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
+        <label class="keylab">Key <select id="tb-key"></select></label>
+        <label class="keylab">Seed <input id="tb-seed" type="number" min="1" max="999999" step="1" inputmode="numeric"></label>
+      </div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="tb-autoplay"> Play it straight after generating</label>
+      </div>
+    </details>
+
     <div class="row">
       <label class="keylab">Note <div class="seg" id="tb-len" role="group" aria-label="Note length">${LENGTH_NAMES.map((n, i) => `<button type="button" data-len="${i}" aria-pressed="false">${n}</button>`).join('')}</div></label>
       <label class="chk" title="Three in the time of two (1/16, 1/8, 1/4 and 1/2 notes)"><input type="checkbox" id="tb-trip"> Triplet</label>
@@ -60,28 +85,6 @@ export function mount(root){
       <button type="button" data-k="ArrowDown" aria-label="Down a string">↓</button>
     </div>
     <p class="hint">Click a spot on the tab, type a fret (two digits for 10 and up), and the cursor moves on by the note length. Arrow keys move, Delete removes, Space plays, Ctrl+Z undoes.</p>
-    <details class="fold" id="tb-gen"><summary>Generate a solo</summary>
-      <p class="hint">Name the chords in the tab (or load a progression), then generate. It replaces the notes - Undo brings yours back.</p>
-      <div class="row">
-        <label class="keylab">Chords from <select id="tb-prog" aria-label="Load a progression"></select></label>
-        <label class="keylab">in <select id="tb-progkey"></select></label>
-        <button type="button" class="share" id="tb-useprog">Use these chords</button>
-      </div>
-      <div class="row">
-        <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
-        <label class="keylab">Notes <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
-        <label class="keylab" title="How the solo develops over the song: higher and busier towards a peak">Evolve <select id="tb-evolve">${EVOLVES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
-        <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
-        <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
-        <label class="keylab">Key <select id="tb-key"></select></label>
-        <label class="keylab">Seed <input id="tb-seed" type="number" min="1" max="999999" step="1" inputmode="numeric"></label>
-      </div>
-      <div class="row">
-        <button type="button" class="play" id="tb-gen-go">Generate</button>
-        <button type="button" class="share" id="tb-gen-new">Another one</button>
-        <span class="vometa" id="tb-genmsg" role="status" aria-live="polite"></span>
-      </div>
-    </details>
     <details class="fold" id="tb-more"><summary>Playback options and tools</summary>
       <div class="row">
         <label class="chk"><input type="checkbox" id="tb-backing"> Play the bar chords</label>
@@ -103,7 +106,7 @@ export function mount(root){
         tripCb = $('#tb-trip'), techSeg = $('#tb-tech'), backingCb = $('#tb-backing'), metroCb = $('#tb-metro'), loopCb = $('#tb-loop');
 
   // --- state ---------------------------------------------------------------
-  const opts = { backing: true, metro: true, loop: false, unit: 1, tech: 'some', evolve: 'arc', triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
+  const opts = { backing: true, metro: true, loop: false, unit: 1, tech: 'some', evolve: 'arc', repeat: /** @type {string|number} */ ('auto'), autoplay: true, triplet: false, swing: 'straight', feel: 'straight', style: 'follow', density: 'medium', key: 'auto', seed: 1 + Math.floor(Math.random() * 999999) };
   /** @type {Record<string, any>} */ let stored = {};
   try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* defaults */ }
   if (stored.opts && typeof stored.opts === 'object') {
@@ -118,6 +121,8 @@ export function mount(root){
     if (SWINGS.some(x => x.id === stored.opts.swing)) opts.swing = stored.opts.swing;
     if (FEELS.some(x => x.id === stored.opts.feel)) opts.feel = stored.opts.feel;
     if (EVOLVES.some(x => x.id === stored.opts.evolve)) opts.evolve = stored.opts.evolve;
+    if (stored.opts.repeat === 'auto' || [1, 2, 3, 4, 6, 8].includes(stored.opts.repeat)) opts.repeat = stored.opts.repeat;
+    opts.autoplay = stored.opts.autoplay !== false;
   }
   /** One undo history per instrument: frets mean different notes on different strings. */
   const histories = {};
@@ -472,14 +477,17 @@ export function mount(root){
   densSel.onchange = () => { opts.density = densSel.value; persist(); };
   keySel.onchange = () => { opts.key = keySel.value; persist(); render(); };
   seedIn.onchange = () => { const v = Math.round(+seedIn.value); opts.seed = v >= 1 && v <= 999999 ? v : opts.seed; seedIn.value = String(opts.seed); persist(); };
+  const repeatSel = $('#tb-repeat'), autoCb = $('#tb-autoplay');
+  repeatSel.value = String(opts.repeat); repeatSel.onchange = () => { opts.repeat = repeatSel.value === 'auto' ? 'auto' : +repeatSel.value; persist(); };
+  autoCb.checked = opts.autoplay; autoCb.onchange = () => { opts.autoplay = autoCb.checked; persist(); };
   $('#tb-useprog').onclick = () => {
     cancelPending(); stopPlay();
     const [t, mode] = progKey.value.split(':');
     const names = progressionText(PROGRESSION_LIBRARY[+progSel.value], { t: +t, mode: /** @type {'major'|'minor'} */ (mode) }).split(' ');
-    const cur = tab();
-    commit({ ...cur, bars: names.map((n, i) => ({ chords: [{ at: 0, name: n }], notes: cur.bars[i]?.notes || [] })) });
+    commit(withChords(tab(), names, opts.repeat));
+    const bars = tab().bars.length;
     cursor.bar = 0; cursor.at = 0; keySel.value = opts.key = progKey.value; persist();
-    genMsg.textContent = `${names.length} bar${names.length === 1 ? '' : 's'} of chords loaded`; render();
+    genMsg.textContent = `${bars} bar${bars === 1 ? '' : 's'} of chords loaded (${names.length} chord${names.length === 1 ? '' : 's'} \u00d7 ${bars / names.length})`; render();
   };
   function generate(){
     cancelPending(); stopPlay();
@@ -498,6 +506,7 @@ export function mount(root){
     const named = chordsUsed(tab()).length > 0;
     genMsg.textContent = `${named ? '' : 'No chords named, so it used ' + keyName(res.key) + '. '}Seed ${opts.seed}`;
     cursor.bar = 0; cursor.at = 0; render();
+    if (opts.autoplay) togglePlay();
   }
   $('#tb-gen-go').onclick = generate;
   $('#tb-gen-new').onclick = () => { opts.seed = 1 + Math.floor(Math.random() * 999999); seedIn.value = String(opts.seed); persist(); generate(); };

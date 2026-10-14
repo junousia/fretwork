@@ -2,7 +2,7 @@
 // and the plain-text export.
 import * as T from '../site/tab.js';
 import { setChordPlan, emptyTab, addBar, removeBar, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes,
-  tabEvents, stepSeconds, normalizeTab, createHistory, stringNames, tabToText, STEPS, BEAT, MAX_BARS, LENGTHS, TRIPLET_OF, gridFor } from '../site/tab.js';
+  tabEvents, stepSeconds, normalizeTab, createHistory, stringNames, tabToText, withChords, repeatsFor, STEPS, BEAT, MAX_BARS, LENGTHS, TRIPLET_OF, gridFor } from '../site/tab.js';
 import { swung, SWINGS } from '../site/transport.js';
 
 import { tabSvg, barsPerRowFor, stepPos, BAR_W, STEP_W } from '../site/tab-view.js';
@@ -257,6 +257,20 @@ assert(tabToText(x, UKE.midi).split('\n').filter(l => /\|$/.test(l)).length === 
   assert(ys(up)[0] > ys(up)[1] && ys(down)[0] < ys(down)[1], 'a slide up climbs, a slide down falls');
   assert(/class="tabbend"/.test(draw(b)) && />full</.test(draw(b)) && />1\/2</.test(draw(st(t, 0, 4, 1, { bend: 1 }))) && />1 1\/2</.test(draw(st(t, 0, 4, 1, { bend: 3 }))), 'a bend is an arrow labelled with its size');
   assert((draw(st(t, 0, 4, 1, { vib: true })).match(/class="tabbend"/g) || []).length === 1 && !/tablink/.test(draw(t)), 'vibrato is a wavy line; plain notes have no marks');
+}
+
+// --- loading a progression: repeated so a solo has some length
+{
+  assert(repeatsFor(3, 'auto') === 3 && repeatsFor(4, 'auto') === 2 && repeatsFor(12, 'auto') === 1 && repeatsFor(8, 'auto') === 1 && repeatsFor(1, 'auto') === 8, 'auto repeats a progression until there are at least 8 bars');
+  assert(repeatsFor(3, 4) === 4 && repeatsFor(3, '2') === 2 && repeatsFor(3, 0) === 1 && repeatsFor(3, 'x') === 1 && repeatsFor(3, -5) === 1, 'an explicit count is used (never less than one)');
+  const base = putNote(emptyTab(2), 0, 0, 0, 5, 6);
+  const t3 = withChords(base, ['Dm7', 'G7', 'Cmaj7'], 'auto');
+  assert(t3.bars.length === 9 && t3.bars.map(b => b.chords[0].name).join() === 'Dm7,G7,Cmaj7,Dm7,G7,Cmaj7,Dm7,G7,Cmaj7' && t3.bars.every(b => b.chords.length === 1 && b.chords[0].at === 0), 'a ii-V-I becomes nine bars with the chords repeating');
+  assert(noteAt(t3, 0, 0, 0)?.f === 5 && withChords(base, ['C'], 1).bars.length === 1, 'notes already in a bar are kept; one chord once is one bar');
+  assert(withChords(base, ['A7', 'D7', 'E7'], 4).bars.length === 12 && withChords(base, ['A7', 'D7', 'E7'], 8).bars.length === 24, 'an explicit count repeats it that many times');
+  assert(withChords(base, ['A', 'B'], 99).bars.length === MAX_BARS && withChords(base, ['C'], 'auto').bars.length === 8, `a long repeat is cut at ${MAX_BARS} bars`);
+  assert(withChords(base, [], 4) === base, 'no chords changes nothing');
+  assert(withChords({ ...base, title: 'x', bpm: 77 }, ['C', 'G'], 2).title === 'x' && withChords({ ...base, bpm: 77 }, ['C', 'G'], 2).bpm === 77, 'title and tempo are kept');
 }
 
 console.log(failures ? `${failures} FAILED` : 'tab: all passed');
