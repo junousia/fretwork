@@ -35,6 +35,19 @@ export const FEELS = [
   { id: 'shuffle', name: 'Shuffle / swing' },
   { id: 'triplet', name: 'Triplets (12/8)' },
   { id: 'funk', name: 'Sixteenths (funk)' },
+  { id: 'mixed', name: 'Mixed (jazz)' },
+];
+
+/**
+ * How much the line leans on chord tones. Real jazz solos (Weimar Jazz Database, measured 2026-10-14) land on a chord tone
+ * (1-3-5-7) on only about half of their strong beats - hardly more than on the weak ones. 'free' behaves like that, 'safe' is the
+ * textbook rule (nearly every strong beat is a chord tone) and 'balanced' sits between.
+ * snap: chance a strong beat is moved onto a chord tone; first: chance the first note of a chord is a chord tone.
+ */
+export const TENSIONS = [
+  { id: 'safe', name: 'Mostly chord tones', snap: 1, first: 1 },
+  { id: 'balanced', name: 'Balanced', snap: 0.15, first: 0.8 },
+  { id: 'free', name: 'Free', snap: 0, first: 0.4 },
 ];
 
 /** Rhythms written in sixteenths ([start, length]; gaps are rests), scaled to the 48-step bar. @param {number[][]} r @returns {number[][]} */
@@ -112,13 +125,60 @@ export const RHYTHMS = {
     ].map(x3),
   },
 };
+/**
+ * The 'mixed' feel: bars built beat by beat from the rhythms real jazz lines use - quarters, eighths on and off the beat, sixteenth runs,
+ * triplets, dotted figures, held notes and rests - with weights tuned so the onset positions match real solos (on the beat about 40%,
+ * off-beat eighths 25%, triplet positions 13%, sixteenth positions 19%), about 25% of beats without a new note, and 4.7 / 6.6 / 9 notes
+ * a bar for sparse / medium / busy. A pool of distinct bars is made once, from a fixed seed, so the generator stays deterministic.
+ * @type {Record<string, number[][]>}
+ */
+const BEAT_TOKENS = {
+  Q: [[0, 12]], H: [], R: [], E1: [[0, 6]], O1: [[6, 6]], E2: [[0, 6], [6, 6]], S4: [[0, 3], [3, 3], [6, 3], [9, 3]],
+  S2E: [[0, 3], [3, 3], [6, 6]], ES2: [[0, 6], [6, 3], [9, 3]], SES: [[0, 3], [3, 6], [9, 3]], T3: [[0, 4], [4, 4], [8, 4]], DS: [[0, 9], [9, 3]],
+};
+/** @type {Record<string, Record<string, number>>} */
+const TOKEN_WEIGHTS = {
+  sparse: { Q: .22, H: .19, R: .12, E1: .05, O1: .09, E2: .11, S4: 0, S2E: .01, ES2: .02, SES: .02, T3: .10, DS: .07 },
+  medium: { Q: .10, H: .13, R: .09, E1: .04, O1: .09, E2: .20, S4: .03, S2E: .04, ES2: .06, SES: .05, T3: .11, DS: .06 },
+  busy: { Q: .03, H: .06, R: .04, E1: .03, O1: .07, E2: .20, S4: .09, S2E: .08, ES2: .09, SES: .08, T3: .16, DS: .07 },
+};
+/** @param {string} density @returns {number[][][]} */
+function mixedPool(density) {
+  const w = TOKEN_WEIGHTS[density], total = Object.values(w).reduce((a, b) => a + b, 0), r = rng(7919 + density.length * 31);
+  const pickToken = () => { let x = r() * total; for (const [k, v] of Object.entries(w)) { x -= v; if (x <= 0) return k; } return 'Q'; };
+  /** @type {number[][][]} */ const pool = [], seen = new Set();
+  for (let tries = 0; pool.length < 40 && tries < 400; tries++) {
+    /** @type {number[][]} */ const bar = [];
+    let held = false;
+    for (let beat = 0; beat < 4; beat++) {
+      let t = pickToken();
+      if (beat === 0 && t === 'H') t = 'Q';                         // a bar starts with a note
+      if (t === 'H' || (t === 'R' && r() < 0.5)) { // hold: the previous note rings on through this beat; a rest leaves a gap
+        if (bar.length && t === 'H') { bar[bar.length - 1] = [bar[bar.length - 1][0], Math.min(STEPS - bar[bar.length - 1][0], bar[bar.length - 1][1] + 12)]; held = true; }
+        continue;
+      }
+      for (const [at, len] of BEAT_TOKENS[t]) bar.push([beat * 12 + at, len]);
+    }
+    void held;
+    if (bar.length < 2) continue;
+    // a held note must not run into the next one: shorten to the next onset
+    for (let i = 0; i + 1 < bar.length; i++) bar[i][1] = Math.min(bar[i][1], bar[i + 1][0] - bar[i][0]);
+    const key = JSON.stringify(bar);
+    if (!seen.has(key)) { seen.add(key); pool.push(bar); }
+  }
+  return pool;
+}
+
 /** The last bar of a solo: a run into a long final note, per feel (the sparse one is simpler). @type {Record<string, {sparse:number[][], normal:number[][]}>} */
 export const FINALS = {
+  mixed: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 6], [6, 6], [12, 4], [16, 4], [20, 4], [24, 24]] },
   straight: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 6], [6, 6], [12, 6], [18, 6], [24, 24]] },
   shuffle: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 8], [8, 4], [12, 8], [20, 4], [24, 24]] },
   triplet: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 4], [4, 4], [8, 4], [12, 12], [24, 24]] },
   funk: { sparse: [[0, 12], [12, 12], [24, 24]], normal: [[0, 3], [6, 3], [12, 3], [18, 3], [24, 24]] },
 };
+
+RHYTHMS.mixed = { sparse: mixedPool('sparse'), medium: mixedPool('medium'), busy: mixedPool('busy') };
 
 /** Small seeded generator (mulberry32). @param {number} seed @returns {() => number} */
 export function rng(seed) {
@@ -134,6 +194,8 @@ export function rng(seed) {
  * @property {string} density 'sparse' | 'medium' | 'busy'
  * @property {string} [feel] 'straight' | 'shuffle' | 'triplet' | 'funk' (default straight)
  * @property {string} [evolve] 'off' (default) | 'build' | 'arc': the solo develops over the song (see `intensityAt`)
+ * @property {string} [tension] 'safe' | 'balanced' (default) | 'free': how much the line leans on chord tones (see TENSIONS)
+ * @property {number} [rests] 0-1 chance that a beat (after the first) is left without a new note in the pooled feels; default 0.14 (the 'mixed' feel has its own rests)
  * @property {string} [techniques] 'off' (default) | 'some' | 'lots': hammer-ons, pull-offs, slides, bends and vibrato
  * @property {number} seed
  * @property {Key} [key] default: detected from the chords, else A minor
@@ -176,9 +238,12 @@ function autoScale(style, chord, key, dominants) {
 /** How the solo develops. */
 export const EVOLVES = [
   { id: 'off', name: 'Steady' },
-  { id: 'build', name: 'Build up' },
+  { id: 'gentle', name: 'Gentle arc' },
   { id: 'arc', name: 'Arc (up, then settle)' },
+  { id: 'build', name: 'Build up' },
 ];
+/** How strongly a solo develops: real solos get ~10% busier and ~1 semitone higher mid-way on average, which is 'gentle'. @param {string} evolve @returns {number} */
+export const strengthOf = evolve => (evolve === 'gentle' ? 0.4 : evolve === 'arc' || evolve === 'build' ? 1 : 0);
 
 /**
  * How built-up the solo is at a bar, 0-1: it drives the register (which position), how busy the rhythm is (up to the
@@ -187,7 +252,7 @@ export const EVOLVES = [
  * @param {string} evolve @param {number} bar @param {number} bars @returns {number}
  */
 export function intensityAt(evolve, bar, bars) {
-  if (evolve !== 'build' && evolve !== 'arc') return 1;
+  if (evolve !== 'build' && evolve !== 'arc' && evolve !== 'gentle') return 1;
   const x = bars > 1 ? bar / (bars - 1) : 0.5;
   const i = evolve === 'build' ? 0.15 + 0.85 * x : x <= 0.7 ? 0.15 + 0.85 * (x / 0.7) : 1 - 0.7 * ((x - 0.7) / 0.3);
   return bars > 1 && bar === bars - 1 ? Math.min(i, 0.4) : Math.max(0.1, Math.min(1, i));
@@ -217,6 +282,25 @@ export function soloContext(bars, style, keyOpt) {
 }
 
 /**
+ * Leave some beats without a new note: the beat's notes are dropped and either the previous note is held through it or it
+ * stays a rest. The first beat of a bar, and bars with fewer than three notes, are left alone.
+ * @param {number[][]} rhythm @param {number} p chance per beat @param {() => number} rand @returns {number[][]}
+ */
+function thin(rhythm, p, rand) {
+  const out = rhythm.map(x => [...x]);
+  for (let beat = 1; beat < 4; beat++) {
+    if (out.length <= 3 || rand() >= p) continue;
+    const inBeat = out.filter(([at]) => at >= beat * 12 && at < beat * 12 + 12);
+    if (!inBeat.length) continue;
+    const idxFirst = out.indexOf(inBeat[0]);
+    for (const n of inBeat) out.splice(out.indexOf(n), 1);
+    const prev = out[idxFirst - 1];
+    if (prev && rand() < 0.5) { const nextAt = out[idxFirst] ? out[idxFirst][0] : STEPS; prev[1] = Math.min(prev[1] + 12, nextAt - prev[0]); } // held
+  }
+  return out;
+}
+
+/**
  * Generate a solo.
  * @param {SoloOptions} o
  * @returns {{bars:TabNote[][], info:SegmentInfo[], key:Key}}
@@ -224,7 +308,10 @@ export function soloContext(bars, style, keyOpt) {
 export function generateSolo(o) {
   const rand = rng(o.seed);
   const feel = o.feel && RHYTHMS[o.feel] ? o.feel : 'straight';
-  const evolve = o.evolve === 'build' || o.evolve === 'arc' ? o.evolve : 'off';
+  const evolve = o.evolve === 'build' || o.evolve === 'arc' || o.evolve === 'gentle' ? o.evolve : 'off';
+  const strength = strengthOf(evolve);
+  const tn = TENSIONS.find(x => x.id === o.tension) || TENSIONS[1];
+  const restChance = feel === 'mixed' ? 0 : Math.max(0, Math.min(1, o.rests ?? 0.14));
   const BANDS = /** @type {const} */ (['sparse', 'medium', 'busy']), peak = Math.max(0, BANDS.indexOf(/** @type {any} */ (o.density)));
   const pick = /** @template T @param {T[]} arr @returns {T} */ arr => arr[Math.floor(rand() * arr.length)];
   const nStr = o.inst.midi.length;
@@ -257,8 +344,9 @@ export function generateSolo(o) {
   /** @type {number[][]|null} */ let motifRhythm = null;
   /** @type {number[]|null} */ let motifOffsets = null;
   let phraseRhythm = /** @type {number[][]} */ ([]);
-  let dir = rand() < 0.5 ? 1 : -1, afterLeap = false;
+  let dir = rand() < 0.5 ? 1 : -1, leapPending = false, lastSemis = 0;
   const lastBar = o.bars.length - 1;
+  const reuse = feel === 'mixed' ? 0.08 : 0.35; // real bars almost never repeat their rhythm exactly (1%), so repeats are rare and loose
 
   segs.forEach((seg, si) => {
     const { bar, chord } = seg;
@@ -275,7 +363,8 @@ export function generateSolo(o) {
     const inten = intensityAt(evolve, bar, o.bars.length);
     let pos;
     if (evolve !== 'off' && !allowed.length) { // the register follows the build-up: low early, high at the peak
-      const lo = Math.min(...centers), hi = Math.max(...centers), target = lo + inten * (hi - lo);
+      // full strength: low at the start of the build-up, high at its peak; gentle: only a little either way around the middle
+      const lo = Math.min(...centers), hi = Math.max(...centers), target = lo + (0.5 + strength * (inten - 0.55) / 0.9) * (hi - lo);
       // move at most one position per bar while the scale stays (so the hand never has to jump), else stay near where it was
       const same = prevPos >= 0 && prevScale === scaleId && prevRoot === root;
       let pool = same ? usable.filter(k => Math.abs(k - prevPos) <= 1) : usable.filter(k => prevPos < 0 || Math.abs(centers[k] - prevCenter) <= 4);
@@ -311,13 +400,16 @@ export function generateSolo(o) {
       if (last) r = (FINALS[feel] || FINALS.straight)[o.density === 'sparse' ? 'sparse' : 'normal'];
       else {
         // busier bars as the solo builds, up to the density that was asked for
-        const band = BANDS[Math.min(peak, Math.round(inten * peak))];
+        const eff = 1 - strength * (1 - inten);
+        const band = BANDS[Math.min(peak, Math.round(eff * peak))];
         const pool = (RHYTHMS[feel] || RHYTHMS.straight)[band] || RHYTHMS.straight.medium;
         if (!pool.includes(phraseRhythm)) { motifRhythm = null; motifOffsets = null; } // the motif was from another band
         if (k === 0 || !pool.includes(phraseRhythm)) { phraseRhythm = pick(pool); motifRhythm = phraseRhythm; motifOffsets = null; r = phraseRhythm; }
-        else if (k === 1) r = rand() < 0.7 ? phraseRhythm : pick(pool);
+        else if (k === 1) r = rand() < reuse ? phraseRhythm : pick(pool);
         else if (k === 2) r = pick(pool.filter(x => x !== phraseRhythm)) || phraseRhythm;
-        else r = rand() < 0.5 ? phraseRhythm : pick(pool);
+        else r = rand() < reuse * 0.7 ? phraseRhythm : pick(pool);
+        // real solos leave space: now and then a beat gets no new note (the note before it rings on, or there is a rest)
+        if (restChance > 0) r = thin(r, Math.min(0.6, restChance * (1 + 0.8 * strength * (1 - inten))), rand);
       }
       rhythmOf[bar] = r;
     }
@@ -336,10 +428,26 @@ export function generateSolo(o) {
     const nextSeg = segs[si + 1];
     const changing = !!nextSeg && (nextSeg.chord.root !== chord.root || nextSeg.chord.iv.join() !== chord.iv.join());
     /** @type {number[]} */ const idxs = [];
+    const mid = (pitches.length - 1) / 2;
+    /** One step of the ordinary walk: usually a step, sometimes a skip, rarely a leap; keeps its direction like real lines do, and
+     *  after a leap (5 semitones or more) usually turns back by a step. */
+    const walk = () => {
+      let delta;
+      if (leapPending && rand() < 0.7) { delta = 1; dir = lastSemis > 0 ? -1 : 1; leapPending = false; }
+      else {
+        leapPending = false;
+        const pull = idx < mid - 2 ? 0.7 : idx > mid + 2 ? 0.3 : 0.5; // chance of going up
+        dir = rand() < 0.8 ? dir : (rand() < pull ? 1 : -1);
+        const r = rand();
+        delta = r < 0.58 ? 1 : r < 0.80 ? 2 : r < 0.86 ? 0 : r < 0.94 ? 3 : 4;
+      }
+      let next = idx + dir * delta;
+      if (next < 0 || next > pitches.length - 1) { dir = -dir; next = idx + dir * delta; }
+      idx = clampIdx(next);
+    };
     rhythm.forEach(([at], n) => {
       const strong = at % BEAT === 0, firstOn = n === 0, lastOn = n === rhythm.length - 1;
       // the walk is pulled gently back to the middle of the position so it does not drift to one end
-      const mid = (pitches.length - 1) / 2;
       if (lastSeg && lastOn) { // the final note: the root of the last chord
         const rootIdx = all.filter(i => pitches[i] % 12 === chord.root % 12);
         idx = nearest(rootIdx.length ? rootIdx : tones, idx)[0];
@@ -353,28 +461,16 @@ export function generateSolo(o) {
           idx = clampIdx(target + side);
         } else idx = nearest(tones, idx)[0];
       } else if (firstOn) {
-        const near = nearest(tones, idx); idx = near.length > 1 && rand() < 0.3 ? near[1] : near[0];
+        if (rand() < tn.first) { const near = nearest(tones, idx); idx = near.length > 1 && rand() < 0.3 ? near[1] : near[0]; }
+        else walk();
       } else if (replay && motifOffsets && motifOffsets[n] !== undefined) {
         idx = clampIdx(idxs[0] + motifOffsets[n]);
         if (strong && !isTone(idx)) { const near = nearest(tones, idx)[0]; if (Math.abs(near - idx) <= 2) idx = near; }
-      } else if (strong) { // land on a chord tone, a different one than we are on, one of the two nearest
+      } else if (strong && rand() < tn.snap) { // land on a chord tone, a different one than we are on, one of the two nearest - the one in the direction we are going if there is one
         const near = nearest(tones, idx).filter(i => i !== idx);
-        idx = near.length > 1 && rand() < 0.35 ? near[1] : (near[0] ?? idx);
-      } else {
-        // a step usually, sometimes a skip, rarely a leap (which is answered by a step back)
-        let delta;
-        if (afterLeap) { delta = 1; dir = -dir; afterLeap = false; }
-        else {
-          const pull = idx < mid - 2 ? 0.7 : idx > mid + 2 ? 0.3 : 0.5; // chance of going up
-          dir = rand() < 0.62 ? dir : (rand() < pull ? 1 : -1);
-          const r = rand();
-          delta = r < 0.58 ? 1 : r < 0.80 ? 2 : r < 0.86 ? 0 : r < 0.94 ? 3 : 4;
-          if (delta >= 3) afterLeap = true;
-        }
-        let next = idx + dir * delta;
-        if (next < 0 || next > pitches.length - 1) { dir = -dir; next = idx + dir * delta; }
-        idx = clampIdx(next);
-      }
+        const ahead = near.filter(i => (i - idx) * dir > 0);
+        idx = ahead.length && rand() < 0.65 ? ahead[0] : near.length > 1 && rand() < 0.35 ? near[1] : (near[0] ?? idx);
+      } else walk();
       // never leap more than a major sixth, and never sound the same note three times running
       if (!(lastSeg && lastOn) && !(firstOn && prevMidi < 0)) {
         const fromPitch = n > 0 ? pitches[idxs[n - 1]] : prevMidi >= 0 ? prevMidi : pitches[cur0];
@@ -384,6 +480,10 @@ export function generateSolo(o) {
           idx = nx;
         }
         if (n >= 1 && idx === idxs[n - 1] && (n >= 2 ? idxs[n - 2] === idx : sameAsPrev2(idx))) idx = clampIdx(idx + (rand() < 0.5 ? 1 : -1));
+      }
+      { // remember a leap so the next step can turn back
+        const before = n > 0 ? pitches[idxs[n - 1]] : prevMidi >= 0 ? prevMidi : pitches[cur0];
+        lastSemis = pitches[idx] - before; leapPending = Math.abs(lastSemis) >= 5;
       }
       idxs.push(idx);
     });
@@ -403,7 +503,7 @@ export function generateSolo(o) {
     });
   });
   const level = o.techniques === 'lots' ? 2 : o.techniques === 'some' ? 1 : 0;
-  if (level) addTechniques(outBars, info, o.style, o.inst.midi, level, rand, evolve !== 'off');
+  if (level) addTechniques(outBars, info, o.style, o.inst.midi, level, rand, strength);
   return { bars: outBars, info, key };
 }
 
@@ -412,14 +512,17 @@ export function generateSolo(o) {
  * / slide joins two neighbouring notes on one string a few frets apart; a bend is written one or two semitones LOWER
  * than the scale note it arrives at (so the sounding pitch stays in the scale and the position), on the high strings
  * of a guitar only; vibrato goes on long notes, and most often on the last one. No note takes part in two links.
- * @param {TabNote[][]} bars @param {SegmentInfo[]} info @param {string} style @param {number[]} midi open-string notes @param {number} level 1 some, 2 lots @param {() => number} rand @param {boolean} evolving techniques are rarer early in the solo and more frequent at its peak
+ * @param {TabNote[][]} bars @param {SegmentInfo[]} info @param {string} style @param {number[]} midi open-string notes @param {number} level 1 some, 2 lots @param {() => number} rand @param {number} strength 0 steady .. 1: techniques are rarer early in the solo and more frequent at its peak
  */
-function addTechniques(bars, info, style, midi, level, rand, evolving) {
+function addTechniques(bars, info, style, midi, level, rand, strength) {
   const nStr = midi.length;
-  const pSlide = level === 2 ? 0.3 : 0.15, pHammer = level === 2 ? 0.6 : 0.35, pVib = level === 2 ? 0.6 : 0.35, pVibEnd = level === 2 ? 0.85 : 0.6;
-  const pBend = (/** @type {Record<string, number>} */ ({ blues: 0.2, pent: 0.1, follow: 0.05 })[style] ?? 0.05) * level;
+  // Jazz lines (the 'follow' style) use these far less than blues and rock lines: in the Weimar Jazz Database, 2% of notes have vibrato,
+  // 2% a slide and 0.3% a bend. Blues and pentatonic keep the higher rates.
+  const jazz = style === 'follow', tone = jazz ? { slide: 0.5, hammer: 0.6, vib: 0.7 } : { slide: 1, hammer: 1, vib: 1 };
+  const pSlide = (level === 2 ? 0.3 : 0.15) * tone.slide, pHammer = (level === 2 ? 0.6 : 0.35) * tone.hammer, pVib = (level === 2 ? 0.6 : 0.35) * tone.vib, pVibEnd = level === 2 ? 0.85 : 0.6;
+  const pBend = (/** @type {Record<string, number>} */ ({ blues: 0.2, pent: 0.1, follow: 0.01 })[style] ?? 0.01) * level;
   bars.forEach((notes, bi) => {
-    const m = evolving ? 0.5 + (info.find(x => x.bar === bi)?.intensity ?? 1) : 1; // 0.6 early, 1.5 at the peak
+    const m = 1 + strength * ((info.find(x => x.bar === bi)?.intensity ?? 1) - 0.5); // full strength: 0.6 early .. 1.5 at the peak
     /** @type {Set<TabNote>} */ const joined = new Set();
     for (const a of notes) {
       const b = linkedNext(notes, a);

@@ -468,6 +468,11 @@ async function run(browser, origin, label) {
     assert(pr.summary === 'Tempo and playback' && pr.summary === cp.summary, `${label}: both pages call their playback settings "Tempo and playback"`);
     assert(JSON.stringify(pr.controls) === JSON.stringify(cp.controls) && pr.controls.join('|') === 'Tempo BPM|Loop|Click', `${label}: and start with the same controls in the same order (${pr.controls.join(' | ')})`);
     assert(!pr.open && !cp.open, `${label}: and both are folded on a phone`);
+    const defaults = async hash => { await pp.goto(origin + hash, { waitUntil: 'networkidle' }); return pp.evaluate(() => ({ loop: /** @type {HTMLInputElement} */ (document.querySelector('.view:not([hidden]) input[id$="-loop"]')).checked, click: /** @type {HTMLInputElement} */ (document.querySelector('.view:not([hidden]) input[id$="-metro"]')).checked })); };
+    const dp = await defaults('#progressions'), dc = await defaults('#compose');
+    assert(dp.loop === dc.loop && dp.click === dc.click && dp.loop === true && dp.click === false, `${label}: both pages start with Loop on and Click off (${JSON.stringify(dp)} / ${JSON.stringify(dc)})`);
+    const gen = await pp.evaluate(() => ({ feel: /** @type {HTMLSelectElement} */ (document.querySelector('#tb-feel')).value, evolve: /** @type {HTMLSelectElement} */ (document.querySelector('#tb-evolve')).value, tension: /** @type {HTMLSelectElement} */ (document.querySelector('#tb-tension')).value, tensions: [...document.querySelectorAll('#tb-tension option')].map(o => o.textContent) }));
+    assert(gen.feel === 'mixed' && gen.evolve === 'gentle' && gen.tension === 'balanced' && gen.tensions.length === 3, `${label}: the generator starts calibrated: mixed feel, gentle arc, balanced chord tones (${JSON.stringify(gen)})`);
     await pp.goto(origin + '#progressions', { waitUntil: 'networkidle' }); await pp.waitForSelector('#pr-strip .chip');
     await pp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const prBar = await pp.evaluate(() => { const b = document.querySelector('#pr-run').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, covered: !document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)?.closest('#pr-run') }; });

@@ -305,6 +305,21 @@ mount and on `hashchange` via `openShared`: it pushes the shared tab onto the un
 user's own), applies the setup/generator settings, and tidies the long hash away. `app.js` applies the setup
 before the views mount, like Progressions links.
 
+### Calibration against real solos (2026-10-14)
+
+The generator's defaults were tuned against the Weimar Jazz Database (435 solos in 4/4; chord tones = 1-3-5-7 of the chord in effect).
+`REAL` in `test/solo.test.mjs` holds the measured numbers with tolerances and checks the DEFAULT settings (follow style, Mixed feel,
+medium density, Gentle arc, Balanced chord tones, techniques Some): chord tones on strong beats ~0.7 (real 0.52; the 'safe' textbook
+setting is 0.96 and is kept as an option), ~21% beats without a new note (real 27%), onset positions (beat .43 / eighth .25 / triplet
+.14 / sixteenth .18), interval mix (step .57 / third .24 / fourth .12), keeps direction .64 (real .58), turns back after a leap .71
+(real .67), exact bar-rhythm repeats .05 (real .01), vibrato/bend/slide rates for jazz, a gentle arc (middle 1.07x as busy; real 1.11x).
+How: `TENSIONS` (snap chance of strong beats onto chord tones), the 'mixed' feel (`BEAT_TOKENS`/`TOKEN_WEIGHTS` build pools of bars beat
+by beat; weights were tuned offline to match the real onset mix), `thin()` (leaves beats without a note: held or rest), walk direction
+persistence 0.8 and general gap-fill after leaps, `strengthOf('gentle') = 0.4`, jazz-style technique rates (style 'follow').
+Things the data did NOT support, kept anyway: approaching a chord change from a scale step (real players land within a semitone of
+a new chord tone 87% of the time - no better than random, 89%). Limits: horn-heavy jazz, strict chord tones, 4/4 only, pooled over
+notes; blues-rock guitar is not represented. To re-measure: `fretwork-notes/scripts/wjd_metrics.py` and `gen_metrics.mjs` (maintainer's notes).
+
 ### Evolve
 
 `intensityAt(evolve, bar, bars)` (0.1-1; 'arc' peaks ~70% in and falls, 'build' rises to the last bar, the last bar is

@@ -7,7 +7,7 @@ import { emptyTab, putNote, putChord, setChordPlan, setVoicing, setTechnique, se
 let failures = 0;
 const assert = (c, m) => { if (!c) { console.log(`FAIL: ${m}`); failures++; } };
 const GUITAR = { midi: [64, 59, 55, 50, 45, 40], tuning: [4, 11, 7, 2, 9, 4] };
-const GEN = { style: 'blues', density: 'busy', feel: 'shuffle', tech: 'lots', evolve: 'arc', key: '9:minor', seed: 424242 };
+const GEN = { style: 'blues', density: 'busy', feel: 'shuffle', tech: 'lots', evolve: 'arc', tension: 'free', key: '9:minor', seed: 424242 };
 const b64 = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const link = o => `#tab?d=${b64(JSON.stringify(o))}`;
 
@@ -61,6 +61,7 @@ assert(evil && ({}).polluted === undefined && evil.tab.voicings?.Am7 === 2 && ev
 const setup = decodeTabLink(`#tab?i=banjo&t=${encodeURIComponent('../x')}&cp=99&lh=yes&d=${b64(JSON.stringify({ v: 1, r: [[[], []]] }))}`);
 assert(setup.setup.instrument === 'guitar' && setup.setup.tuning === undefined && setup.setup.capo === undefined && setup.setup.leftHanded === undefined, 'bad setup values in the URL are ignored');
 const gen = n => decodeTabLink(link({ v: 1, r: [[[], []]], g: n }))?.gen;
+assert(gen(['blues', 'busy', 'shuffle', 'lots', 'arc', 'auto', 5]).tension === 'balanced' && gen(['blues', 'busy', 'mixed', 'lots', 'gentle', 'auto', 5, 'free']).tension === 'free' && gen(['blues', 'busy', 'shuffle', 'lots', 'arc', 'auto', 5, 'wild']) === undefined, 'links made before the Chord tones setting still open (balanced); an unknown value is refused');
 assert(gen(['blues', 'busy', 'shuffle', 'lots', 'arc', 'auto', 5]) !== undefined && gen(['blues', 'busy', 'shuffle', 'lots', 'arc', 'auto', 0]) === undefined && gen(['rap', 'busy', 'shuffle', 'lots', 'arc', 'auto', 5]) === undefined && gen(['blues', 'busy', 'shuffle', 'lots', 'arc', '<x>', 5]) === undefined && gen(['blues', 'busy', 'shuffle', 'lots', 'arc', 'auto', 1e9]) === undefined, 'generator settings are validated one by one');
 const named = decodeTabLink(link({ v: 1, r: [[[[0, '<script>alert(1)</script>']], []]] }));
 assert(named.tab.bars[0].chords[0].name.length <= 16, 'chord names from a link are cut to 16 characters (and escaped when drawn - see the tab test)');
