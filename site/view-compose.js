@@ -2,6 +2,7 @@ import { esc, parseChord } from './music.js';
 import { getInstrument, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { encodeTabLink, decodeTabLink } from './tab-share.js';
 import { tabOf } from './share.js';
+import { playbackFold, openWhereRoom } from './playback-ui.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
 import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES } from './solo.js';
@@ -31,12 +32,16 @@ export function mount(root){
       <button type="button" class="share" id="tb-undo" aria-label="Undo"><span aria-hidden="true">\u21B6</span><span class="lbl"> Undo</span></button>
       <button type="button" class="share" id="tb-redo" aria-label="Redo"><span aria-hidden="true">\u21B7</span><span class="lbl"> Redo</span></button>
     </div>
-    <div class="tabtools" role="group" aria-label="Tempo, sharing and export">
-      <label class="keylab">Tempo <input id="tb-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
+    <p class="status" id="tb-genmsg" role="status" aria-live="polite"></p>
+    <div class="sharebar" role="group" aria-label="Share and export">
+      <label class="keylab">Title <input id="tb-title" type="text" size="22" maxlength="80" autocomplete="off"></label>
       <button type="button" class="share" id="tb-share" title="A link that opens this tab (notes, chords, settings and seed) for someone else">Copy link</button>
       <button type="button" class="share" id="tb-pdf" title="Print the tab with its chord boxes - choose Save as PDF in the print dialog">Export PDF</button>
-      <span class="vometa" id="tb-genmsg" role="status" aria-live="polite"></span>
+      <button type="button" class="share" id="tb-copy" title="The tab as plain text, to paste into notes or a message">Copy as text</button>
+      <span class="vometa" id="tb-msg" role="status" aria-live="polite"></span>
     </div>
+    ${playbackFold('tb', `<label class="chk"><input type="checkbox" id="tb-backing"> Play the bar chords</label>
+        <label class="keylab" title="Plays straight eighths long-short. Notes written as triplets are not changed.">Swing <select id="tb-swing">${SWINGS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>`)}
     <details class="fold" id="tb-gen"><summary>Solo generator settings</summary>
       <p class="hint">Name the chords in the tab (or load a progression), then press Generate above. It replaces the notes - Undo brings yours back.</p>
       <div class="row">
@@ -74,6 +79,7 @@ export function mount(root){
       <label class="keylab">Chord at bar <span id="tb-barno">1</span>, beat <span id="tb-beat">1</span> <input id="tb-chord" type="text" size="7" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Am7"></label>
       <button type="button" class="share" id="tb-addbar">Add bar</button>
       <button type="button" class="share" id="tb-delbar">Delete bar</button>
+      <button type="button" class="share" id="tb-clear">Clear notes</button>
     </div>
     <div id="tb-chords" class="chordsum"></div>
     <div id="tb-plan" class="plansum"></div>
@@ -87,20 +93,6 @@ export function mount(root){
       <button type="button" data-k="ArrowDown" aria-label="Down a string">↓</button>
     </div>
     <p class="hint">Click a spot on the tab, type a fret (two digits for 10 and up), and the cursor moves on by the note length. Arrow keys move, Delete removes, Space plays, Ctrl+Z undoes.</p>
-    <details class="fold" id="tb-more"><summary>Playback and more</summary>
-      <div class="row">
-        <label class="chk"><input type="checkbox" id="tb-backing"> Play the bar chords</label>
-        <label class="chk"><input type="checkbox" id="tb-metro"> Click</label>
-        <label class="chk"><input type="checkbox" id="tb-loop"> Loop</label>
-        <label class="keylab" title="Plays straight eighths long-short. Notes written as triplets are not changed.">Swing <select id="tb-swing">${SWINGS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
-      </div>
-      <div class="row">
-        <label class="keylab">Title <input id="tb-title" type="text" size="22" maxlength="80" autocomplete="off"></label>
-        <button type="button" class="share" id="tb-copy">Copy as text</button>
-        <button type="button" class="share" id="tb-clear">Clear notes</button>
-        <span class="vometa" id="tb-msg" role="status" aria-live="polite"></span>
-      </div>
-    </details>
   `;
   const $ = sel => root.querySelector(sel);
   const surface = $('#tb-surface'), playBtn = $('#tb-play'), undoBtn = $('#tb-undo'), redoBtn = $('#tb-redo'), bpmIn = $('#tb-bpm'),
@@ -513,7 +505,7 @@ export function mount(root){
   $('#tb-gen-go').onclick = generate;
   $('#tb-gen-new').onclick = () => { opts.seed = 1 + Math.floor(Math.random() * 999999); seedIn.value = String(opts.seed); persist(); generate(); };
   $('#tb-gen').open = matchMedia('(min-width:760px)').matches;
-  $('#tb-more').open = matchMedia('(min-width:760px)').matches;
+  openWhereRoom($('#tb-opts'));
 
   root.addEventListener('fw-shown', () => { planSig = ''; render(); });
   let resizeTimer = /** @type {any} */ (0);

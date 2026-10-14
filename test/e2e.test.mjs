@@ -461,6 +461,19 @@ async function run(browser, origin, label) {
   await pp.click('#tb-gen-go'); await pp.waitForTimeout(300);
   assert((await pp.$$('#tb-surface .fret')).length > 0, `${label}: Generate works from the pinned bar`);
   await pp.goto(origin + '#scales', { waitUntil: 'networkidle' });
+  // Progressions and Compose play the same way: the same "Tempo and playback" fold with Tempo, Loop, Click first, Play pinned on both
+  {
+    const optsOf = async hash => { await pp.goto(origin + hash, { waitUntil: 'networkidle' }); return pp.evaluate(() => { const d = /** @type {HTMLDetailsElement} */ (document.querySelector('.view:not([hidden]) details[id$="-opts"]')); return { summary: d.querySelector('summary').textContent.trim(), controls: [...d.querySelectorAll('.transport > *')].slice(0, 3).map(x => x.textContent.trim().replace(/\s+/g, ' ')), open: d.open }; }); };
+    const pr = await optsOf('#progressions'), cp = await optsOf('#compose');
+    assert(pr.summary === 'Tempo and playback' && pr.summary === cp.summary, `${label}: both pages call their playback settings "Tempo and playback"`);
+    assert(JSON.stringify(pr.controls) === JSON.stringify(cp.controls) && pr.controls.join('|') === 'Tempo BPM|Loop|Click', `${label}: and start with the same controls in the same order (${pr.controls.join(' | ')})`);
+    assert(!pr.open && !cp.open, `${label}: and both are folded on a phone`);
+    await pp.goto(origin + '#progressions', { waitUntil: 'networkidle' }); await pp.waitForSelector('#pr-strip .chip');
+    await pp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const prBar = await pp.evaluate(() => { const b = document.querySelector('#pr-run').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, covered: !document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)?.closest('#pr-run') }; });
+    assert(prBar.top >= 0 && prBar.bottom < 120 && !prBar.covered, `${label}: Play progression is pinned at the top of a scrolled phone, like Play on Compose`);
+    await pp.goto(origin + '#scales', { waitUntil: 'networkidle' });
+  }
   // phone: the root and scale pickers are selects; the long chord-builder starts folded
   assert(await pp.isVisible('#sc-rootsel') && await pp.isHidden('#sc-roots'), `${label}: phone uses a root drop-down`);
   await pp.goto(origin + '#chords', { waitUntil: 'networkidle' });
