@@ -46,7 +46,7 @@ jobs:
           node-version: 22
       - name: Lighthouse (performance, accessibility, best practices, SEO >= thresholds in lighthouserc.json)
         run: npx --yes @lhci/cli@0.15 autorun --config=lighthouserc.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lighthouse-report
