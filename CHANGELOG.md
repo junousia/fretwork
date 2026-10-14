@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Compose: Play, Generate, Another one, Undo and Redo are pinned to the top of the page while you scroll (on a phone they
+  shrink to fit one row: "\u21bb Another", "\u21b6", "\u21b7"), so the essential controls are always within reach. The SVG bar
+  lines no longer share the navigation's `tabbar` class name.
+
 ## 2.0.0 - 2026-10-14
 
 A large release: Fretwork is now also a composer.

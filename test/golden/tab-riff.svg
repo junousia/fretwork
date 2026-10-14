@@ -11,9 +11,9 @@
 <line class="tabline" x1="26" y1="78" x2="634" y2="78"/>
 <line class="tabline" x1="26" y1="94" x2="634" y2="94"/>
 <line class="tabline" x1="26" y1="110" x2="634" y2="110"/>
-<line class="tabbar" x1="26" y1="30" x2="26" y2="110"/>
-<line class="tabbar" x1="330" y1="30" x2="330" y2="110"/>
-<line class="tabbar" x1="634" y1="30" x2="634" y2="110"/>
+<line class="tabbarline" x1="26" y1="30" x2="26" y2="110"/>
+<line class="tabbarline" x1="330" y1="30" x2="330" y2="110"/>
+<line class="tabbarline" x1="634" y1="30" x2="634" y2="110"/>
 <line class="tabbeat" x1="106" y1="26" x2="106" y2="114"/>
 <line class="tabbeat" x1="178" y1="26" x2="178" y2="114"/>
 <line class="tabbeat" x1="250" y1="26" x2="250" y2="114"/>
