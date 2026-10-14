@@ -264,6 +264,20 @@ these on ~3,700 solos across all tunings, capos, styles and densities (notes in 
 >=90% chord-tone starts, >=55% strong-beat chord tones, approach >=80%, ...). It is a phrase
 generator, not a performer: no bends, slides or feel yet.
 
+### Sound
+
+`audio.js` `note()` routes every note through the engine set by `setNoteEngine` (or its own simple triangle synth
+`simpleNote` when none / if the engine returns false or throws). `sound.js` is the "Plucked guitar" engine: it renders
+each note with `string-dsp.js` (`renderString`, pure, deterministic, Node-testable) into a cached AudioBuffer at 22.05 kHz
+(~2.5 ms per note) and plays it through EQ -> compressor -> short convolver room -> limiter. Why not Tone.js PluckSynth:
+measured (2026-10-14) random loudness (3-14 dB between identical notes), silent above ~1.1 kHz, flat by up to 30 cents.
+Lessons from building the voice: the 2-tap loop filter attenuates the FUNDAMENTAL of high notes, so the filter weight `a` rises
+with pitch and the loop gain is capped below 1 (a gain >= 1 at DC made E6 explode/silent); normalise each note's RMS for
+consistent loudness; the delay is read with cubic interpolation so bends/slides/vibrato are smooth. `test/sound.test.mjs`
+measures tuning (<3 cents at 22.05/44.1/48 kHz), loudness (+-0.5 dB), decay trend, damping, bend/slide/vibrato, harmonic
+content, centroid, cost; the e2e test renders the real chain in an OfflineAudioContext. If a sampled guitar is ever wanted,
+Tone.Sampler (vendored, lazy-loaded, listed in sw.js SHELL, excluded from CodeQL and from the site test's URL scan) is the plan.
+
 ### Sharing a tab
 
 `tab-share.js` (pure): `#tab?i=&t=&cp=&lh=&d=<base64url json>`. `d` is a compact JSON (`v:1`, `n` title, `b` bpm,

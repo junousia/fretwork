@@ -6,16 +6,22 @@ import { mount as mountTab } from './view-tab.js';
 import { FAMILIES, MAX_CAPO, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { decodeProgression, tabOf } from './share.js';
 import { decodeTabLink } from './tab-share.js';
+import { SOUNDS, getSound, setSound, applySound } from './sound.js';
 
 // A shared link may carry the instrument; apply it before anything renders.
 { const sh = decodeProgression(location.hash); if (sh && tabOf(location.hash) === 'progressions') applySetup({ instrument: sh.instrument || 'guitar', tuning: sh.tuning || 'standard', capo: sh.capo || 0, leftHanded: sh.leftHanded === true }); }
 
 { const tl = tabOf(location.hash) === 'tab' ? decodeTabLink(location.hash) : null; if (tl) applySetup({ instrument: tl.setup.instrument || 'guitar', tuning: tl.setup.tuning || 'standard', capo: tl.setup.capo || 0, leftHanded: tl.setup.leftHanded === true }); }
 
+applySound();
+
 const instSwitch = document.getElementById('instrument-switch');
 const tuningSel = /** @type {HTMLSelectElement} */ (document.getElementById('tuning-select'));
 const capoSel = /** @type {HTMLSelectElement} */ (document.getElementById('capo-select'));
 const lefty = /** @type {HTMLInputElement} */ (document.getElementById('lefty-toggle'));
+const soundSel = /** @type {HTMLSelectElement} */ (document.getElementById('sound-select'));
+soundSel.innerHTML = SOUNDS.map(x => `<option value="${x.id}">${x.name}</option>`).join(''); soundSel.value = getSound();
+soundSel.onchange = () => setSound(soundSel.value);
 capoSel.innerHTML = Array.from({ length: MAX_CAPO + 1 }, (_, n) => `<option value="${n}">${n ? 'Capo at fret ' + n : 'No capo'}</option>`).join('');
 function syncSetupControls(){
   const s = getSetup();
