@@ -76,7 +76,7 @@ useVoicingData(data);
   const std = getVoicings(getInstrument(), 0, '');
   applySetup({ capo: 3 });
   const capo3 = getVoicings(getInstrument(), 3, '');
-  assert(std.length >= 3 && same(capo3.map(v => v.f).sort(), std.map(v => v.f).sort()), 'capo 3: a C shape is available as an Eb chord, same fingerings');
+  assert(std.length >= 3 && same(capo3.map(v => v.f).sort(), std.map(v => v.f).sort()), 'capo 3: a C shape is available as an Eb chord, same voicings');
   // half step down (T=11): the shapes of the chord one semitone UP are reused, unchanged
   applySetup({ capo: 0, tuning: 'half-down' });
   const hd = getVoicings(getInstrument(), 11, '');

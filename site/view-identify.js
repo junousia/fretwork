@@ -53,7 +53,7 @@ export function mount(root){
 
     body.innerHTML = `
       <div class="boardbar"><div class="scaletitle">${noteNames.length ? esc(noteNames.join(' ')) : 'No notes marked'}</div>
-        <div class="controls"><button type="button" class="play" id="id-play"${midi.length ? '' : ' disabled'}>Play</button>
+        <div class="controls"><button type="button" class="play" id="id-play"${midi.length ? '' : ' disabled'}>\u25B6 Play</button>
         <button type="button" class="share" id="id-clear"${midi.length ? '' : ' disabled'}>Clear</button></div></div>
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, 'notes', false, opts)}</div>
       <div class="strsels">${selects}</div>

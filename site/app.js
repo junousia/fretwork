@@ -2,7 +2,7 @@ import { mount as mountProgressions } from './view-progressions.js';
 import { mount as mountScales } from './view-scales.js';
 import { mount as mountChords } from './view-chords.js';
 import { mount as mountIdentify } from './view-identify.js';
-import { mount as mountTab } from './view-tab.js';
+import { mount as mountCompose } from './view-compose.js';
 import { FAMILIES, MAX_CAPO, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { decodeProgression, tabOf } from './share.js';
 import { decodeTabLink } from './tab-share.js';
@@ -11,7 +11,7 @@ import { SOUNDS, getSound, setSound, applySound } from './sound.js';
 // A shared link may carry the instrument; apply it before anything renders.
 { const sh = decodeProgression(location.hash); if (sh && tabOf(location.hash) === 'progressions') applySetup({ instrument: sh.instrument || 'guitar', tuning: sh.tuning || 'standard', capo: sh.capo || 0, leftHanded: sh.leftHanded === true }); }
 
-{ const tl = tabOf(location.hash) === 'tab' ? decodeTabLink(location.hash) : null; if (tl) applySetup({ instrument: tl.setup.instrument || 'guitar', tuning: tl.setup.tuning || 'standard', capo: tl.setup.capo || 0, leftHanded: tl.setup.leftHanded === true }); }
+{ const tl = tabOf(location.hash) === 'compose' ? decodeTabLink(location.hash) : null; if (tl) applySetup({ instrument: tl.setup.instrument || 'guitar', tuning: tl.setup.tuning || 'standard', capo: tl.setup.capo || 0, leftHanded: tl.setup.leftHanded === true }); }
 
 applySound();
 
@@ -41,13 +41,13 @@ onInstrumentChange(syncSetupControls);
 syncSetupControls();
 
 const LAST_TAB_KEY = 'gtr-last-tab';
-const TABS = ['progressions', 'scales', 'chords', 'identify', 'tab'];
+const TABS = ['progressions', 'scales', 'chords', 'identify', 'compose'];
 const views = {};
 TABS.forEach(id => { views[id] = document.getElementById('view-' + id); });
 
 // Each tab is built the first time it is shown, so startup only pays for the
 // visible one (the others would add ~1,000 DOM nodes and lots of main-thread work).
-const mounters = { progressions: mountProgressions, scales: mountScales, chords: mountChords, identify: mountIdentify, tab: mountTab };
+const mounters = { progressions: mountProgressions, scales: mountScales, chords: mountChords, identify: mountIdentify, compose: mountCompose };
 const mounted = new Set();
 function ensureMounted(id){
   if(mounted.has(id)) return;

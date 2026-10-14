@@ -202,7 +202,7 @@ export const chordTimeline = tab => tab.bars.flatMap((b, bar) => b.chords.map(c 
 /** The distinct chord names used, in order of first appearance. @param {Tab} tab @returns {string[]} */
 export const chordsUsed = tab => [...new Set(chordTimeline(tab).map(c => c.name))];
 
-/** Choose which stored fingering (0-based) a chord uses. @param {Tab} tab @param {string} name @param {number} index @returns {Tab} */
+/** Choose which stored voicing (0-based) a chord uses. @param {Tab} tab @param {string} name @param {number} index @returns {Tab} */
 export function setVoicing(tab, name, index) {
   if (!Number.isInteger(index) || index < 0 || index > 99) return tab;
   const voicings = { ...(tab.voicings || {}) };

@@ -1,4 +1,4 @@
-// Chord identification: fixed cases, plus every stored fingering must be
+// Chord identification: fixed cases, plus every stored voicing must be
 // recognised as the chord it is filed under (ranked in the top results).
 import fs from 'fs';
 import { identifyChord, marksToNotes } from '../site/identify.js';
@@ -35,7 +35,7 @@ assert(names([0, 1, 0, 2, 3, 0], GUITAR).some(n => n === 'C/E'), 'C over open E 
 assert(identifyChord([0], 0).length === 0, 'a single note is not a chord');
 assert(identifyChord([], 0).length === 0, 'no notes, no chords');
 
-// Every stored fingering is recognised as the chord it is filed under: for each
+// Every stored voicing is recognised as the chord it is filed under: for each
 // one, the filed chord's pitch classes must appear in the first 5 results.
 {
   const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url), 'utf8'));
@@ -59,8 +59,8 @@ assert(identifyChord([], 0).length === 0, 'no notes, no chords');
       }
     }
   }
-  console.log(`stored fingerings: ${total}, ranked first ${tally.first}, top5 ${tally.top5}, lower ${tally.rest}`);
-  assert(tally.first / total > 0.6, 'most stored fingerings are ranked first');
+  console.log(`stored voicings: ${total}, ranked first ${tally.first}, top5 ${tally.top5}, lower ${tally.rest}`);
+  assert(tally.first / total > 0.6, 'most stored voicings are ranked first');
 }
 
 console.log(failures ? `${failures} FAILED` : 'identify: all passed');

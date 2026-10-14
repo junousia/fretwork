@@ -30,6 +30,15 @@ async function run(browser, origin, label) {
   // only the visible tab is built at startup (performance), the others on first visit
   assert(await page.evaluate(() => document.querySelector('#view-progressions').children.length > 0 && document.querySelector('#view-scales').children.length === 0 && document.querySelector('#view-chords').children.length === 0), `${label}: only the visible tab is mounted at startup`);
 
+  // every page's title is its name in the navigation (nothing like "Over the changes" for "Progressions")
+  for (const a of await page.$$('.tabbar a.tab')) {
+    const nav = (await a.textContent()).replace(/^\S\s*/, '').trim();
+    await a.click();
+    await page.waitForFunction(n => document.querySelector('.view:not([hidden]) h1')?.textContent === n, nav, { timeout: 3000 }).catch(() => {});
+    assert((await page.textContent('.view:not([hidden]) h1')) === nav, `${label}: the ${nav} page is titled "${nav}"`);
+  }
+  await page.click('a[data-tab="progressions"]');
+
   // service worker takes control
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload({ waitUntil: 'networkidle' });
@@ -70,7 +79,7 @@ async function run(browser, origin, label) {
   assert((await page.getAttribute('#ch-roots .chip[aria-pressed="true"]', 'data-r')) === '4', `${label}: Chords root is E`);
 
   // tab editor: click a cell, type frets, change lengths, undo, persist, play
-  await page.click('a[data-tab="tab"]');
+  await page.click('a[data-tab="compose"]');
   await page.waitForSelector('#tb-surface .tabhit');
   const frets = () => page.$$eval('#tb-surface .fret', e => e.map(x => `${x.textContent}@${x.dataset.bar}.${x.dataset.at}.${x.dataset.s}`).join(' '));
   assert((await frets()) === '', `${label}: the tab starts empty`);
@@ -102,7 +111,7 @@ async function run(browser, origin, label) {
   await page.click('#tb-addbar');
   assert((await page.$$eval('#tb-surface .tabbar', e => e.length)) > bars0 && (await page.textContent('#tb-barno')) === '3', `${label}: Add bar adds a bar after the current one`);
   const before = await frets();
-  await page.reload({ waitUntil: 'networkidle' }); await page.click('a[data-tab="tab"]');
+  await page.reload({ waitUntil: 'networkidle' }); await page.click('a[data-tab="compose"]');
   assert((await frets()) === before, `${label}: the tab is still there after a reload`);
   await page.click('#tb-play');
   await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 });
@@ -144,7 +153,7 @@ async function run(browser, origin, label) {
   await page.uncheck('#tb-trip');
   assert((await page.$$('#tb-surface .tabhit[data-bar="3"][data-s="1"]')).length === 16, `${label}: straight notes go back to sixteenth cells`);
   await page.selectOption('#tb-swing', 'shuffle'); await page.click('#tb-play'); await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 }); await page.click('#tb-play');
-  // chords can sit at any step; the chords used are gathered above the tab with a fingering
+  // chords can sit at any step; the chords used are gathered above the tab with a voicing
   await page.click('#tb-surface .tabhit[data-bar="0"][data-at="24"][data-s="2"]');
   await page.fill('#tb-chord', 'D7'); await page.press('#tb-chord', 'Tab');
   assert((await page.textContent('#tb-beat')) === '3', `${label}: the chord field names the beat of the cursor`);
@@ -152,10 +161,10 @@ async function run(browser, origin, label) {
   assert(chordXs.length >= 2 && chordXs.some(c => c.startsWith('D7@')), `${label}: a second chord is placed inside the bar (${chordXs})`);
   const used = await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent));
   assert(used.includes('D7') && used.includes('Em7') && new Set(used).size === used.length, `${label}: the chords used are gathered on top once each (${used})`);
-  assert((await page.$$('#tb-chords .chip .vdiag')).length === used.length, `${label}: every chord shows a fingering diagram`);
+  assert((await page.$$('#tb-chords .chip .vdiag')).length === used.length, `${label}: every chord shows a voicing diagram`);
   const cap = () => page.textContent('#tb-chords .chip[data-name="D7"] span');
   const c1 = await cap(); await page.click('#tb-chords .chip[data-name="D7"]');
-  assert((await cap()) !== c1, `${label}: tapping a chord steps to its next fingering (${c1} -> ${await cap()})`);
+  assert((await cap()) !== c1, `${label}: tapping a chord steps to its next voicing (${c1} -> ${await cap()})`);
   // loading a short progression repeats it, so there is a solo's worth of bars; Generate and Play sit side by side
   await page.uncheck('#tb-autoplay');
   assert(await page.isVisible('#tb-gen-go') && await page.isVisible('#tb-play') && await page.isVisible('#tb-gen-new'), `${label}: Play, Generate and Another one are all in the top toolbar`);
@@ -208,6 +217,8 @@ async function run(browser, origin, label) {
   // per chord occurrence: scale and position choices for the chord under the cursor
   await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="2"]');
   const planText = () => page.textContent('#tb-planfold > summary');
+  assert(await page.$eval('#tb-planfold', d => !d.open), `${label}: the scale and position panel starts folded so the tab stays near the top`);
+  await page.click('#tb-planfold > summary');
   assert((await planText()).includes('A7 (bar 1, beat 1)'), `${label}: the plan panel names the chord occurrence under the cursor (${await planText()})`);
   assert((await page.$$('#tb-planboard svg circle')).length > 10, `${label}: the plan panel shows the scale on a fretboard`);
   await page.selectOption('#tb-planscale', 'minpent');
@@ -234,11 +245,11 @@ async function run(browser, origin, label) {
   await page.evaluate(() => { const w = /** @type {any} */ (window); w.__copied = ''; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async t => { w.__copied = t; } } }); });
   await page.click('#tb-share');
   const sharedUrl = await page.evaluate(() => /** @type {any} */ (window).__copied);
-  assert(/#tab\?.*d=/.test(sharedUrl) && sharedUrl.length < 4000, `${label}: Copy link makes a #tab link (${sharedUrl.length} characters)`);
+  assert(/#compose\?.*d=/.test(sharedUrl) && sharedUrl.length < 4000, `${label}: Copy link makes a #compose link (${sharedUrl.length} characters)`);
   assert((await page.textContent('#tb-msg')) === 'Link copied', `${label}: it says the link was copied`);
   const friend = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
   const fp = await friend.newPage();
-  await fp.goto(origin, { waitUntil: 'networkidle' }); await fp.click('a[data-tab="tab"]'); await fp.waitForSelector('#tb-surface .tabhit');
+  await fp.goto(origin, { waitUntil: 'networkidle' }); await fp.click('a[data-tab="compose"]'); await fp.waitForSelector('#tb-surface .tabhit');
   await fp.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="3"]'); await fp.keyboard.press('9'); await fp.waitForTimeout(800); // the friend has a tab of their own
   const own = await fp.$$eval('#tb-surface .fret', e => e.map(x => x.textContent).join());
   await fp.goto(origin + new URL(sharedUrl).hash, { waitUntil: 'networkidle' });
@@ -251,6 +262,13 @@ async function run(browser, origin, label) {
   await fp.click('#tb-undo');
   assert((await fp.$$eval('#tb-surface .fret', e => e.map(x => x.textContent).join())) === own, `${label}: Undo brings back the friend's own tab`);
   await friend.close();
+  // links made when the page was still called "tab" keep working
+  const legacy = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const lp = await legacy.newPage();
+  await lp.goto(origin + new URL(sharedUrl).hash.replace('#compose', '#tab'), { waitUntil: 'networkidle' });
+  await lp.waitForSelector('#tb-surface .tabhit');
+  assert((await lp.$$eval('#tb-surface .fret', e => e.map(x => `${x.textContent}@${x.dataset.bar}.${x.dataset.at}.${x.dataset.s}`).join(' '))) === sharedFrets && (await lp.getAttribute('a[data-tab="compose"]', 'aria-current')) === 'page', `${label}: an old #tab link opens the same tab on the Compose page`);
+  await legacy.close();
   // a damaged link opens nothing and breaks nothing
   const bad = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
   const bp = await bad.newPage(); const badErrors = []; bp.on('pageerror', e => badErrors.push(e.message));
@@ -304,7 +322,7 @@ async function run(browser, origin, label) {
   });
   assert(timing.onsets.every(o => Math.abs(o) < 3), `${label}: notes are heard on time through the chain (onset error in ms: ${timing.onsets})`);
   assert(Math.abs(timing.chainMs - timing.comp) < 3, `${label}: the chain delay in this browser (${timing.chainMs} ms) matches the compensation (${timing.comp} ms)`);
-  await page.click('#menu-btn'); await page.click('a[data-tab="tab"]'); await page.waitForSelector('#tb-surface .tabhit');
+  await page.click('#menu-btn'); await page.click('a[data-tab="compose"]'); await page.waitForSelector('#tb-surface .tabhit');
   // PDF export: the print sheet has the title, every chord box once, and the tab in rows that are not split
   assert(await page.isVisible('#tb-pdf'), `${label}: there is an Export PDF button`);
   await page.fill('#tb-title', 'Blues in A'); await page.press('#tb-title', 'Tab');
@@ -315,7 +333,7 @@ async function run(browser, origin, label) {
   assert(await page.isHidden('.app') && await page.isVisible('#print-sheet'), `${label}: printing hides the app and shows the sheet`);
   assert((await page.textContent('#print-sheet h1')) === 'Blues in A' && (await page.textContent('#print-sheet .print-meta')).includes('90 BPM'), `${label}: the sheet has the title and the tempo`);
   assert((await page.$$eval('#print-sheet .print-chord b', e => e.map(x => x.textContent))).join() === usedChords.join(), `${label}: the sheet shows each chord used once, with its box (${usedChords})`);
-  assert((await page.$$('#print-sheet .print-chord .vdiag')).length === usedChords.length, `${label}: every chord box has a fingering diagram`);
+  assert((await page.$$('#print-sheet .print-chord .vdiag')).length === usedChords.length, `${label}: every chord box has a voicing diagram`);
   const rows = await page.$$eval('#print-sheet .print-row', r => r.map(x => ({ w: x.querySelector('svg').getBoundingClientRect().width, h: x.getBoundingClientRect().height, bars: x.querySelectorAll('.tabbarno').length })));
   assert(rows.length === Math.ceil(12 / 2) && rows.every(r => r.bars === 2 && r.w <= 720), `${label}: twelve bars are laid out two per row, each row narrower than a page (${rows.length} rows)`);
   assert((await page.$$eval('#print-sheet .tabbarno', e => e.map(x => x.textContent))).join() === '1,2,3,4,5,6,7,8,9,10,11,12', `${label}: bars are numbered`);
@@ -333,7 +351,7 @@ async function run(browser, origin, label) {
   const bright = await page.$$eval('#view-scales .board svg circle[r="12.5"]:not([opacity])', c => c.length);
   assert(bright > 5, `${label}: a scale position lights its notes (${bright})`);
 
-  // arpeggios: degree chord inside a scale position (Scales), shape around a fingering (Chords)
+  // arpeggios: degree chord inside a scale position (Scales), shape around a voicing (Chords)
   await page.click('#sc-arpseg button[data-k="4"]');
   const arpTone = await page.$$eval('#view-scales .board svg circle[r="12.5"][fill="#E3A21A"]:not([opacity]), #view-scales .board svg circle[r="12.5"][fill="#C23B2E"]:not([opacity])', c => c.length);
   assert(arpTone >= 3, `${label}: the V arpeggio lights chord tones inside the position (${arpTone})`);
@@ -346,7 +364,7 @@ async function run(browser, origin, label) {
   const onlyFingering = await page.$$eval('#view-chords .board svg circle[r="12.5"]:not([opacity])', c => c.length);
   await page.check('#ch-arp');
   const shape = await page.$$eval('#view-chords .board svg circle[r="12.5"]:not([opacity])', c => c.length);
-  assert(shape > onlyFingering, `${label}: the arpeggio shape shows more chord tones than the fingering alone (${shape} > ${onlyFingering})`);
+  assert(shape > onlyFingering, `${label}: the arpeggio shape shows more chord tones than the voicing alone (${shape} > ${onlyFingering})`);
   await page.click('#ch-arpplay');
   await page.uncheck('#ch-arp');
   await page.click('a[data-tab="scales"]');
@@ -354,7 +372,7 @@ async function run(browser, origin, label) {
   // progressions: chip diagrams
   await page.click('a[data-tab="progressions"]');
   await page.waitForSelector('#pr-strip .chip .vdiag');
-  assert((await page.$$('#pr-strip .chip .vdiag')).length >= 3, `${label}: chord chips show fingering diagrams`);
+  assert((await page.$$('#pr-strip .chip .vdiag')).length >= 3, `${label}: chord chips show voicing diagrams`);
 
   // sharing: the URL carries the progression, key and voicing choice
   await page.fill('#pr-prog', 'Dm7 G7 Cmaj7'); await page.waitForSelector('#pr-strip .chip:nth-child(3)');

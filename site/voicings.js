@@ -1,4 +1,4 @@
-// Chord voicings (fingerings), from data/voicings.json - converted from
+// Chord voicings (voicings), from data/voicings.json - converted from
 // tombatossals/chords-db (MIT) by tools/build-voicings.mjs. A voicing is
 // {f, g, b}: absolute fret per string in tuning order (0 = highest string,
 // -1 = muted), finger numbers, and an optional barre {fret, from, to}.

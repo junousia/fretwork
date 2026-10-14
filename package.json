@@ -1,7 +1,7 @@
 {
   "name": "fretwork",
-  "version": "1.0.0",
-  "description": "Scales, chords and chord progressions on the fretboard for guitar and ukulele. Vanilla JS PWA, no build step.",
+  "version": "2.0.0",
+  "description": "Scales, chords, chord progressions and solos on the fretboard for guitar and ukulele - with a tab composer and solo generator. Vanilla JS PWA, no build step.",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -17,7 +17,8 @@
     "test:a11y": "node test/a11y.test.mjs",
     "test:golden:update": "UPDATE_GOLDEN=1 node test/golden.test.mjs",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.strict.json && tsc -p tsconfig.sw.json",
-    "test:nginx": "node test/nginx.test.mjs"
+    "test:nginx": "node test/nginx.test.mjs",
+    "docs:screenshots": "node tools/screenshots.mjs"
   },
   "engines": {
     "node": ">=20"

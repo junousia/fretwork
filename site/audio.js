@@ -53,7 +53,7 @@ export function chordMidiNotes(chord,offset=0){
   const base=40+offset+((chord.root-4+12)%12);
   return [...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
 }
-/** Strum a chord then play a run. @param {{root:number, iv:number[]}} chord @param {{iv:number[]}} scale @param {number} [offset] register offset in semitones @param {number[]|null} [run] explicit MIDI run (else the scale) @param {number[]|null} [chordMidi] explicit MIDI notes of a fingering */
+/** Strum a chord then play a run. @param {{root:number, iv:number[]}} chord @param {{iv:number[]}} scale @param {number} [offset] register offset in semitones @param {number[]|null} [run] explicit MIDI run (else the scale) @param {number[]|null} [chordMidi] explicit MIDI notes of a voicing */
 export function play(chord,scale,offset=0,run=null,chordMidi=null){
   const ctx=audioContext();
   if(!ctx) return;

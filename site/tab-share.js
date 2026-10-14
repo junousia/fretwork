@@ -1,6 +1,6 @@
-// Shareable tab links: the whole tab (notes, techniques, chords, chosen fingerings,
+// Shareable tab links: the whole tab (notes, techniques, chords, chosen voicings,
 // scale/position choices), the instrument setup and the generator settings (seed
-// included) live in the URL hash, e.g.  #tab?i=ukulele&cp=2&d=<base64url json>.
+// included) live in the URL hash, e.g.  #compose?i=ukulele&cp=2&d=<base64url json> (links made when the page was called "tab" still open).
 // Pure functions (no DOM) so they can be unit tested. Decoding treats the URL as
 // untrusted input: anything malformed is dropped or repaired, never thrown on.
 import { normalizeTab } from './tab.js';
@@ -25,7 +25,7 @@ const techCode = n => (n.link === 'h' ? 1 : n.link === 's' ? 2 : 0) + (n.bend ||
 
 /**
  * @param {{tab:Tab, setup?:SetupLink, gen?:GenSettings}} s
- * @returns {string} the query part ("i=ukulele&d=...") of a #tab link
+ * @returns {string} the query part ("i=ukulele&d=...") of a #compose link
  */
 export function encodeTabLink({ tab, setup = {}, gen }) {
   const q = new URLSearchParams();
@@ -51,7 +51,7 @@ export function encodeTabLink({ tab, setup = {}, gen }) {
 const isArr = o => Array.isArray(o);
 
 /**
- * "#tab?d=..." (or just the query) -> the tab and the settings it came with, or null. Untrusted input.
+ * "#compose?d=..." (or just the query) -> the tab and the settings it came with, or null. Untrusted input.
  * @param {string|null|undefined} hashOrQuery
  * @returns {{tab:Tab, setup:SetupLink, gen?:GenSettings}|null}
  */

@@ -30,6 +30,7 @@ assert(same(Object.keys(proto.pos), ['Am7|dorian']) && Object.getPrototypeOf(pro
 assert(decodeProgression('c=' + 'A'.repeat(5000)).text.length <= 400, 'chord text is length-limited');
 
 assert(tabOf('#progressions?c=C') === 'progressions' && tabOf('#scales') === 'scales' && tabOf('') === '', 'tabOf parses the tab out of the hash');
+assert(tabOf('#compose?d=x') === 'compose' && tabOf('#tab?d=x') === 'compose' && tabOf('#tab') === 'compose' && tabOf('#tabs') === 'tabs' && tabOf(null) === '', 'the old #tab name of the Compose page is an alias, nothing else is');
 
 // --- player beat math ----------------------------------------------------
 // 3 chords, 4 beats each, click on: beat 0 = chord 0 + accented click, beat 1 = plain click,

@@ -21,6 +21,12 @@
 `site/fonts/` contains Familjen Grotesk, Copyright 2021 The Familjen Grotesk Project Authors
 (https://github.com/Familjen-Sthlm/Familjen-Grotesk). Full licence text: `site/fonts/OFL.txt`.
 
+## Sound
+
+The plucked-guitar voice (`site/string-dsp.js`) is our own implementation of the Karplus-Strong plucked-string
+algorithm (K. Karplus and A. Strong, 1983, with the extensions of D. Jaffe and J. O. Smith, 1983). No third-party audio
+code or samples are included.
+
 ## Concepts
 
 Scale-position conventions follow published guitar pedagogy (the CAGED pentatonic boxes and

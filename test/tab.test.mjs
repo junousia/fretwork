@@ -69,7 +69,7 @@ assert(putChord(t, 0, 0, '  Am7  ').bars[0].chords[0].name === 'Am7', 'chord nam
   assert(putChord(c, 0, 16, 'C') === c && putChord(c, 9, 0, 'C') === c, 'out-of-range chord placement is ignored');
   let many = emptyTab(1); for (let i = 0; i < 12; i++) many = putChord(many, 0, i, 'C' + i);
   assert(many.bars[0].chords.length === 8, 'a bar holds at most 8 chord markers');
-  assert(setVoicing(c, 'Am7', 2).voicings?.Am7 === 2 && !('Am7' in (setVoicing(setVoicing(c, 'Am7', 2), 'Am7', 0).voicings || {})) && setVoicing(c, 'Am7', -1) === c, 'chosen fingerings are stored by chord name (0 = the default)');
+  assert(setVoicing(c, 'Am7', 2).voicings?.Am7 === 2 && !('Am7' in (setVoicing(setVoicing(c, 'Am7', 2), 'Am7', 0).voicings || {})) && setVoicing(c, 'Am7', -1) === c, 'chosen voicings are stored by chord name (0 = the default)');
   { // generator choices live on the chord marker: one occurrence, not the chord name
     let a = putChord(putChord(emptyTab(2), 0, 0, 'A7'), 1, 0, 'A7');
     a = setChordPlan(a, 0, 0, { scale: 'minpent' }); a = setChordPlan(a, 0, 0, { positions: [3, 1, 3] });
@@ -91,9 +91,9 @@ assert(putChord(t, 0, 0, '  Am7  ').bars[0].chords[0].name === 'Am7', 'chord nam
   const old = normalizeTab({ bars: [{ chord: 'Em', notes: [] }, { chord: '', notes: [] }] });
   assert(old?.bars[0].chords.length === 1 && old.bars[0].chords[0].at === 0 && old.bars[1].chords.length === 0, 'the old one-chord-per-bar shape is still read');
   const rt = normalizeTab(JSON.parse(JSON.stringify(setVoicing(c, 'G', 3))));
-  assert(JSON.stringify(rt) === JSON.stringify(setVoicing(c, 'G', 3)), 'chords and fingerings survive a JSON round trip');
+  assert(JSON.stringify(rt) === JSON.stringify(setVoicing(c, 'G', 3)), 'chords and voicings survive a JSON round trip');
   const junk = normalizeTab({ bars: [{ chords: [{ at: 99, name: 'C' }, { at: 1, name: 5 }, null, { at: 2, name: 'Dm' }], notes: [] }], voicings: { C: 'x', G: 2, [`${'x'.repeat(40)}`]: 1 } });
-  assert(junk?.bars[0].chords.length === 1 && junk.bars[0].chords[0].name === 'Dm' && junk.voicings?.G === 2, 'bad chord markers and fingerings are dropped');
+  assert(junk?.bars[0].chords.length === 1 && junk.bars[0].chords[0].name === 'Dm' && junk.voicings?.G === 2, 'bad chord markers and voicings are dropped');
 }
 assert(setBpm(t, 9999).bpm === 220 && setBpm(t, 1).bpm === 40 && setBpm(t, 'x').bpm === 90, 'tempo is clamped');
 assert(clearNotes(putChord(t, 0, 0, 'C')).bars[0].notes.length === 0 && clearNotes(putChord(t, 0, 0, 'C')).bars[0].chords[0].name === 'C', 'clear keeps the chords');

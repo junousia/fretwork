@@ -1,8 +1,9 @@
 # Fretwork - Agent Notes
 
 This app is a vanilla-JS, no-build-step, no-framework PWA
-for guitar/ukulele theory: chord progressions, scales, and chords, each
-rendered on a shared SVG fretboard (`board()` in `site/board.js`). Read
+for guitar/ukulele theory and composing, in five pages: Progressions, Scales, Chords, Identify (chord from marked
+notes) and Compose (tab editor + solo generator + PDF / share link). The theory pages render on a shared SVG
+fretboard (`board()` in `site/board.js`). Read
 this before touching `getPositions`/`positionFrets`/`board()` - the
 position/box system went through many wrong turns before landing here, and
 re-deriving it from scratch will very likely repeat them.
@@ -16,16 +17,17 @@ All plain ES modules in `site/` (no build). Dependencies point one way (`music.j
 | `music.js` | note names, `SCALES`, `CHORDS`, chord parsing, chord-scale ranking, key detection, `spell`/`esc` |
 | `positions.js` | `getPositions`/`positionFrets`: the two position models, always an unbroken run by pitch |
 | `chord-features.js` | chord-builder features derived from intervals |
-| `arpeggio.js` | degree chords, arpeggios in positions / around fingerings |
+| `arpeggio.js` | degree chords, arpeggios in positions / around voicings |
 | `identify.js` | chord identification from marked notes (pure): `identifyChord`, `marksToNotes` |
-| `tab.js` / `tab-view.js` | tab data model + editing rules (pure) / the tab SVG and its geometry |
+| `tab.js` / `tab-view.js` / `tab-share.js` | tab data model + editing rules (pure) / the tab SVG and its geometry / share-link codec (pure) |
 | `solo.js` | seeded solo generator: scale/position per chord stretch, chord-tone targets, approach notes (pure) |
-| `board.js` | the fretboard SVG (positions, fingerings, capo, left-handed mirror) |
-| `voicings.js` | chord fingering data lookup (incl. reuse in other tunings) and chord boxes |
+| `board.js` | the fretboard SVG (positions, voicings, capo, left-handed mirror) |
+| `voicings.js` | chord voicing data lookup (incl. reuse in other tunings) and chord boxes |
 | `instrument.js` | setup: instrument, tuning, capo, handedness |
-| `audio.js` / `player.js` / `transport.js` | Web Audio, progression playback, beat math |
+| `audio.js` / `player.js` / `transport.js` | Web Audio (note routing + the simple synth), playback of progressions and tabs, beat and swing math |
+| `string-dsp.js` / `sound.js` | the plucked-guitar voice (pure DSP, Node-tested) / its playback chain and the Sound setting |
 | `share.js` / `progressions.js` | share-link codec / roman-numeral progression library |
-| `view-*.js`, `app.js`, `sw.js` | the three tabs, routing/lazy mounting, offline service worker |
+| `view-*.js`, `app.js`, `sw.js` | the five pages (`view-compose.js` is Compose), routing / lazy mounting, offline service worker |
 | `types.js` | JSDoc typedefs only (never loaded at runtime) |
 
 **Types:** JSDoc, checked by `npm run typecheck` (`tsc --noEmit`, no build). The engine modules are
@@ -123,12 +125,12 @@ roots x the guitar's own tuning:
   canonical, user-verified reference, jog included) and A Ionian positions
   1/3 (the literal bug reports that motivated the window model).
 
-## Chord voicings (fingerings)
+## Chord voicings (voicings)
 
-Fingerings are **not computed** - they come from
+Voicings are **not computed** - they come from
 [tombatossals/chords-db](https://github.com/tombatossals/chords-db) (MIT,
 (c) 2016 David Rubert; attribution in `site/data/voicings.LICENSE.txt`).
-Computing playable fingerings means encoding finger-stretch/barre rules
+Computing playable voicings means encoding finger-stretch/barre rules
 and which shapes people actually play, which a curated dataset already
 does. `npm run build:voicings -- <chords-db>/lib` converts it into
 `site/data/voicings.json` (guitar ~1630, ukulele ~1630 voicings): our own
@@ -166,15 +168,15 @@ those are allowed. Re-run the build only if updating the dataset.
 
 - `site/arpeggio.js` (pure): `degreeChord` stacks thirds on a degree of a SEVEN-note scale (named
   via `CHORDS`, roman numeral from quality); `arpeggioInSets` = the chord tones among a position's
-  notes; `arpeggioAround(voicing)` = every chord tone in the fingering's fret window +-1 (the
-  "arpeggio shape" that goes with a chord shape; an open fingering keeps the nut);
+  notes; `arpeggioAround(voicing)` = every chord tone in the voicing's fret window +-1 (the
+  "arpeggio shape" that goes with a chord shape; an open voicing keeps the nut);
   `arpeggioNotes`/`upAndDown` give the playable sequence, `playNotes` (player.js) plays it.
 - The Scales view recolours the board by re-basing the scale onto the chord root (the board colours
   relative to the chord root), so Intervals labels are then relative to that chord.
 - Test (`test/arpeggio.test.mjs`) leans on the position guarantee: every position of a seven-note
   scale contains every degree, hence every degree chord's arpeggio is complete inside every
   position - checked for all 15,288 (scale, root, position, chord) combinations. Some ukulele
-  fingerings legitimately have no root in their window (4 strings); the shape only has to contain
+  voicings legitimately have no root in their window (4 strings); the shape only has to contain
   three distinct chord tones.
 
 ## Tunings, capo, left-handed
@@ -227,9 +229,9 @@ those are allowed. Re-run the build only if updating the dataset.
 - CI also runs Lighthouse (`lighthouserc.json`: performance >= 0.9, accessibility >= 0.95, best
   practices >= 0.9, SEO >= 0.9; currently all 1.0) and CodeQL.
 - **Performance rule:** only the visible tab is mounted at startup (`ensureMounted` in `app.js`);
-  mounting all three cost ~300 ms of blocking time and doubled the DOM. Keep new views lazy.
+  mounting every page at startup cost ~300 ms of blocking time and doubled the DOM. Keep new views lazy.
 
-## Tab editor (Tab tab)
+## Compose: the tab editor
 
 `tab.js` is the single model every tab feature uses (48 steps per 4/4 bar: quarter 12, sixteenth 3, eighth
 triplet 4 - `STEPS`/`BEAT`/`SIXTEENTH`; older saved tabs have no `res` and are converted x3 by `normalizeTab`;
@@ -241,13 +243,13 @@ earlier note and clips the new one. Never trust stored/shared data: run it throu
 Pitch is `inst.midi[s] + f`, so tuning and capo come for free. `tab-view.js` draws the SVG (CSS
 classes `tab*`, so dark mode and printing work) and exports the geometry (`stepPos`) the editor uses
 for the cursor and playhead. Chords are markers `{at, name}` per bar (`putChord`, up to 8),
-`chordTimeline`/`chordsUsed` feed playback and the chord overview; the chosen fingering per chord name
+`chordTimeline`/`chordsUsed` feed playback and the chord overview; the chosen voicing per chord name
 is `tab.voicings` (so exports can match what is played). Typing: a digit places a note at the cursor, a second digit within
 700 ms extends it (1 then 2 = fret 12, one undo step), then the cursor advances by the note length.
 Tests: `test/tab.test.mjs` (model, validation, exact text export, rendering), the `tab-riff` golden,
-and the Tab section of the e2e test.
+and the Compose section of the e2e test.
 
-## Solo generator (Tab tab)
+## Compose: the solo generator
 
 `solo.js` (pure, seeded: same seed = same solo) walks the pitches of one position per chord
 **stretch** (a bar split at its chord markers). Rules: scale per style (`follow` = the scale the
@@ -283,10 +285,10 @@ Tone.Sampler (vendored, lazy-loaded, listed in sw.js SHELL, excluded from CodeQL
 
 ### Sharing a tab
 
-`tab-share.js` (pure): `#tab?i=&t=&cp=&lh=&d=<base64url json>`. `d` is a compact JSON (`v:1`, `n` title, `b` bpm,
+`tab-share.js` (pure): `#compose?i=&t=&cp=&lh=&d=<base64url json>` (`#tab?...` is the old name and still works: `tabOf` aliases it). `d` is a compact JSON (`v:1`, `n` title, `b` bpm,
 `r` bars as `[chords, notes]` with notes `[at,len,s,f,code]`, technique `code` = link h1/s2 + bend*10 + vibrato 100,
 `o` voicings, `g` generator settings incl. seed). Decoding is untrusted-input safe: it rebuilds the object and runs it
-through `normalizeTab`, caps sizes, validates the generator settings one by one. The Tab view applies a link at
+through `normalizeTab`, caps sizes, validates the generator settings one by one. The Compose view applies a link at
 mount and on `hashchange` via `openShared`: it pushes the shared tab onto the undo history (so Undo restores the
 user's own), applies the setup/generator settings, and tidies the long hash away. `app.js` applies the setup
 before the views mount, like Progressions links.
@@ -317,18 +319,18 @@ copying generated notes into a Tab: copy the technique fields too (the e2e test 
 sit on sixteenths, shuffle writes long-short pairs (`fromBeats`: P = 8+4 steps, T = three 4s, Q = a
 quarter) and triplet writes runs of triplet eighths - all on the 4-step triplet grid. `swung()` in
 `transport.js` is the playback-only swing mapping (beats never move); it does not change the notes.
-The PDF is the browser's own print: the Tab view builds `#print-sheet` on `beforeprint` (title, meta,
+The PDF is the browser's own print: the Compose view builds `#print-sheet` on `beforeprint` (title, meta,
 chord boxes from `tab.voicings`, one SVG per row of bars so rows never split) and `@media print` hides
 the app. Test it by dispatching `beforeprint` + `page.emulateMedia({media:'print'})` + `page.pdf()`.
 
 ## Chord identifier (Identify tab)
 
 `identify.js` is pure. A chord matches when every played pitch class is one of its tones
-(`TOLERATED` adds the 11th that 13th-chord fingerings contain). Score = 10 - 0.15*tones minus omit
+(`TOLERATED` adds the 11th that 13th-chord voicings contain). Score = 10 - 0.15*tones minus omit
 penalties (root 3, 5th 0.5, 3rd/sus/altered 5th 6, 7th 5, extensions 1.5, or 6 in chords of <=4
 tones) minus 0.8 for a slash chord; matches under 2.5 are dropped. Aliases (maj6, add2, 7#5, 11)
 are not candidates and `11` is the full dominant 11th. Re-entrant tunings (ukulele high G) give no
-bass, so no slash chords. `test/identify.test.mjs` runs every stored fingering through it (every
+bass, so no slash chords. `test/identify.test.mjs` runs every stored voicing through it (every
 guitar one must be found) - that is the check against real data; keep it when changing weights.
 The fretboard cells come from `board(..., {hitAreas:true})`; the per-string selects are the
 keyboard-accessible equivalent.

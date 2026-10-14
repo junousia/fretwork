@@ -1,5 +1,5 @@
 // Arpeggios: degree chords, chord tones inside scale positions, and the
-// arpeggio shape around a chord fingering.
+// arpeggio shape around a chord voicing.
 import fs from 'fs';
 import { degreeChord, arpeggioInSets, arpeggioAround, arpeggioNotes, upAndDown } from '../site/arpeggio.js';
 import { getPositions, positionFrets } from '../site/positions.js';
@@ -47,7 +47,7 @@ assert(spell(0 + degreeChord(ionian, 4).root, false) === 'G', 'degree V of C maj
   console.log(`Arpeggio-in-position checks: ${combos} (scale, root, position, degree chord) combinations, ${foreign} foreign, ${incomplete} incomplete`);
 }
 
-// --- arpeggio shape around every stored fingering ---------------------------------------
+// --- arpeggio shape around every stored voicing ---------------------------------------
 {
   const V = JSON.parse(fs.readFileSync(new URL('../site/data/voicings.json', import.meta.url), 'utf8'));
   const OPEN = { guitar: [64, 59, 55, 50, 45, 40], ukulele: [69, 64, 60, 67] };
@@ -70,10 +70,10 @@ assert(spell(0 + degreeChord(ionian, 4).root, false) === 'G', 'degree V of C maj
       }
     }
   }
-  assert(missingOwn === 0, `${missingOwn} fingering notes are missing from their own arpeggio shape`);
-  assert(outside === 0, `${outside} arpeggio notes fall outside the fingering's fret window`);
+  assert(missingOwn === 0, `${missingOwn} voicing notes are missing from their own arpeggio shape`);
+  assert(outside === 0, `${outside} arpeggio notes fall outside the voicing's fret window`);
   assert(thin === 0, `${thin} arpeggio shapes have fewer than three distinct chord tones`);
-  console.log(`Arpeggio-shape checks over ${n} fingerings: ${missingOwn} own notes missing, ${outside} outside the window, ${thin} thin shapes`);
+  console.log(`Arpeggio-shape checks over ${n} voicings: ${missingOwn} own notes missing, ${outside} outside the window, ${thin} thin shapes`);
 }
 
 // --- notes and playback order ----------------------------------------------------------

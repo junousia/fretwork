@@ -1,4 +1,4 @@
-/* The fretboard SVG: scale/chord notes, positions, fingerings, capo, left-handed mirror. */
+/* The fretboard SVG: scale/chord notes, positions, voicings, capo, left-handed mirror. */
 
 import { STRING_WIDTHS, TUNING, esc, ivLabel, spell } from './music.js';
 

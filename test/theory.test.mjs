@@ -106,7 +106,7 @@ function assert(cond, msg) {
   console.log(`Pitch-order/render checks over ${total} positions (guitar+ukulele): ${skipped} skipped notes, ${notRendered} notes missing from the SVG`);
 }
 
-// Chord voicings (site/data/voicings.json): every stored fingering must
+// Chord voicings (site/data/voicings.json): every stored voicing must
 // sound only notes of its own chord (with the root, on guitar), use real
 // fret/finger/barre values, fit on the drawn neck, and board() must draw
 // exactly its dots. This guards the converted third-party data and the

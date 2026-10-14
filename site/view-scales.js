@@ -103,7 +103,7 @@ export function mount(root){
         <div class="controls"><div class="seg" id="sc-labelseg" role="group" aria-label="Fretboard labels">
           <button type="button" data-l="notes" aria-pressed="${state.labels === 'notes'}">Note names</button>
           <button type="button" data-l="intervals" aria-pressed="${state.labels === 'intervals'}">Intervals</button></div>
-          <button type="button" class="play" id="sc-play">Play scale</button></div></div>
+          <button type="button" class="play" id="sc-play">\u25B6 Play scale</button></div></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="sc-posseg" role="group" aria-label="Fretboard position">${posButtons}</div></label></div>
       ${arpRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, state.labels, false, boardOpts)}</div>
