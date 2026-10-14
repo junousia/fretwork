@@ -15,6 +15,8 @@ export const SOUNDS = [
 const KEY = 'fw-sound';
 const RATE = 22050;          // notes are rendered at half the usual rate (cheaper); the browser resamples them
 const CACHE_MAX = 300;
+/** The two dynamics compressors in the chain delay everything by about 6 ms each (measured: 12 ms). The click and the simple synth bypass the chain, so notes are started this much early to land on the beat. */
+export const CHAIN_LATENCY = 0.012;
 
 let setting = 'plucked';
 try { const s = localStorage.getItem(KEY); if (SOUNDS.some(x => x.id === s)) setting = /** @type {string} */ (s); } catch (e) { /* default */ }
@@ -72,7 +74,7 @@ export function createStringEngine(ctx, dest = ctx.destination) {
       if (cache.size > CACHE_MAX) cache.delete(/** @type {string} */ (cache.keys().next().value));
     }
     const src = ctx.createBufferSource(); src.buffer = buf; src.connect(input);
-    src.start(Math.max(t, ctx.currentTime));
+    src.start(Math.max(t - CHAIN_LATENCY, ctx.currentTime));
     return true;
   }
   return { note, input, cache };

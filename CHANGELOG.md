@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Sound timing: the plucked sound's effects chain delayed every note by about 12 ms against the click, so the
+  solo could feel late. Notes are now started that much earlier (measured and tested: the onset of a note
+  heard through the chain is within 3 ms of its time), the note gets a short pick "tick" for a definite
+  attack, strings are stopped sooner (less smear between notes on one string) and the backing chord strum
+  in the Tab is quicker (12 ms per string) so the chord lands on the beat.
+
 - Tab: loading a progression now **repeats** it (Repeat: Auto repeats until there are at least 8 bars, so a ii-V-I
   becomes 9 bars; or x1 to x8), so the generated solo has some length. **Generate** and **Another one** now sit
   next to Play in the top toolbar, the generator settings are a fold right under it, and "Play it straight after

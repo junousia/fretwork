@@ -271,6 +271,9 @@ generator, not a performer: no bends, slides or feel yet.
 each note with `string-dsp.js` (`renderString`, pure, deterministic, Node-testable) into a cached AudioBuffer at 22.05 kHz
 (~2.5 ms per note) and plays it through EQ -> compressor -> short convolver room -> limiter. Why not Tone.js PluckSynth:
 measured (2026-10-14) random loudness (3-14 dB between identical notes), silent above ~1.1 kHz, flat by up to 30 cents.
+Timing: the chain's two DynamicsCompressors delay audio by ~12 ms (`CHAIN_LATENCY`), the click and the simple synth bypass
+it, so `sound.js` starts each note that much early; the e2e test measures it offline. The voice adds a ~6 ms pick tick and rings
+for 1.15x the written length (1.4x smeared consecutive notes on one string).
 Lessons from building the voice: the 2-tap loop filter attenuates the FUNDAMENTAL of high notes, so the filter weight `a` rises
 with pitch and the loop gain is capped below 1 (a gain >= 1 at DC made E6 explode/silent); normalise each note's RMS for
 consistent loudness; the delay is read with cubic interpolation so bends/slides/vibrato are smooth. `test/sound.test.mjs`

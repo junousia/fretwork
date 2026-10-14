@@ -44,15 +44,17 @@ function rng(seed) {
  * @property {number} [slideEnd]   ... and arriving this many seconds after the start
  */
 
+/** How long the string rings before it is damped: a little past the written length, so notes on one string do not smear into each other. @param {StringNote} p @returns {number} */
+export const ringOf = p => Math.min(4, Math.max(p.dur * 1.15, 0.25));
 /** How long the sound of a note lasts in seconds (its ring plus the damping). @param {StringNote} p @returns {number} */
-export const lengthOf = p => Math.min(4, Math.max(p.dur * 1.4, 0.3)) + 0.2;
+export const lengthOf = p => ringOf(p) + 0.2;
 
 /**
  * Render one note.
  * @param {StringNote} p @param {number} sr sample rate @returns {Float32Array} mono samples
  */
 export function renderString(p, sr) {
-  const ring = Math.min(4, Math.max(p.dur * 1.4, 0.3)), N = Math.ceil(lengthOf(p) * sr), out = new Float32Array(N);
+  const ring = ringOf(p), N = Math.ceil(lengthOf(p) * sr), out = new Float32Array(N);
   const f0 = p.freq;
   if (!(f0 > 20 && f0 < 5000)) return out;
   const vel = Math.min(1.5, Math.max(0.25, p.vol / REF_VOL));
@@ -115,7 +117,13 @@ export function renderString(p, sr) {
   let e = 0; for (let i = a0; i < a1; i++) e += out[i] * out[i];
   const rms = Math.sqrt(e / Math.max(1, a1 - a0));
   const gain = rms > 1e-9 ? (TARGET_RMS * Math.min(2, vel)) / rms : 0;
-  let pk = 0; for (let i = 0; i < N; i++) { out[i] *= gain; pk = Math.max(pk, Math.abs(out[i])); }
+  for (let i = 0; i < N; i++) out[i] *= gain;
+  // --- the pick: a few milliseconds of bright noise at the very start, so the note has a definite attack (the string itself
+  // already starts at full level; this is the "tick" the ear uses to place the note in time) ---
+  const rc = rng(7 + Math.round(f0)), tick = Math.floor(0.006 * sr);
+  let prevNoise = 0;
+  for (let i = 0; i < tick && i < N; i++) { const nz = rc() * 2 - 1; out[i] += (nz - prevNoise) * 0.5 * TARGET_RMS * (0.5 + 1.5 * hard) * Math.exp(-i / (0.0015 * sr)); prevNoise = nz; }
+  let pk = 0; for (let i = 0; i < N; i++) pk = Math.max(pk, Math.abs(out[i]));
   if (pk > 0.9) { const k = 0.9 / pk; for (let i = 0; i < N; i++) out[i] *= k; }
   return out;
 }

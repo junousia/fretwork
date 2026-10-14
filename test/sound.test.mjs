@@ -1,6 +1,6 @@
 // The plucked-string voice, measured: tuning, loudness, decay, damping, bends, slides, vibrato and timbre.
 // Pure Node - string-dsp.js renders samples with no Web Audio, so everything here is deterministic.
-import { renderString, lengthOf, t60For, REF_VOL, TARGET_RMS } from '../site/string-dsp.js';
+import { renderString, lengthOf, ringOf, t60For, REF_VOL, TARGET_RMS } from '../site/string-dsp.js';
 
 let failures = 0;
 const assert = (c, m) => { if (!c) { console.log(`FAIL: ${m}`); failures++; } };
@@ -78,9 +78,26 @@ const SR = 22050;
 // --- damping: the string is stopped after the note's length
 {
   const x = renderString({ freq: hz(52), dur: 0.3, vol: REF_VOL }, SR);
-  const ring = 0.42, attack = rmsOf(x, Math.floor(0.05 * SR), Math.floor(0.1 * SR)), after = rmsOf(x, Math.floor((ring + 0.1) * SR), Math.floor(0.08 * SR));
+  const ring = ringOf({ freq: 1, dur: 0.3, vol: 1 }), attack = rmsOf(x, Math.floor(0.05 * SR), Math.floor(0.1 * SR)), after = rmsOf(x, Math.floor((ring + 0.1) * SR), Math.floor(0.08 * SR));
   assert(after < attack * 0.02, `after its length the note is damped (${(20 * Math.log10(after / attack)).toFixed(0)} dB)`);
-  assert(x.length === Math.ceil(lengthOf({ freq: 1, dur: 0.3, vol: 1 }) * SR) && lengthOf({ freq: 1, dur: 0.01, vol: 1 }) >= 0.5 && lengthOf({ freq: 1, dur: 99, vol: 1 }) <= 4.2, 'notes are rendered to a bounded length (a short note still rings a moment)');
+  assert(x.length === Math.ceil(lengthOf({ freq: 1, dur: 0.3, vol: 1 }) * SR) && lengthOf({ freq: 1, dur: 0.01, vol: 1 }) >= 0.45 && lengthOf({ freq: 1, dur: 99, vol: 1 }) <= 4.2, 'notes are rendered to a bounded length (a short note still rings a moment)');
+}
+
+// --- attack: the note is at full level from its first samples and starts with a pick tick, for every pitch
+{
+  let worstStart = 1, worstTick = 99;
+  for (let midi = 40; midi <= 88; midi++) {
+    const x = renderString({ freq: hz(midi), dur: 0.5, vol: REF_VOL }, SR), ms = t => Math.floor(t * SR / 1000);
+    let loud = 0; for (let t = 0; t < 30; t += 1) loud = Math.max(loud, rmsOf(x, ms(t), ms(3)));
+    worstStart = Math.min(worstStart, rmsOf(x, 0, ms(3)) / loud);
+    const hf = (a, n) => { let s = 0; for (let i = a + 1; i < a + n; i++) s += (x[i] - x[i - 1]) ** 2; return Math.sqrt(s / n); };
+    worstTick = Math.min(worstTick, hf(0, ms(4)) / hf(ms(20), ms(4)));
+  }
+  assert(worstStart > 0.6, `every note is at full level from the first 3 ms (worst ${(100 * worstStart).toFixed(0)}% of its loudest 3 ms)`);
+  assert(worstTick > 1.5, `and starts with a bright pick tick, at least 1.5x the high-frequency energy of 20 ms later (worst ${worstTick.toFixed(1)}x)`);
+  // the previous note on a string is gone by the time a note of the same length arrives again: little smear
+  const e = renderString({ freq: hz(52), dur: 0.25, vol: REF_VOL }, SR);
+  assert(rmsOf(e, Math.floor(0.45 * SR), Math.floor(0.05 * SR)) < rmsOf(e, Math.floor(0.05 * SR), Math.floor(0.05 * SR)) * 0.03, 'an eighth note at 120 bpm has stopped sounding before the note after next starts');
 }
 
 // --- determinism: no random loudness

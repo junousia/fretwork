@@ -91,7 +91,7 @@ export function startTab(opts) {
       const step = next % totalSteps, at = t0 + next * stepSec;
       if (opts.metronome && step % beat === 0) click(ac, at, step % (beat * 4) === 0);
       const chord = chordAt.get(step);
-      if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.03, Math.min(3, 4 * beat * stepSec), 0.07));
+      if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.012, Math.min(3, 4 * beat * stepSec), 0.07)); // a quick strum: the bar's chord should land on the beat, not trail it
       for (const e of byStep.get(step) || []) {
         if (e.skip) continue; // already sounded by the slide that ran into it
         const start = (swung(step, beat, long) - step) * stepSec, dur = (swung(step + e.dur, beat, long) - swung(step, beat, long)) * stepSec;

@@ -285,6 +285,25 @@ async function run(browser, origin, label) {
   assert(chain.bad === 0 && chain.peak > 0.05 && chain.peak < 1 && chain.attack > 0.02, `${label}: the sound chain gives audible output that does not clip (peak ${chain.peak.toFixed(2)}, rms ${chain.attack.toFixed(3)})`);
   assert(Math.abs(1200 * Math.log2(chain.hz / 220)) < 15, `${label}: and the note comes out in tune through the chain (${chain.hz.toFixed(1)} Hz for 220)`);
   assert(chain.silence < chain.attack * 0.5, `${label}: and it dies away`);
+  // timing: a note scheduled at t is heard at t (the chain's delay is cancelled), and the chain delays a signal by about the 12 ms we compensate
+  const timing = await page.evaluate(async () => {
+    const m = await import(new URL('sound.js', document.baseURI).href), sr = 44100;
+    const onsets = [];
+    for (const t of [0.2, 0.55, 0.9]) {
+      const oc = new OfflineAudioContext(1, sr, sr), eng = m.createStringEngine(oc);
+      eng.note(330, t, 0.3, 0.16);
+      const x = (await oc.startRendering()).getChannelData(0);
+      let pk = 0; for (let i = 0; i < 0.3 * sr; i++) pk = Math.max(pk, Math.abs(x[i + Math.floor(t * sr)] || 0));
+      let first = -1; for (let i = 0; i < x.length; i++) if (Math.abs(x[i]) > 0.1 * pk) { first = i; break; }
+      onsets.push(+(1000 * (first / sr - t)).toFixed(2));
+    }
+    const oc2 = new OfflineAudioContext(1, sr, sr), buf = oc2.createBuffer(1, 400, sr), d = buf.getChannelData(0); for (let i = 0; i < 400; i++) d[i] = 0.5 * Math.sin(2 * Math.PI * 1000 * i / sr) * (1 - i / 400);
+    const src = oc2.createBufferSource(); src.buffer = buf; src.connect(m.buildChain(oc2, oc2.destination)); src.start(0.2);
+    const y = (await oc2.startRendering()).getChannelData(0); let at = -1; for (let i = 0; i < y.length; i++) if (Math.abs(y[i]) > 0.02) { at = i; break; }
+    return { onsets, chainMs: +(1000 * (at / sr - 0.2)).toFixed(2), comp: m.CHAIN_LATENCY * 1000 };
+  });
+  assert(timing.onsets.every(o => Math.abs(o) < 3), `${label}: notes are heard on time through the chain (onset error in ms: ${timing.onsets})`);
+  assert(Math.abs(timing.chainMs - timing.comp) < 3, `${label}: the chain delay in this browser (${timing.chainMs} ms) matches the compensation (${timing.comp} ms)`);
   await page.click('#menu-btn'); await page.click('a[data-tab="tab"]'); await page.waitForSelector('#tb-surface .tabhit');
   // PDF export: the print sheet has the title, every chord box once, and the tab in rows that are not split
   assert(await page.isVisible('#tb-pdf'), `${label}: there is an Export PDF button`);
