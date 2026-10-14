@@ -8,6 +8,7 @@ import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
 import { startProgression, playNotes } from './player.js';
 import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
+import { playbackFold, openWhereRoom } from './playback-ui.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
@@ -37,19 +38,14 @@ export function mount(root){
       </div>
       <p id="pr-err" class="err" hidden></p>
     </section>
-    <div class="transport" role="group" aria-label="Playback and sharing">
+    <div class="stickybar" role="group" aria-label="Playback">
       <button type="button" class="play" id="pr-run">\u25B6 Play progression</button>
+    </div>
+    <div class="sharebar" role="group" aria-label="Sharing">
       <button type="button" class="share" id="pr-share">Copy link</button>
       <span class="vometa" id="pr-msg" role="status" aria-live="polite"></span>
     </div>
-    <details class="fold" id="pr-opts"><summary>Tempo and playback</summary>
-      <div class="transport">
-        <label class="keylab">Tempo <input id="pr-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
-        <label class="keylab">Beats per chord <select id="pr-beats"><option>1</option><option>2</option><option>4</option><option>8</option></select></label>
-        <label class="chk"><input type="checkbox" id="pr-loop"> Loop</label>
-        <label class="chk"><input type="checkbox" id="pr-metro"> Click</label>
-      </div>
-    </details>
+    ${playbackFold('pr', '<label class="keylab">Beats per chord <select id="pr-beats"><option>1</option><option>2</option><option>4</option><option>8</option></select></label>')}
     <nav class="strip" id="pr-strip" aria-label="Chords in the progression"></nav>
     <section id="pr-detail"></section>
     <p class="foot">Separate chords with spaces. Understands names like C, Am, F#m7b5, Bb7, Ebmaj7, G7b9, Dsus4, Cdim7 and slash chords like G/B. Use the arrow keys to step through the chords.</p>
@@ -80,7 +76,7 @@ export function mount(root){
 
   prog.value=state.text;
   // Tempo and playback options start folded on phones, open where there is room.
-  const optsEl=root.querySelector('#pr-opts'); optsEl.open=matchMedia('(min-width:760px)').matches;
+  openWhereRoom(root.querySelector('#pr-opts'));
 
   // One menu for both the fixed examples and the common progressions (which are
   // transposed into the key chosen next to it).

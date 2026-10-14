@@ -283,9 +283,13 @@ measures tuning (<3 cents at 22.05/44.1/48 kHz), loudness (+-0.5 dB), decay tren
 content, centroid, cost; the e2e test renders the real chain in an OfflineAudioContext. If a sampled guitar is ever wanted,
 Tone.Sampler (vendored, lazy-loaded, listed in sw.js SHELL, excluded from CodeQL and from the site test's URL scan) is the plan.
 
-### Pinned controls
+### Pinned controls and the shared playback fold
 
-The Compose page's essential row (`.stickybar`: Play, Generate, Another one, Undo, Redo) is `position: sticky` under the
+Both playing pages (Progressions, Compose) use the same three blocks in the same order: `.stickybar` (Play; on Compose also Generate,
+Another one, Undo, Redo), `.sharebar` (Copy link; Compose adds Title, Export PDF, Copy as text) and `playbackFold()` from
+`playback-ui.js` ("Tempo and playback": Tempo, Loop, Click, then page-specific extras). Add new playback controls there, not in a
+new place; the e2e test checks the summary text, the first three controls and that Play is pinned on both pages. The Compose
+essential row (`.stickybar`) is `position: sticky` under the
 top of the viewport (`z-index` 9, below the fixed bottom bar at 10); `html{scroll-padding}` keeps `scrollIntoView` (cursor,
 playhead) from landing under it. On phones its labels collapse (`.lbl`) so the row fits 390 px. The e2e test scrolls a phone to
 the bottom and checks the bar is pinned, fits, is not covered, and that Generate works from there. The other controls
