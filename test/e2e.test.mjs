@@ -156,6 +156,23 @@ async function run(browser, origin, label) {
   const cap = () => page.textContent('#tb-chords .chip[data-name="D7"] span');
   const c1 = await cap(); await page.click('#tb-chords .chip[data-name="D7"]');
   assert((await cap()) !== c1, `${label}: tapping a chord steps to its next fingering (${c1} -> ${await cap()})`);
+  // loading a short progression repeats it, so there is a solo's worth of bars; Generate and Play sit side by side
+  await page.uncheck('#tb-autoplay');
+  assert(await page.isVisible('#tb-gen-go') && await page.isVisible('#tb-play') && await page.isVisible('#tb-gen-new'), `${label}: Play, Generate and Another one are all in the top toolbar`);
+  const ys = await page.$$eval('#tb-play, #tb-gen-go, #tb-gen-new', e => e.map(x => Math.round(x.getBoundingClientRect().top)));
+  assert(ys.every(y => Math.abs(y - ys[0]) < 3), `${label}: and on the same row (${ys})`);
+  await page.selectOption('#tb-prog', '4'); await page.selectOption('#tb-progkey', '0:major');
+  await page.click('#tb-useprog');
+  assert((await page.$$('#tb-surface .tabchord')).length === 9 && (await page.textContent('#tb-genmsg')).includes('9 bars'), `${label}: ii-V-I loads as nine bars with Auto repeat (${await page.textContent('#tb-genmsg')})`);
+  await page.selectOption('#tb-repeat', '8'); await page.click('#tb-useprog');
+  assert((await page.$$('#tb-surface .tabchord')).length === 24, `${label}: Repeat x8 gives 24 bars`);
+  await page.selectOption('#tb-repeat', 'auto');
+  await page.click('#tb-gen-go');
+  assert((await page.$$eval('#tb-surface .fret', e => new Set(e.map(x => x.dataset.bar)).size)) >= 5, `${label}: the solo fills the repeated bars`);
+  await page.check('#tb-autoplay'); await page.click('#tb-gen-new');
+  await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 });
+  assert((await page.textContent('#tb-play')).includes('Stop'), `${label}: with "Play it straight after generating" on, Generate starts playing`);
+  await page.click('#tb-play'); await page.uncheck('#tb-autoplay');
   // solo generator: load a 12-bar blues, generate, same seed twice is identical, Another one differs, Undo restores
   await page.selectOption('#tb-prog', '6'); await page.selectOption('#tb-progkey', '9:major'); await page.click('#tb-useprog');
   assert((await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent))).join() === 'A7,D7,E7', `${label}: the progression's chords are gathered (A7 D7 E7)`);

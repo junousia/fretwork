@@ -124,6 +124,22 @@ export function setTechnique(tab, bar, at, s, patch) {
   });
 }
 
+/** With 'auto', a progression is repeated until the tab has at least this many bars (a ii-V-I of 3 chords becomes 9 bars, not 3). */
+export const MIN_AUTO_BARS = 8;
+/** How many times to play a progression of `len` chords: 'auto' or a count. @param {number} len @param {string|number} repeat @returns {number} */
+export const repeatsFor = (len, repeat) => (repeat === 'auto' ? Math.max(1, Math.ceil(MIN_AUTO_BARS / Math.max(1, len))) : Math.max(1, Math.floor(+repeat) || 1));
+
+/**
+ * Lay a chord progression into the tab, one chord per bar, repeated (at most MAX_BARS bars). Notes already in a bar
+ * stay in it; chords, scale and position choices are replaced.
+ * @param {Tab} tab @param {string[]} names @param {string|number} [repeat] 'auto' or a count @returns {Tab}
+ */
+export function withChords(tab, names, repeat = 'auto') {
+  if (!names.length) return tab;
+  const n = Math.min(MAX_BARS, names.length * repeatsFor(names.length, repeat));
+  return { ...tab, bars: Array.from({ length: n }, (_, i) => ({ chords: [{ at: 0, name: names[i % names.length] }], notes: tab.bars[i]?.notes || [] })) };
+}
+
 /** @param {Tab} tab @param {number} [index] insert before this bar (default: at the end) @returns {Tab} */
 export function addBar(tab, index = tab.bars.length) {
   if (tab.bars.length >= MAX_BARS) return tab;

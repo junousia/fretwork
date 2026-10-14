@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Tab: loading a progression now **repeats** it (Repeat: Auto repeats until there are at least 8 bars, so a ii-V-I
+  becomes 9 bars; or x1 to x8), so the generated solo has some length. **Generate** and **Another one** now sit
+  next to Play in the top toolbar, the generator settings are a fold right under it, and "Play it straight after
+  generating" (on by default) starts playback when you press Generate.
+
 - **Plucked guitar sound** (default; "Simple" is the old synth, chosen in the setup menu). Every note is rendered
   with a plucked-string model (extended Karplus-Strong, `site/string-dsp.js`): in tune to within ~1.5 cents from E2
   to E6, the same loudness on every string, strings that ring longer when low and darken as they die away, damping
