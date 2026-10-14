@@ -36,7 +36,7 @@ export function tabSvg(tab, inst, { perRow, cursor = null, editable = false, gri
     const y0 = row * rowHeight(n) + CHORD_H, bars = Math.min(perRow, tab.bars.length - row * perRow);
     names.forEach((nm, s) => { g += `<text class="tabname" x="${LEFT - 6}" y="${y0 + s * SG + 4}" text-anchor="end" font-size="11">${esc(nm)}</text>`; });
     for (let s = 0; s < n; s++) g += `<line class="tabline" x1="${LEFT}" y1="${y0 + s * SG}" x2="${LEFT + bars * BAR_W}" y2="${y0 + s * SG}"/>`;
-    for (let c = 0; c <= bars; c++) g += `<line class="tabbar" x1="${LEFT + c * BAR_W}" y1="${y0}" x2="${LEFT + c * BAR_W}" y2="${y0 + (n - 1) * SG}"/>`;
+    for (let c = 0; c <= bars; c++) g += `<line class="tabbarline" x1="${LEFT + c * BAR_W}" y1="${y0}" x2="${LEFT + c * BAR_W}" y2="${y0 + (n - 1) * SG}"/>`;
   }
   tab.bars.forEach((bar, bi) => {
     const { x: bx, y: y0 } = stepPos(n, perRow, bi, 0);

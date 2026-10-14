@@ -174,11 +174,20 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 
 /* ---- Tab editor ---- */
 .tabtools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:6px 0 4px}
+/* The controls you need all the time (play, generate, undo) stay on screen while the page scrolls. */
+.stickybar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;display:flex;align-items:center;gap:8px;
+  margin:0 -16px 8px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+.stickybar button{white-space:nowrap}
+.stickybar #tb-undo,.stickybar #tb-redo{margin-left:auto}
+.stickybar #tb-undo+#tb-redo{margin-left:0}
+.stickybar button:disabled{opacity:.4;cursor:default}
+@media (max-width:520px){ .stickybar{gap:6px} .stickybar .lbl{display:none} .stickybar button{padding-inline:10px;font-size:.88rem} }
+html{scroll-padding-top:72px;scroll-padding-bottom:84px}
 .tabtools .share:disabled,.row .share:disabled{opacity:.4;cursor:default}
 .tabwrap{margin-top:14px;background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:10px 6px;overflow-x:auto}
 .tabsvg{display:block;color:var(--ink);font-family:inherit}
 .tabline{stroke:currentColor;stroke-width:1;opacity:.55}
-.tabbar{stroke:currentColor;stroke-width:1.5}
+.tabbarline{stroke:currentColor;stroke-width:1.5}
 .tabbeat{stroke:currentColor;stroke-width:1;opacity:.12}
 .tabname{fill:var(--muted)}
 .tabchord{fill:var(--accent)}

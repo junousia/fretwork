@@ -107,9 +107,9 @@ async function run(browser, origin, label) {
   await page.fill('#tb-chord', 'Xyz'); await page.press('#tb-chord', 'Tab');
   assert((await page.getAttribute('#tb-chord', 'aria-invalid')) === 'true', `${label}: an unreadable chord name is flagged`);
   await page.fill('#tb-chord', 'Em7'); await page.press('#tb-chord', 'Tab');
-  const bars0 = (await page.$$eval('#tb-surface .tabbar', e => e.length));
+  const bars0 = (await page.$$eval('#tb-surface .tabbarline', e => e.length));
   await page.click('#tb-addbar');
-  assert((await page.$$eval('#tb-surface .tabbar', e => e.length)) > bars0 && (await page.textContent('#tb-barno')) === '3', `${label}: Add bar adds a bar after the current one`);
+  assert((await page.$$eval('#tb-surface .tabbarline', e => e.length)) > bars0 && (await page.textContent('#tb-barno')) === '3', `${label}: Add bar adds a bar after the current one`);
   const before = await frets();
   await page.reload({ waitUntil: 'networkidle' }); await page.click('a[data-tab="compose"]');
   assert((await frets()) === before, `${label}: the tab is still there after a reload`);
@@ -451,6 +451,16 @@ async function run(browser, origin, label) {
     });
     assert(vis.n > 5 && vis.inView >= vis.n * 0.6, `${label}: phone, position ${n} is scrolled into view (${vis.inView}/${vis.n} notes visible)`);
   }
+  // the essential controls stay on screen while the page scrolls
+  await pp.goto(origin + '#compose', { waitUntil: 'networkidle' }); await pp.waitForSelector('#tb-surface .tabhit');
+  await pp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const sticky = await pp.evaluate(() => { const r = id => document.querySelector(id).getBoundingClientRect(); const bar = r('.stickybar'); return { top: bar.top, playTop: r('#tb-play').top, playBottom: r('#tb-play').bottom, genOk: r('#tb-gen-go').right <= innerWidth, undoOk: r('#tb-redo').right <= innerWidth + 1, scrolled: scrollY }; });
+  assert(sticky.scrolled > 200 && sticky.top >= 0 && sticky.top < 12 && sticky.playBottom < 120, `${label}: on a phone the controls stay pinned at the top while scrolled (bar top ${sticky.top}, scrolled ${sticky.scrolled})`);
+  assert(sticky.genOk && sticky.undoOk, `${label}: and the whole row fits the phone width`);
+  assert(await pp.evaluate(() => { const b = document.querySelector('#tb-play').getBoundingClientRect(), el = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!el && !!el.closest('#tb-play'); }), `${label}: and Play is really clickable there (nothing covers it)`);
+  await pp.click('#tb-gen-go'); await pp.waitForTimeout(300);
+  assert((await pp.$$('#tb-surface .fret')).length > 0, `${label}: Generate works from the pinned bar`);
+  await pp.goto(origin + '#scales', { waitUntil: 'networkidle' });
   // phone: the root and scale pickers are selects; the long chord-builder starts folded
   assert(await pp.isVisible('#sc-rootsel') && await pp.isHidden('#sc-roots'), `${label}: phone uses a root drop-down`);
   await pp.goto(origin + '#chords', { waitUntil: 'networkidle' });

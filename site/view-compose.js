@@ -24,12 +24,14 @@ export function mount(root){
       <h1>Compose</h1>
       <p class="lead">Write a riff or solo as tab - or let the generator write one over your chords. Click a spot, type the fret number, and it plays back.</p>
     </header>
-    <div class="tabtools" role="group" aria-label="Compose tools">
-      <button type="button" class="play" id="tb-play">▶ Play</button>
+    <div class="stickybar" role="group" aria-label="Playback and generator">
+      <button type="button" class="play" id="tb-play">\u25B6 Play</button>
       <button type="button" class="play" id="tb-gen-go" title="Write a solo over the chords (settings below)">Generate</button>
-      <button type="button" class="share" id="tb-gen-new" title="Generate again with a new seed">Another one</button>
-      <button type="button" class="share" id="tb-undo">Undo</button>
-      <button type="button" class="share" id="tb-redo">Redo</button>
+      <button type="button" class="share" id="tb-gen-new" title="Generate again with a new seed" aria-label="Another one: generate again with a new seed"><span aria-hidden="true">\u21BB</span> Another<span class="lbl"> one</span></button>
+      <button type="button" class="share" id="tb-undo" aria-label="Undo"><span aria-hidden="true">\u21B6</span><span class="lbl"> Undo</span></button>
+      <button type="button" class="share" id="tb-redo" aria-label="Redo"><span aria-hidden="true">\u21B7</span><span class="lbl"> Redo</span></button>
+    </div>
+    <div class="tabtools" role="group" aria-label="Tempo, sharing and export">
       <label class="keylab">Tempo <input id="tb-bpm" type="number" min="40" max="220" step="1" inputmode="numeric"> BPM</label>
       <button type="button" class="share" id="tb-share" title="A link that opens this tab (notes, chords, settings and seed) for someone else">Copy link</button>
       <button type="button" class="share" id="tb-pdf" title="Print the tab with its chord boxes - choose Save as PDF in the print dialog">Export PDF</button>
