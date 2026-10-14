@@ -30,7 +30,7 @@ for (const s of mf.shortcuts || []) assert(s.url.startsWith('./'), `shortcut url
 
 // service worker precache list vs real files
 const sw = read('sw.js');
-const shell = [...sw.slice(sw.indexOf('const SHELL'), sw.indexOf('];', sw.indexOf('const SHELL'))).matchAll(/'([^']+)'/g)].map(m => m[1]).filter(x => x !== 'fretwork-shell-v1');
+const shell = [...sw.slice(sw.indexOf('const SHELL'), sw.indexOf('];', sw.indexOf('const SHELL'))).matchAll(/'([^']+)'/g)].map(m => m[1]).filter(x => x !== 'fretwork-shell-v2');
 for (const f of shell) assert(f === './' || files.includes(path.normalize(f)), `sw.js precaches a file that does not exist: ${f}`);
 const optional = new Set(['sw.js', 'types.js', // types.js is JSDoc typedefs only, never loaded at runtime
    'icons/icon-maskable.svg', 'icons/icon-apple.svg', 'icons/icon-maskable-512.png', 'fonts/OFL.txt', 'data/voicings.LICENSE.txt']);
@@ -49,6 +49,22 @@ for (const f of files.filter(f => /\.(js|css|html)$/.test(f))) {
   const ext = [...t.matchAll(/https?:\/\/[^\s"'`)<]+/g)].map(m => m[0]).filter(u => !/w3\.org|github\.com|fonts\/OFL/.test(u));
   assert(!ext.length, `${f} references external URLs (breaks offline/privacy): ${ext.slice(0, 3).join(' ')}`);
   assert(!/(fetch|import|src=|href=)\s*\(?\s*['"]\//.test(t), `${f} uses a root-absolute path (breaks GitHub Pages subpath)`);
+}
+// docs stay in step with the app: every page is described in the README, its screenshots exist, the manifest shortcuts and the
+// changelog's latest release match
+{
+  const readme = fs.readFileSync(path.join(site, '../README.md'), 'utf8'), changelog = fs.readFileSync(path.join(site, '../CHANGELOG.md'), 'utf8');
+  const pkg = JSON.parse(fs.readFileSync(path.join(site, '../package.json'), 'utf8'));
+  const pages = [...html.matchAll(/<a href="#([a-z]+)" class="tab" data-tab="[a-z]+"><span class="ic" aria-hidden="true">[^<]*<\/span>([^<]+)<\/a>/g)].map(m => ({ id: m[1], label: m[2] }));
+  assert(pages.length >= 5, 'the navigation lists the pages');
+  for (const p of pages) {
+    assert(readme.includes(`**${p.label}**`), `README.md must describe the "${p.label}" page (in bold)`);
+    assert(mf.shortcuts.some(s => s.url === `./#${p.id}`), `manifest.webmanifest needs a shortcut to #${p.id}`);
+  }
+  for (const m of readme.matchAll(/\]\((docs\/[^)]+)\)/g)) assert(fs.existsSync(path.join(site, '..', m[1])), `README.md references a missing image: ${m[1]}`);
+  const latest = (changelog.match(/^## (\d+\.\d+\.\d+)/m) || [])[1];
+  assert(latest === pkg.version, `package.json version ${pkg.version} must match the newest CHANGELOG release ${latest}`);
+  assert(!/Over the changes/.test(html + readme), 'the old "Over the changes" title is gone');
 }
 // nginx must serve the manifest with the right type and compress the JSON
 const ng = fs.readFileSync(new URL('../nginx.conf', import.meta.url), 'utf8');

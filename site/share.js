@@ -76,7 +76,11 @@ export function decodeProgression(hashOrQuery) {
   return out;
 }
 
-/** The tab name of a location hash: "#progressions?c=.." -> "progressions". @param {string|null|undefined} hash @returns {string} */
+/** Names an old link may use for a page (the Compose page was called "tab" at first). */
+const TAB_ALIASES = /** @type {Record<string, string>} */ ({ tab: 'compose' });
+
+/** The page named by a location hash: "#progressions?c=.." -> "progressions"; the old "#tab?d=.." -> "compose". @param {string|null|undefined} hash @returns {string} */
 export function tabOf(hash) {
-  return String(hash || '').replace(/^#/, '').split('?')[0];
+  const name = String(hash || '').replace(/^#/, '').split('?')[0];
+  return TAB_ALIASES[name] || name;
 }

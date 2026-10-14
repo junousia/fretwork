@@ -117,8 +117,8 @@ export function mount(root){
     const vo = state.voicing === 'all' ? null : (voicings[state.voicing - 1] || null);
     if(!vo && state.labels === 'fingers') state.labels = 'notes';
     const boardOpts = { tuning: inst.tuning, stringWidths: inst.stringWidths, leftHanded: inst.leftHanded, capo: inst.capo };
-    // Arpeggio shape: every chord tone in the fret window of the fingering, with the
-    // fingering itself ringed; otherwise the neck dims to just the fingering.
+    // Arpeggio shape: every chord tone in the fret window of the voicing, with the
+    // voicing itself ringed; otherwise the neck dims to just the voicing.
     const chordPcs = iv.map(x => (state.root + x) % 12);
     const arpSets = vo ? arpeggioAround(vo, inst, chordPcs) : null;
     const showArp = !!vo && state.arp;
@@ -128,15 +128,15 @@ export function mount(root){
       ? `<h3 class="vh">Voicings <span class="hint">tap one to show it on the neck</span></h3>${voicingGallery(voicings, state.voicing === 'all' ? -1 : state.voicing - 1, { id: 'ch-voseg', base: 1, mirror: inst.leftHanded })}
          ${vo ? `<div class="row"><label class="chk"><input type="checkbox" id="ch-arp"${state.arp ? ' checked' : ''}> Arpeggio shape</label>
           <button type="button" class="share" id="ch-arpplay">Play arpeggio</button></div>` : ''}`
-      : (loaded ? `<p class="hint">No stored fingering for this chord in this tuning - the neck shows every chord tone.</p>` : '');
+      : (loaded ? `<p class="hint">No stored voicing for this chord in this tuning - the neck shows every chord tone.</p>` : '');
     let h = `${builderHtml()}
       <div class="chordhead"><h2>${esc(spell(state.root, false))} ${esc(labelFor(state.suffix))}</h2><p>Tones ${esc(iv.map(x => spell(state.root + x, false)).join(' '))}</p></div>
-      <div class="boardbar"><div class="scaletitle">${esc(name)}</div>
+      <div class="boardbar"><div class="scaletitle">Chord tones on the neck</div>
         <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
           <button type="button" data-l="notes" aria-pressed="${state.labels === 'notes'}">Note names</button>
           <button type="button" data-l="intervals" aria-pressed="${state.labels === 'intervals'}">Intervals</button>${vo ? `
           <button type="button" data-l="fingers" aria-pressed="${state.labels === 'fingers'}">Fingers</button>` : ''}</div>
-          <button type="button" class="play" id="ch-play">Play chord</button></div></div>
+          <button type="button" class="play" id="ch-play">\u25B6 Play chord</button></div></div>
       ${voRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, state.labels === 'fingers' ? 'notes' : state.labels, false, boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone</span></div>

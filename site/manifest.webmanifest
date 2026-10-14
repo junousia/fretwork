@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Fretwork",
   "short_name": "Fretwork",
-  "description": "Scales, chords and chord progressions on the fretboard for guitar and ukulele. Works offline.",
+  "description": "Scales, chords, chord progressions and solos on the fretboard for guitar and ukulele, with a tab composer. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -19,6 +19,8 @@
   "shortcuts": [
     { "name": "Progressions", "url": "./#progressions" },
     { "name": "Scales", "url": "./#scales" },
-    { "name": "Chords", "url": "./#chords" }
+    { "name": "Chords", "url": "./#chords" },
+    { "name": "Identify a chord", "url": "./#identify" },
+    { "name": "Compose a solo", "url": "./#compose" }
   ]
 }

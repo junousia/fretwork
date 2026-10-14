@@ -31,7 +31,7 @@ export const noteNameIn = (pc, root) => (FLAT_ROOTS.has(root) ? FLAT_NAMES : SHA
 // without a 3rd is really 9sus4).
 const ALIASES = new Set(['maj6', 'add2', '7#5', '11']);
 // Tones a chord may contain without them counting as chord tones (nothing is lost
-// when they are absent): the 11th that sits in most 13th-chord fingerings, and the
+// when they are absent): the 11th that sits in most 13th-chord voicings, and the
 // sharp 11th of a major 13th.
 /** @type {Record<string, number[]>} */
 const TOLERATED = { '13': [5], 'm13': [5], 'maj13': [6] };
@@ -39,7 +39,7 @@ const TOLERATED = { '13': [5], 'm13': [5], 'maj13': [6] };
 /** @type {{suffix:string, iv:number[], tolerated:number[]}[]} */
 const CANDIDATES = [
   ...Object.keys(CHORDS).filter(s => !ALIASES.has(s)).map(suffix => ({ suffix, iv: CHORDS[suffix], tolerated: TOLERATED[suffix] ?? [] })),
-  // The dominant 11th WITH its 3rd (R 3 5 b7 9 11), as played in most fingerings.
+  // The dominant 11th WITH its 3rd (R 3 5 b7 9 11), as played in most voicings.
   // CHORDS['11'] is the third-less version, which is really a 9sus4.
   { suffix: '11', iv: [0, 4, 7, 10, 2, 5], tolerated: [] },
 ];

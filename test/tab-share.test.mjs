@@ -11,7 +11,7 @@ const GEN = { style: 'blues', density: 'busy', feel: 'shuffle', tech: 'lots', ev
 const b64 = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const link = o => `#tab?d=${b64(JSON.stringify(o))}`;
 
-// a tab using everything: chords with choices, fingerings, triplets, every technique, a title and tempo
+// a tab using everything: chords with choices, voicings, triplets, every technique, a title and tempo
 let tab = emptyTab(4);
 tab = putChord(putChord(putChord(tab, 0, 0, 'Am7'), 0, 24, 'D7'), 2, 0, 'Em');
 tab = setChordPlan(setChordPlan(tab, 0, 0, { scale: 'minpent' }), 0, 0, { positions: [2, 3] });
@@ -22,7 +22,7 @@ tab = setBpm({ ...tab, title: 'Lick in A' }, 123);
 
 const q = encodeTabLink({ tab, setup: { instrument: 'ukulele', tuning: 'low-g', capo: 2, leftHanded: true }, gen: GEN });
 const back = decodeTabLink(`#tab?${q}`);
-assert(back && JSON.stringify(back.tab) === JSON.stringify(tab), 'the whole tab survives the round trip: notes, techniques, triplets, chords, choices, fingerings, title, tempo');
+assert(back && JSON.stringify(back.tab) === JSON.stringify(tab), 'the whole tab survives the round trip: notes, techniques, triplets, chords, choices, voicings, title, tempo');
 assert(back.setup.instrument === 'ukulele' && back.setup.tuning === 'low-g' && back.setup.capo === 2 && back.setup.leftHanded === true, 'the instrument setup comes along');
 assert(JSON.stringify(back.gen) === JSON.stringify(GEN), 'the generator settings and seed come along');
 assert(q.includes('i=ukulele') && q.includes('t=low-g') && q.includes('cp=2') && q.includes('lh=1'), 'the setup is readable in the link');

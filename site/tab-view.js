@@ -31,7 +31,7 @@ export function stepPos(nStrings, perRow, bar, at) {
 export function tabSvg(tab, inst, { perRow, cursor = null, editable = false, grid = SIXTEENTH, numberFrom }) {
   const n = inst.midi.length, names = stringNames(inst.midi);
   const rows = Math.ceil(tab.bars.length / perRow), W = LEFT + Math.min(perRow, tab.bars.length) * BAR_W + 2, H = rows * rowHeight(n);
-  let g = `<svg class="tabsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tab, ${tab.bars.length} bar${tab.bars.length === 1 ? '' : 's'}">`;
+  let g = `<svg class="tabsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tab notation, ${tab.bars.length} bar${tab.bars.length === 1 ? '' : 's'}">`;
   for (let row = 0; row < rows; row++) {
     const y0 = row * rowHeight(n) + CHORD_H, bars = Math.min(perRow, tab.bars.length - row * perRow);
     names.forEach((nm, s) => { g += `<text class="tabname" x="${LEFT - 6}" y="${y0 + s * SG + 4}" text-anchor="end" font-size="11">${esc(nm)}</text>`; });

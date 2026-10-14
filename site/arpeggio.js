@@ -1,4 +1,4 @@
-// Arpeggios: chord tones laid out within a position or around a fingering.
+// Arpeggios: chord tones laid out within a position or around a voicing.
 // Pure functions (no DOM, no audio) so they can be unit tested.
 import { CHORDS } from './music.js';
 
@@ -19,16 +19,16 @@ function chordToneFrets(inst, chordPcs, lo, hi) {
   });
 }
 
-// The "arpeggio shape" around a fingering: every chord tone within the fret
-// window the fingering occupies, widened by `pad` frets each side (so the
-// outer chord tones one fret away from the fingering are included - what
+// The "arpeggio shape" around a voicing: every chord tone within the fret
+// window the voicing occupies, widened by `pad` frets each side (so the
+// outer chord tones one fret away from the voicing are included - what
 // players call the arpeggio shape that goes with that chord shape).
 /** @param {Voicing} voicing @param {Tuned} inst @param {number[]} chordPcs @param {number} [pad] @returns {FretSets} */
 export function arpeggioAround(voicing, inst, chordPcs, pad = 1) {
   const played = voicing.f.filter(f => f > 0);
   const lo = played.length ? Math.min(...played) - pad : 0;
   const hi = (played.length ? Math.max(...played) : 3) + pad;
-  // an open-position fingering keeps the nut in the window
+  // an open-position voicing keeps the nut in the window
   return chordToneFrets(inst, chordPcs, voicing.f.some(f => f === 0) ? 0 : lo, hi);
 }
 

@@ -40,7 +40,7 @@ export {};
  */
 
 /**
- * A chord fingering. `f`/`g` are indexed like the tuning (0 = top string);
+ * A chord voicing. `f`/`g` are indexed like the tuning (0 = top string);
  * f: absolute fret, 0 open, -1 muted; g: finger 1-4 or 0.
  * @typedef {object} Voicing
  * @property {number[]} f
@@ -107,9 +107,9 @@ export {};
  * @property {Position[]} [positions]   the positions to draw dividers for
  * @property {{s:number, e:number}} [dimRange]  the selected position (highlights its badge)
  * @property {FretSets} [brightSets]    notes outside these are dimmed, not hidden
- * @property {Voicing} [voicing]        dim everything but this fingering; draws barre and X marks
- * @property {Voicing} [voicingRing]    ring this fingering without dimming anything else
- * @property {boolean} [fingerLabels]   label the fingering's dots with finger numbers
+ * @property {Voicing} [voicing]        dim everything but this voicing; draws barre and X marks
+ * @property {Voicing} [voicingRing]    ring this voicing without dimming anything else
+ * @property {boolean} [fingerLabels]   label the voicing's dots with finger numbers
  * @property {boolean} [hitAreas]       add a clickable cell (class "hit", data-s, data-f) per string and fret
  * @property {boolean} [leftHanded]     mirror the neck
  * @property {number} [capo]            draw a capo bar instead of the nut
@@ -164,4 +164,4 @@ export {};
  * @typedef {{at:number, name:string, scale?:string, positions?:number[]}} TabChord
  */
 /** @typedef {{chords:TabChord[], notes:TabNote[]}} TabBar */
-/** @typedef {{title:string, bpm:number, bars:TabBar[], voicings?:Record<string, number>, res?:number}} Tab  voicings: which stored fingering (0-based) is shown/played for each chord name */
+/** @typedef {{title:string, bpm:number, bars:TabBar[], voicings?:Record<string, number>, res?:number}} Tab  voicings: which stored voicing (0-based) is shown/played for each chord name */

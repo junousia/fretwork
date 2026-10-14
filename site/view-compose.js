@@ -21,10 +21,10 @@ const STORE_KEY = 'fw-tabs';
 export function mount(root){
   root.innerHTML = `
     <header>
-      <h1>Tab</h1>
-      <p class="lead">Write a riff or solo as tab. Click a spot, type the fret number, and it plays back over your chords.</p>
+      <h1>Compose</h1>
+      <p class="lead">Write a riff or solo as tab - or let the generator write one over your chords. Click a spot, type the fret number, and it plays back.</p>
     </header>
-    <div class="tabtools" role="group" aria-label="Tab tools">
+    <div class="tabtools" role="group" aria-label="Compose tools">
       <button type="button" class="play" id="tb-play">▶ Play</button>
       <button type="button" class="play" id="tb-gen-go" title="Write a solo over the chords (settings below)">Generate</button>
       <button type="button" class="share" id="tb-gen-new" title="Generate again with a new seed">Another one</button>
@@ -38,14 +38,14 @@ export function mount(root){
     <details class="fold" id="tb-gen"><summary>Solo generator settings</summary>
       <p class="hint">Name the chords in the tab (or load a progression), then press Generate above. It replaces the notes - Undo brings yours back.</p>
       <div class="row">
-        <label class="keylab">Chords from <select id="tb-prog" aria-label="Load a progression"></select></label>
+        <label class="keylab">Load <select id="tb-prog" aria-label="Load a progression"></select></label>
         <label class="keylab">in <select id="tb-progkey"></select></label>
         <label class="keylab" title="How many times to play the progression: Auto repeats it until there are at least 8 bars">Repeat <select id="tb-repeat"><option value="auto">Auto</option>${[1, 2, 3, 4, 6, 8].map(n => `<option value="${n}">\u00d7${n}</option>`).join('')}</select></label>
         <button type="button" class="share" id="tb-useprog">Load chords</button>
       </div>
       <div class="row">
         <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
-        <label class="keylab">Notes <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
+        <label class="keylab">Density <select id="tb-density">${DENSITIES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="How the solo develops over the song: higher and busier towards a peak">Evolve <select id="tb-evolve">${EVOLVES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
@@ -58,7 +58,7 @@ export function mount(root){
     </details>
 
     <div class="row">
-      <label class="keylab">Note <div class="seg" id="tb-len" role="group" aria-label="Note length">${LENGTH_NAMES.map((n, i) => `<button type="button" data-len="${i}" aria-pressed="false">${n}</button>`).join('')}</div></label>
+      <label class="keylab">Length <div class="seg" id="tb-len" role="group" aria-label="Note length">${LENGTH_NAMES.map((n, i) => `<button type="button" data-len="${i}" aria-pressed="false">${n}</button>`).join('')}</div></label>
       <label class="chk" title="Three in the time of two (1/16, 1/8, 1/4 and 1/2 notes)"><input type="checkbox" id="tb-trip"> Triplet</label>
     </div>
     <div class="row">
@@ -85,7 +85,7 @@ export function mount(root){
       <button type="button" data-k="ArrowDown" aria-label="Down a string">↓</button>
     </div>
     <p class="hint">Click a spot on the tab, type a fret (two digits for 10 and up), and the cursor moves on by the note length. Arrow keys move, Delete removes, Space plays, Ctrl+Z undoes.</p>
-    <details class="fold" id="tb-more"><summary>Playback options and tools</summary>
+    <details class="fold" id="tb-more"><summary>Playback and more</summary>
       <div class="row">
         <label class="chk"><input type="checkbox" id="tb-backing"> Play the bar chords</label>
         <label class="chk"><input type="checkbox" id="tb-metro"> Click</label>
@@ -255,27 +255,27 @@ export function mount(root){
     $('#tb-addbar').disabled = tab().bars.length >= 64;
     if (reveal) surface.querySelector('.tabcursor')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
-  /** The fingering (0-based index into the stored ones) used for a chord name. */
+  /** The voicing (0-based index into the stored ones) used for a chord name. */
   function voicingOf(inst, name){
     const c = parseChord(name); if (!c) return { list: [], k: 0 };
     const list = getVoicings(inst, c.root, c.suf);
     return { list, k: Math.min(tab().voicings?.[name] ?? 0, Math.max(0, list.length - 1)) };
   }
-  // Every chord named in the tab, with a fingering you can step through.
+  // Every chord named in the tab, with a voicing you can step through.
   const chordsEl = $('#tb-chords');
   function renderChords(inst){
     const names = chordsUsed(tab());
-    if (!names.length) { chordsEl.innerHTML = '<p class="hint">Chords you name in the tab appear here with a fingering to play them.</p>'; return; }
-    chordsEl.innerHTML = `<h2 class="bh">Chords in this tab</h2><div class="vogal" role="group" aria-label="Chords used in this tab">${names.map(name => {
+    if (!names.length) { chordsEl.innerHTML = '<p class="hint">Chords you name in the tab appear here with a voicing to play them.</p>'; return; }
+    chordsEl.innerHTML = `<h2 class="bh">Chords used</h2><div class="vogal" role="group" aria-label="Chords used">${names.map(name => {
       const { list, k } = voicingOf(inst, name), v = list[k];
-      const label = v ? `${voicingLabel(v)}${v.b ? ' \u00b7 barre' : ''}${list.length > 1 ? ` \u00b7 ${k + 1}/${list.length}` : ''}` : parseChord(name) ? 'no fingering' : 'unknown chord';
-      return `<button type="button" class="chip vobtn" data-name="${esc(name)}"${list.length > 1 ? ` title="Tap for the next fingering"` : ''}><b>${esc(name)}</b>${v ? voicingDiagram(v, { label: false, mirror: inst.leftHanded }) : ''}<span>${esc(label)}</span></button>`;
+      const label = v ? `${voicingLabel(v)}${v.b ? ' \u00b7 barre' : ''}${list.length > 1 ? ` \u00b7 ${k + 1} of ${list.length}` : ''}` : parseChord(name) ? 'no voicing' : 'unknown chord';
+      return `<button type="button" class="chip vobtn" data-name="${esc(name)}"${list.length > 1 ? ` title="Tap for the next voicing"` : ''}><b>${esc(name)}</b>${v ? voicingDiagram(v, { label: false, mirror: inst.leftHanded }) : ''}<span>${esc(label)}</span></button>`;
     }).join('')}</div>`;
   }
   // The scale and positions the solo generator uses over the chord in effect at the cursor
   // (that one occurrence: a chord that comes back later can be played differently).
   const planEl = $('#tb-plan');
-  let planOpen = matchMedia('(min-width:760px)').matches, planSig = '';
+  let planOpen = false, planSig = ''; // folded by default: the tab is what you came for
   function chordInEffect(){
     const step = cursor.bar * STEPS + cursor.at;
     return chordTimeline(tab()).filter(c => c.step <= step).pop() || null;
@@ -369,7 +369,7 @@ export function mount(root){
     const names = chordsUsed(t);
     const boxes = names.map(name => {
       const { list, k } = voicingOf(inst, name), v = list[k];
-      return `<figure class="print-chord"><b>${esc(name)}</b>${v ? voicingDiagram(v, { size: 1.15, label: false, mirror: inst.leftHanded }) : '<div class="print-nofing">no fingering</div>'}<figcaption>${v ? esc(voicingLabel(v)) + (v.b ? ' \u00b7 barre' : '') : ''}</figcaption></figure>`;
+      return `<figure class="print-chord"><b>${esc(name)}</b>${v ? voicingDiagram(v, { size: 1.15, label: false, mirror: inst.leftHanded }) : '<div class="print-nofing">no voicing</div>'}<figcaption>${v ? esc(voicingLabel(v)) + (v.b ? ' \u00b7 barre' : '') : ''}</figcaption></figure>`;
     }).join('');
     let rows = '';
     for (let i = 0; i < t.bars.length; i += PER_ROW) rows += `<div class="print-row">${tabSvg({ ...t, bars: t.bars.slice(i, i + PER_ROW) }, inst, { perRow: PER_ROW, numberFrom: i + 1 })}</div>`;
@@ -390,7 +390,7 @@ export function mount(root){
   function genSettings(){ return { style: opts.style, density: opts.density, feel: opts.feel, tech: opts.tech, evolve: opts.evolve, key: opts.key, seed: opts.seed }; }
   $('#tb-share').onclick = async () => {
     cancelPending();
-    const url = `${location.origin}${location.pathname}#tab?${encodeTabLink({ tab: tab(), setup: getSetup(), gen: genSettings() })}`;
+    const url = `${location.origin}${location.pathname}#compose?${encodeTabLink({ tab: tab(), setup: getSetup(), gen: genSettings() })}`;
     try {
       if (navigator.share && matchMedia('(pointer:coarse)').matches) { await navigator.share({ title: tab().title || 'Fretwork tab', url }); msg.textContent = ''; return; }
       await navigator.clipboard.writeText(url); msg.textContent = 'Link copied';
@@ -399,7 +399,7 @@ export function mount(root){
   };
   /** Open a shared tab: it becomes the current tab, and Undo brings back what was there. */
   function openShared(hash){
-    if (tabOf(hash) !== 'tab') return false;
+    if (tabOf(hash) !== 'compose') return false;
     const link = decodeTabLink(hash); if (!link) return false;
     stopPlay(); cancelPending();
     applySetup({ instrument: link.setup.instrument || 'guitar', tuning: link.setup.tuning || 'standard', capo: link.setup.capo || 0, leftHanded: link.setup.leftHanded === true });
@@ -411,11 +411,11 @@ export function mount(root){
     }
     persist();
     cursor.bar = 0; cursor.at = 0; planSig = '';
-    try { history.replaceState(null, '', `${location.pathname}${location.search}#tab`); } catch (e) { /* keep the long hash */ }
+    try { history.replaceState(null, '', `${location.pathname}${location.search}#compose`); } catch (e) { /* keep the long hash */ }
     genMsg.textContent = 'Opened a shared tab - Undo brings back yours.';
     render(); return true;
   }
-  window.addEventListener('hashchange', () => { if (!root.hidden || tabOf(location.hash) === 'tab') openShared(location.hash); });
+  window.addEventListener('hashchange', () => { if (!root.hidden || tabOf(location.hash) === 'compose') openShared(location.hash); });
 
   // --- wiring ------------------------------------------------------------------
   surface.addEventListener('click', e => {

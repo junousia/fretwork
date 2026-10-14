@@ -1,8 +1,8 @@
 # Fretwork
 
-Scales, chords and chord progressions on the fretboard, for guitar and ukulele.
-A small installable web app that works offline - vanilla JavaScript, no framework,
-no build step, no accounts, no tracking.
+Scales, chords and solos on the fretboard, for guitar and ukulele - and a composer that writes a
+solo over your chords as tab. A small installable web app that works offline: vanilla JavaScript,
+no framework, no build step, no accounts, no tracking.
 
 [![CI](https://github.com/junousia/fretwork/actions/workflows/ci.yml/badge.svg)](https://github.com/junousia/fretwork/actions/workflows/ci.yml)
 [![Pages](https://github.com/junousia/fretwork/actions/workflows/pages.yml/badge.svg)](https://junousia.github.io/fretwork/)
@@ -10,48 +10,56 @@ no build step, no accounts, no tracking.
 
 **Live:** https://junousia.github.io/fretwork/
 
-![Chord progression with scale position and chord voicing](docs/screenshots/progressions.png)
+![Compose: a generated twelve-bar blues solo as tab, with the chords used and their voicings](docs/screenshots/compose.png)
 
-## What it does
+## The five pages
 
-- **Progressions** - type a chord progression (or pick a common one and transpose it to any
-  key). Each chord gets the scales that fit it, ranked for the detected key, laid out on the neck
-  with chord tones and safe landing notes marked. **Play it** with the chosen voicings (tempo,
-  beats per chord, loop, click) and watch the neck follow, or **copy a link** that opens the same
-  progression, scale positions and voicings for someone else.
-- **Scale positions** - pick any scale and root, then isolate one of its positions (or several).
-  Pentatonic scales use the classic CAGED boxes; seven-note scales use one-finger-per-fret
-  positions in the style of the Berklee/Leavitt system. Every position reads as an unbroken run
-  of the scale - no skipped notes.
-- **Chord voicings** - real fingerings (about 1,600 for guitar and for ukulele) with finger
-  numbers and barres, shown next to each chord and ringed on the neck. Picking a voicing moves
-  the scale position to match, and "Play" strums the actual fretted notes.
-- **Chord identifier** - mark notes on the fretboard (click frets, or pick a fret per string) and
-  get every chord that fits, best first, with slash chords and any omitted tones ("without the
-  5th"); play it, or open a match in the Chords tab.
-- **Tab editor** - write a riff or solo as tab: click a spot, type the fret, pick note lengths
-  (1/16 to a whole note, dotted too), name a chord per bar, undo/redo. It plays back with the bar
-  chords and a click, keeps a separate tab per instrument, saves in the browser, and copies as plain
-  ASCII tab. Chords can sit anywhere in a bar and are gathered at the top with fingerings. A **solo
-  generator** writes a melodic line over the chords (follow the chords, pentatonic or blues) in a
-  straight, shuffle, triplet or funk feel, optionally building up over the song, with hammer-ons, slides,
-  bends and vibrato. **Copy link** shares the tab and its settings. Playback uses a modelled plucked-guitar sound
-  (switchable to a simple synth in the setup menu). Triplets are supported, and the tab prints to **PDF** with
-  the chord boxes on top.
-- **Arpeggios** - on any seven-note scale pick a chord stacked on a degree (I, ii ... vii, with
-  optional 7ths) and see its arpeggio inside the chosen position; on a chord fingering, switch on the
-  *arpeggio shape* to see every chord tone in its fret window. Both can be played.
-- **Chord builder** - toggle minor, 7, maj7, sus4, 9, b5 ... and the chord list narrows to what
-  matches; impossible combinations are greyed out.
-- **Guitar and ukulele** with 14 tunings (drop D, DADGAD, open G/D/E, half/whole step down,
-  7-string, low-G, baritone ...), a **capo** and a **left-handed** (mirrored) neck. Chord shapes are
-  reused wherever they are really valid in the chosen tuning. Labelled by note name, interval or
-  finger, with audio playback.
-- **Installable and offline** (PWA), responsive from phone to desktop.
-
-| Chords | Scales on a phone |
+| Page | What it is for |
 | --- | --- |
-| ![Chord builder and voicing](docs/screenshots/chords.png) | ![Scale position on a phone](docs/screenshots/scales-phone.png) |
+| **Progressions** | Type a chord progression (or load a common one in any key). Each chord gets the scales that fit it, ranked for the key, laid out on the neck with chord tones and safe landing notes marked. Play it with the voicings you chose, or copy a link. |
+| **Scales** | Pick a scale and a root, isolate one of its positions, and see its arpeggios inside the position. |
+| **Chords** | Pick a root and a chord type, see every voicing (finger numbers, barres) and every chord tone on the neck. A chord builder narrows the list as you toggle minor, 7, maj7, sus4, 9, b5 ... |
+| **Identify** | Mark notes on the fretboard and get every chord that fits, best first, with slash chords and omitted tones. |
+| **Compose** | Write a riff or solo as tab, or let the generator write one over your chords. Play it, print it as a PDF, share it as a link. |
+
+Everywhere: **guitar and ukulele** with 14 tunings (drop D, DADGAD, open G/D/E, half and whole step down,
+7-string, low-G, baritone ...), a **capo** and a **left-handed** (mirrored) neck; chord shapes are reused
+wherever they are really valid in the chosen tuning. Labels by note name, interval or finger. A modelled
+**plucked-guitar sound** (or a simple synth) in the setup menu. Installable (PWA), responsive from phone
+to desktop, accessible (axe-checked), and nothing leaves your device.
+
+| Progressions | Chords |
+| --- | --- |
+| ![Progressions: the autumn changes with a scale position](docs/screenshots/progressions.png) | ![Chords: a barre voicing and the chord builder](docs/screenshots/chords.png) |
+
+| Identify | Compose |
+| --- | --- |
+| ![Identify: an open C chord marked on the neck](docs/screenshots/identify.png) | ![Compose on a phone](docs/screenshots/compose-phone.png) |
+
+### Scales and positions
+
+Pentatonic scales use the classic CAGED boxes; seven-note scales use one-finger-per-fret positions in the
+style of the Berklee / Leavitt system. Every position reads as an unbroken run of the scale - no skipped
+notes. On a seven-note scale you can colour the arpeggio of any degree chord (I, ii ... vii, with optional
+7ths) inside the position, and on a voicing switch on the *arpeggio shape*.
+
+### Compose
+
+- **Tab editor** - click a spot, type the fret, choose a note length (1/16 to a whole note, dotted, and triplets),
+  name chords anywhere in a bar, undo / redo. Hammer-ons, pull-offs, slides, bends and vibrato are drawn and played.
+  Keys: arrows move, digits set a fret (two digits for 10 and up), Delete removes, Space plays, Ctrl+Z undoes, h / s / b / v
+  set a technique. Every chord you name is gathered at the top with a voicing you can step through.
+- **Solo generator** - pick a style (follow the chords, pentatonic, blues), density, feel (straight, shuffle, triplets, funk),
+  how the solo evolves (steady, build up, arc), techniques and a key, then press Generate. It plays inside one position
+  per chord (or the scale and positions you choose per chord *occurrence*), starts chords on chord tones, moves mostly by
+  step, approaches chord changes, and ends on the root. The same seed always gives the same solo.
+  It is a practice-phrase generator, not a performer: it has no feel of its own and its rules are calibrated against
+  real jazz solos only in part (see `AGENTS.md`).
+- **Play, print, share** - playback with the bar chords, a click, loop and optional swing; **Export PDF** (title, tuning,
+  the chord boxes and the tab in numbered rows) via the print dialog; **Copy link** shares the whole tab with its
+  settings and seed; copy as plain-text tab.
+
+![The PDF export: title, chord boxes and the tab in numbered rows](docs/screenshots/pdf.png)
 
 ## Run it
 
@@ -67,20 +75,23 @@ or `docker build -t fretwork . && docker run -p 8000:8000 fretwork`.
 ## Develop
 
 ```sh
-npm install                       # only needed for the browser test (Playwright)
+npm install                       # only needed for the browser tests (Playwright)
 npm run typecheck                 # TypeScript over the JSDoc types (no build step)
-npm test                          # theory, arpeggios, tunings, SVG goldens, shipped site (plain Node, fast)
+npm test                          # theory, tunings, identifier, tab model, solo generator, share links, sound, SVG goldens, shipped site
 npx playwright install chromium   # once
-npm run test:e2e                  # real-browser smoke test incl. offline + subpath
+npm run test:e2e                  # real-browser test incl. offline + subpath + the audio chain
 npm run test:a11y                 # axe accessibility (light/dark, desktop/phone) + PWA installability
 npm run test:golden:update        # after an intentional visual change: regenerate, then review the diff
+npm run docs:screenshots          # regenerate docs/screenshots/ from the real app
 ```
 
-Everything lives in `site/` as ES modules; there is nothing to compile (types are JSDoc, checked by `tsc --noEmit`). See
-[AGENTS.md](AGENTS.md) for the design notes - especially how scale positions and chord voicings
-are generated and why - before changing `site/positions.js` or `site/voicings.js`.
+Everything lives in `site/` as ES modules; there is nothing to compile (types are JSDoc, checked by `tsc --noEmit`).
+See [AGENTS.md](AGENTS.md) for the design notes - especially how scale positions and chord voicings are generated
+and why - before changing `site/positions.js` or `site/voicings.js`, and for how the tab model, the solo generator and
+the sound work.
 
-Contributions go through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions go through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md). Releases are listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Deployment
 
@@ -90,6 +101,7 @@ the `/fretwork/` subpath. The `Dockerfile` serves the same files with nginx for 
 
 ## Credits and licence
 
-MIT licensed, see [LICENSE](LICENSE). Chord fingerings come from
+MIT licensed, see [LICENSE](LICENSE). Chord voicings come from
 [tombatossals/chords-db](https://github.com/tombatossals/chords-db) (MIT); the font is Familjen
-Grotesk (SIL OFL 1.1). Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Grotesk (SIL OFL 1.1). The plucked-guitar voice is our own code (a Karplus-Strong string model). Details in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
