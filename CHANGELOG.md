@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Plucked guitar sound** (default; "Simple" is the old synth, chosen in the setup menu). Every note is rendered
+  with a plucked-string model (extended Karplus-Strong, `site/string-dsp.js`): in tune to within ~1.5 cents from E2
+  to E6, the same loudness on every string, strings that ring longer when low and darken as they die away, damping
+  at the end of the note, and bends, slides and vibrato as real pitch changes of the string. It plays through a
+  small EQ / compressor / room / limiter chain. Notes are cached, so repeats are free. No new dependency
+  (Tone.js was tried and measured first: its PluckSynth varied 3-14 dB in loudness, was silent above ~1.1 kHz and
+  flat by up to 30 cents).
+
 - Tab: **Copy link** shares the whole tab - notes, techniques, triplets, chords, chosen fingerings,
   scale/position choices, title and tempo - plus the instrument setup (tuning, capo, left-handed) and the
   generator settings with the seed, in one link (about 1.7 KB for a busy 12-bar solo). Opening a link makes

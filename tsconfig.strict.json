@@ -21,7 +21,9 @@
     "site/tab.js",
     "site/tab-view.js",
     "site/solo.js",
-    "site/tab-share.js"
+    "site/tab-share.js",
+    "site/string-dsp.js",
+    "site/sound.js"
   ],
   "exclude": []
 }

@@ -241,6 +241,34 @@ async function run(browser, origin, label) {
   await bp.waitForSelector('#tb-surface .tabhit');
   assert(badErrors.length === 0 && (await bp.$$('#tb-surface .fret')).length === 0, `${label}: a damaged link opens an empty tab without errors`);
   await bad.close();
+  // sound: Plucked guitar is the default and renders the notes; Simple does not; the real chain gives audible, in-tune output
+  if (await page.isHidden('#optbar')) await page.click('#menu-btn');
+  assert((await page.inputValue('#sound-select')) === 'plucked', `${label}: the plucked guitar is the default sound`);
+  const stat = () => page.evaluate(async () => (await import(new URL('sound.js', document.baseURI).href)).soundStats.rendered);
+  await page.click('a[data-tab="chords"]'); await page.waitForSelector('#ch-play');
+  const r0 = await stat();
+  await page.click('#ch-play'); await page.waitForTimeout(400);
+  const r1 = await stat();
+  assert(r1 > r0, `${label}: playing a chord with the plucked sound renders notes (${r0} -> ${r1})`);
+  await page.selectOption('#sound-select', 'simple');
+  await page.click('#ch-play'); await page.waitForTimeout(400);
+  assert((await stat()) === r1, `${label}: the simple sound does not use the string model`);
+  assert(await page.evaluate(() => localStorage.getItem('fw-sound')) === 'simple', `${label}: the choice is remembered`);
+  await page.selectOption('#sound-select', 'plucked');
+  const chain = await page.evaluate(async () => {
+    const m = await import(new URL('sound.js', document.baseURI).href), sr = 44100, oc = new OfflineAudioContext(1, sr * 3, sr);
+    const eng = m.createStringEngine(oc); eng.note(220, 0.1, 0.6, 0.16); eng.note(220, 1.2, 0.6, 0.16, { bend: 2 });
+    const x = (await oc.startRendering()).getChannelData(0);
+    const rms = (a, n) => { let s = 0; for (let i = a; i < a + n; i++) s += x[i] * x[i]; return Math.sqrt(s / n); };
+    let peak = 0, bad = 0; for (const v of x) { peak = Math.max(peak, Math.abs(v)); if (!Number.isFinite(v)) bad++; }
+    const lo = Math.floor(sr / 242), hi = Math.ceil(sr / 198); let best = -1e9, bl = lo; // pitch of the first note by autocorrelation
+    for (let lag = lo; lag <= hi; lag++) { let c = 0; for (let i = 0; i < 4096; i++) c += x[Math.floor(0.2 * sr) + i] * x[Math.floor(0.2 * sr) + i + lag]; if (c > best) { best = c; bl = lag; } }
+    return { peak, bad, attack: rms(Math.floor(0.15 * sr), 4410), silence: rms(Math.floor(2.8 * sr), 4410), hz: sr / bl, tailAfterDamp: rms(Math.floor(0.85 * sr), 2205) };
+  });
+  assert(chain.bad === 0 && chain.peak > 0.05 && chain.peak < 1 && chain.attack > 0.02, `${label}: the sound chain gives audible output that does not clip (peak ${chain.peak.toFixed(2)}, rms ${chain.attack.toFixed(3)})`);
+  assert(Math.abs(1200 * Math.log2(chain.hz / 220)) < 15, `${label}: and the note comes out in tune through the chain (${chain.hz.toFixed(1)} Hz for 220)`);
+  assert(chain.silence < chain.attack * 0.5, `${label}: and it dies away`);
+  await page.click('#menu-btn'); await page.click('a[data-tab="tab"]'); await page.waitForSelector('#tb-surface .tabhit');
   // PDF export: the print sheet has the title, every chord box once, and the tab in rows that are not split
   assert(await page.isVisible('#tb-pdf'), `${label}: there is an Export PDF button`);
   await page.fill('#tb-title', 'Blues in A'); await page.press('#tb-title', 'Tab');

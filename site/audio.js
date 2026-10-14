@@ -2,13 +2,22 @@
 
 /** @type {AudioContext|null} */
 let ac=null;
+/** @type {((freq:number, t:number, dur:number, vol:number, fx?:object) => boolean)|null} */
+let engine=null;
+/** Route every note through another sound engine (sound.js); null goes back to the simple synth. @param {typeof engine} fn */
+export function setNoteEngine(fn){ engine=fn; }
+/** Play one note with the current sound. Same arguments as simpleNote. @param {number} freq Hz @param {number} t start time (context clock) @param {number} dur seconds @param {number} vol 0-1 @param {{bend?:number, vib?:boolean, slideTo?:number, slideStart?:number, slideEnd?:number}} [fx] */
+export function note(freq,t,dur,vol,fx){
+  if(engine){ try{ if(engine(freq,t,dur,vol,fx)!==false) return; }catch(e){ /* fall back to the simple synth */ } }
+  simpleNote(freq,t,dur,vol,fx);
+}
 /**
  * Play one note on the shared context. `fx` adds guitar techniques: a bend (up `bend` semitones early in the note),
  * vibrato, and a slide (the pitch glides to `slideTo` Hz between `slideStart` and `slideEnd` seconds after the start).
  * @param {number} freq Hz @param {number} t start time (context clock) @param {number} dur seconds @param {number} vol 0-1
  * @param {{bend?:number, vib?:boolean, slideTo?:number, slideStart?:number, slideEnd?:number}} [fx]
  */
-export function note(freq,t,dur,vol,fx){
+export function simpleNote(freq,t,dur,vol,fx){
   if(!ac) return;
   const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
   o.type='triangle';o.frequency.value=freq;f.type='lowpass';f.frequency.value=2400;
