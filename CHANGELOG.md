@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.3.0 - 2026-10-15
+
+### Added
+- **More strumming.** A Strum menu in "Tempo and playback" (the same on Progressions and Compose, remembered): one strum per chord (as before), down on every
+  beat, down-up eighths, folk (D DU UDU), ballad, off-beat chops (reggae / ska), bossa nova, swing chops (Freddie Green), arpeggio and Travis picking. Down
+  strums sound low to high, up strums catch only the top strings and are lighter, picked patterns pick single strings (so they work for any tuning and the
+  ukulele), and the pattern follows the chord's length - a chord of one bar gets one bar of the pattern, a chord of two bars gets it twice. On Compose the
+  off-beat hits follow the Swing setting.
+- **Repeats in a chord chart.** Type `(Am F)x2` (a group twice), `|: Am F :|` or `:|x3` (a repeat), `%` (the previous bar) and `|` bar lines, with
+  groups inside groups, on Progressions' chord box - and on Compose, where a new "Or type a chart" row in the generator settings loads a whole song
+  structure into the bars (two chords between bar lines share the bar). A chart that is wrong says what is wrong and changes nothing.
+- **More classics and songs in the Load menu**: Blue Bossa, The Girl from Ipanema (A section) and Fly Me to the Moon (first eight bars) join the Classics,
+  and a new **Songs** group has Hotel California (verse), House of the Rising Sun, Knockin' on Heaven's Door, Hey Joe, Sweet Home Alabama and Hallelujah
+  (verse). All are written as degrees, so they play in any key. The chords were checked against published charts (see THIRD_PARTY_NOTICES.md).
+
 ## 2.2.0 - 2026-10-15
 
 ### Fixed

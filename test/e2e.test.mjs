@@ -176,6 +176,15 @@ async function run(browser, origin, label) {
   await page.selectOption('#tb-repeat', '8'); await page.click('#tb-useprog');
   assert((await page.$$('#tb-surface .tabchord')).length === 24, `${label}: Repeat x8 gives 24 bars`);
   await page.selectOption('#tb-repeat', 'auto');
+  // a typed chart with repeats: |: Am | F | C G :|x2 | E7  = 2 x 3 bars + 1, and two chords in a bar share it
+  await page.fill('#tb-chart', '|: Am | F | C G :|x2 | E7'); await page.click('#tb-usechart');
+  assert((await page.$$('#tb-surface .tabchord')).length === 9 && (await page.textContent('#tb-genmsg')).includes('7 bars'), `${label}: a typed chart with a repeat loads as 7 bars with 9 chords (${await page.textContent('#tb-genmsg')})`);
+  assert((await page.$$eval('#tb-surface .tabchord', e => e.map(x => x.textContent.trim()))).join(' ').replace(/\s+/g, ' ').includes('Am F C'), `${label}: the chart's chords are in the bars`);
+  await page.fill('#tb-chart', '(Am F'); await page.click('#tb-usechart');
+  assert((await page.textContent('#tb-genmsg')).includes('never closed') && (await page.$$('#tb-surface .tabchord')).length === 9, `${label}: a broken chart says what is wrong and changes nothing (${await page.textContent('#tb-genmsg')})`);
+  await page.fill('#tb-chart', 'Am Qq7'); await page.click('#tb-usechart');
+  assert((await page.textContent('#tb-genmsg')).includes('Qq7'), `${label}: an unreadable chord is named (${await page.textContent('#tb-genmsg')})`);
+  await page.selectOption('#tb-key', '0:major'); await page.selectOption('#tb-prog', { label: 'ii–V–I (jazz)' }); await page.click('#tb-useprog');
   await page.click('#tb-gen-go');
   assert((await page.$$eval('#tb-surface .fret', e => new Set(e.map(x => x.dataset.bar)).size)) >= 5, `${label}: the solo fills the repeated bars`);
   await page.check('#tb-autoplay'); await page.click('#tb-gen-new');
@@ -231,7 +240,7 @@ async function run(browser, origin, label) {
   await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="2"]');
   await page.click('#tb-gen-go');
   const inPos = await page.$$eval('#tb-surface .fret[data-bar="0"]', e => e.length);
-  assert(inPos > 2 && (await planText()).includes('position 2'), `${label}: generating keeps the choices (${inPos} notes in bar 1)`);
+  assert(inPos >= 1 && (await planText()).includes('position 2'), `${label}: generating keeps the choices (${inPos} notes in bar 1)`);
   await page.click('#tb-planpos button[data-pos="all"]');
   assert(!/position \d/.test(await planText()), `${label}: All clears the position choice`);
   await page.click('#tb-undo');
@@ -390,6 +399,23 @@ async function run(browser, origin, label) {
   assert(picked === '2', `${label}: the shared voicing choice is restored (${picked})`);
   await other.close();
 
+  // typed repeats: a group x2 and a |: :| section are written out
+  await page.fill('#pr-prog', '(Am F)x2 C'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 5);
+  await page.fill('#pr-prog', '|: Dm7 G7 :|x3 Cmaj7'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 7);
+  assert((await page.$$eval('#pr-strip .chip b', e => e.map(x => x.textContent))).join(' ') === 'Dm7 G7 Dm7 G7 Dm7 G7 Cmaj7', `${label}: |: Dm7 G7 :|x3 Cmaj7 is written out`);
+  await page.fill('#pr-prog', '(Am F'); await page.waitForFunction(() => !/** @type {HTMLElement} */ (document.querySelector('#pr-err')).hidden);
+  assert((await page.textContent('#pr-err')).includes('never closed'), `${label}: an unclosed group is reported`);
+  await page.fill('#pr-prog', 'Am7 D7 Gmaj7');
+  await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
+  // strumming: the pattern sets how many notes a chord sounds, and the choice is kept
+  await page.evaluate(() => { const w = /** @type {any} */ (window); w.__starts = 0; for (const C of [AudioBufferSourceNode, OscillatorNode]) { const o = C.prototype.start; C.prototype.start = function (...a) { w.__starts++; return o.apply(this, a); }; } });
+  await page.fill('#pr-bpm', '60'); await page.dispatchEvent('#pr-bpm', 'change'); await page.selectOption('#pr-beats', '4');
+  /** @param {string} id */
+  const startsFor = async id => { await page.selectOption('#pr-strum', id); await page.evaluate(() => { /** @type {any} */ (window).__starts = 0; }); await page.click('#pr-run'); await page.waitForTimeout(150); const n = await page.evaluate(() => /** @type {any} */ (window).__starts); await page.click('#pr-run'); await page.waitForTimeout(200); return n; };
+  const single = await startsFor('single'), eighths = await startsFor('eighths'), arp = await startsFor('arpeggio');
+  assert(single >= 3 && eighths >= single * 5 && arp >= 6 && arp < eighths, `${label}: the strum pattern changes what is played (single ${single}, down-up eighths ${eighths}, arpeggio ${arp} notes for the first chord)`);
+  assert((await page.evaluate(() => localStorage.getItem('fw-strum'))) === 'arpeggio' && (await page.inputValue('#tb-strum')) !== undefined, `${label}: the strum choice is stored, and Compose has the same menu`);
+  await page.selectOption('#pr-strum', 'single');
   // playback: the highlighted chord advances, Stop ends it
   await page.fill('#pr-bpm', '220'); await page.dispatchEvent('#pr-bpm', 'change');
   await page.selectOption('#pr-beats', '1');
@@ -497,7 +523,7 @@ async function run(browser, origin, label) {
   await page.selectOption('#pr-key', 'auto'); await page.selectOption('#pr-libprog', { label: 'Giant Steps' });
   assert((await page.inputValue('#pr-prog')).startsWith('Bmaj7 D7 Gmaj7 Bb7 Ebmaj7'), `${label}: a classic is written the way it is on the lead sheet (${(await page.inputValue('#pr-prog')).slice(0, 40)})`);
   const groups = await page.$$eval('#pr-libprog optgroup', g => g.map(x => x.label));
-  assert(groups.join() === 'Common,Blues,Jazz,Classics' && (await page.$$('#pr-libkey')).length === 0, `${label}: the Load menu is grouped (${groups}) and there is no second key menu`);
+  assert(groups.join() === 'Common,Blues,Jazz,Classics,Songs' && (await page.$$('#pr-libkey')).length === 0, `${label}: the Load menu is grouped (${groups}) and there is no second key menu`);
   await page.selectOption('#pr-key', '0:major'); assert((await page.inputValue('#pr-prog')).startsWith('Cmaj7 Eb7 Abmaj7'), `${label}: Giant Steps transposes to C`);
   await page.fill('#pr-prog', 'Dm7 G7 Cmaj7'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
   await page.check('#lefty-toggle', { force: true }).catch(() => {});

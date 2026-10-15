@@ -35,6 +35,13 @@ contents under the Database Contents License. Only a handful of derived numbers 
 solo, note or transcription from the database is included in this repository or in the app. Please cite: Pfleiderer, Frieler,
 Abesser, Zaddach, Burkhart (eds.), *Inside the Jazzomat: New Perspectives for Jazz Research*, Schott Campus, 2017.
 
+## Chord changes of well-known tunes and songs
+
+The chord sequences in the Load menu (Classics and Songs) are the harmonic skeletons of well-known tunes, written as degrees. Chord progressions are
+not protected expression; no melody, lyrics or arrangement is included. The jazz tunes marked in CHANGELOG 2.2.0 were derived from the Weimar Jazz
+Database's chord annotations (see above); Blue Bossa, The Girl from Ipanema, Fly Me to the Moon and the pop, rock and folk songs were checked against
+several published lead sheets and chord charts.
+
 ## Concepts
 
 Scale-position conventions follow published guitar pedagogy (the CAGED pentatonic boxes and

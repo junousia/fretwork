@@ -1,6 +1,6 @@
 {
   "name": "fretwork",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Scales, chords, chord progressions and solos on the fretboard for guitar and ukulele - with a tab composer and solo generator. Vanilla JS PWA, no build step.",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node tools/serve.mjs",
-    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/setup.test.mjs && node test/arpeggio.test.mjs && node test/identify.test.mjs && node test/tab.test.mjs && node test/solo.test.mjs && node test/tab-share.test.mjs && node test/sound.test.mjs && node test/golden.test.mjs && node test/site.test.mjs",
+    "test": "node test/theory.test.mjs && node test/player.test.mjs && node test/strum.test.mjs && node test/chart.test.mjs && node test/setup.test.mjs && node test/arpeggio.test.mjs && node test/identify.test.mjs && node test/tab.test.mjs && node test/solo.test.mjs && node test/tab-share.test.mjs && node test/sound.test.mjs && node test/golden.test.mjs && node test/site.test.mjs",
     "build:voicings": "node tools/build-voicings.mjs",
     "test:e2e": "node test/e2e.test.mjs",
     "test:a11y": "node test/a11y.test.mjs",
