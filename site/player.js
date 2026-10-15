@@ -4,6 +4,7 @@
 // the page is busy; the UI is told which chord is current via onChord().
 import { audioContext, note, mtof } from './audio.js';
 import { eventsAtBeat, swung } from './transport.js';
+import { strumHits, hitNotes, strumById } from './strum.js';
 
 const LOOKAHEAD = 0.25, TICK_MS = 25;
 
@@ -23,7 +24,7 @@ export function playNotes(notes, step = 0.18) {
   notes.forEach((m, i) => note(mtof(m), t + i * step, 0.7, 0.15));
 }
 
-// opts: {chords: [{midi:[...]}], bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
+// opts: {chords: [{midi:[...]}], strum (pattern id, see strum.js), bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
 // returns {stop()}.
 export function startProgression(opts) {
   const ac = audioContext();
@@ -50,8 +51,8 @@ export function startProgression(opts) {
       for (const ev of eventsAtBeat(next, opts.chords.length, opts.beats, opts.metronome)) {
         if (ev.type === 'click') click(ac, at, ev.accent);
         else {
-          const dur = Math.min(3, opts.beats * beat);
-          [...opts.chords[ev.index].midi].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.03, dur, 0.11));
+          const pat = strumById(opts.strum || 'single');
+          for (const h of strumHits(pat.id, opts.beats)) for (const n of hitNotes(h, opts.chords[ev.index].midi, 0.03, pat.spread)) note(mtof(n.midi), at + h.at * beat + n.dt, Math.min(3, Math.max(0.1, h.len * beat)), 0.11 * n.vol);
           setTimeout(() => { if (!stopped) opts.onChord(ev.index); }, Math.max(0, (at - ac.currentTime) * 1000));
         }
       }
@@ -66,7 +67,7 @@ export function startProgression(opts) {
 
 // Plays a tab: its notes on the sixteenth-note grid, optionally the bar chords
 // strummed on beat 1 and a click on every beat. opts: {events:[{step,dur,midi}],
-// chords:[{step,midi:[...]}], totalSteps, stepSec, beat (steps per beat), loop, metronome, swing (share of the beat
+// chords:[{step,midi:[...]}], strum (pattern id, see strum.js), totalSteps, stepSec, beat (steps per beat), loop, metronome, swing (share of the beat
 // given to the first eighth, 0.5 = straight), onStep(step|-1), onEnd()}.
 // Returns {stop()}.
 export function startTab(opts) {
@@ -77,6 +78,9 @@ export function startTab(opts) {
   const byStep = new Map();
   for (const e of opts.events) byStep.set(e.step, [...(byStep.get(e.step) || []), e]);
   const chordAt = new Map(opts.chords.map(c => [c.step, c.midi]));
+  // how long each chord lasts: until the next chord, or the end of the tab (at most one bar at a time for the single strum's ring, as before)
+  const chordSteps = [...chordAt.keys()].sort((a, b) => a - b);
+  const chordLen = new Map(chordSteps.map((st, i) => [st, (i + 1 < chordSteps.length ? chordSteps[i + 1] : totalSteps) - st]));
   const t0 = ac.currentTime + 0.1;
   let next = 0, timer = null, stopped = false;
   const finish = () => {
@@ -91,7 +95,13 @@ export function startTab(opts) {
       const step = next % totalSteps, at = t0 + next * stepSec;
       if (opts.metronome && step % beat === 0) click(ac, at, step % (beat * 4) === 0);
       const chord = chordAt.get(step);
-      if (chord) [...chord].sort((a, b) => a - b).forEach((m, i) => note(mtof(m), at + i * 0.012, Math.min(3, 4 * beat * stepSec), 0.07)); // a quick strum: the bar's chord should land on the beat, not trail it
+      if (chord) {
+        const len = chordLen.get(step) || 4 * beat, pat = strumById(opts.strum || 'single'); // a quick strum (12 ms a string): the bar's chord should land on the beat, not trail it
+        for (const h of strumHits(pat.id, len / beat)) {
+          const off = (swung(step + h.at * beat, beat, long) - step) * stepSec;
+          for (const n of hitNotes(h, chord, 0.012, pat.spread)) note(mtof(n.midi), at + off + n.dt, Math.min(3, Math.max(0.1, h.len * beat * stepSec)), 0.07 * n.vol);
+        }
+      }
       for (const e of byStep.get(step) || []) {
         if (e.skip) continue; // already sounded by the slide that ran into it
         const start = (swung(step, beat, long) - step) * stepSec, dur = (swung(step + e.dur, beat, long) - swung(step, beat, long)) * stepSec;

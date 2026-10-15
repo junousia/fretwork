@@ -2,7 +2,9 @@ import { esc, parseChord } from './music.js';
 import { getInstrument, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { encodeTabLink, decodeTabLink } from './tab-share.js';
 import { tabOf } from './share.js';
-import { playbackFold, openWhereRoom } from './playback-ui.js';
+import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
+import { getStrum } from './strum.js';
+import { expandChart } from './chart.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, libraryOptions, keyForTemplate, keyValue, barChords } from './progressions.js';
 import { templateBars } from './progressions.js';
@@ -49,6 +51,10 @@ export function mount(root){
         <label class="keylab">Load <select id="tb-prog" aria-label="Load a progression"></select></label>
         <label class="keylab" title="How many times to play the progression: Auto repeats it until there are at least 8 bars">Repeat <select id="tb-repeat"><option value="auto">Auto</option>${[1, 2, 3, 4, 6, 8].map(n => `<option value="${n}">\u00d7${n}</option>`).join('')}</select></label>
         <button type="button" class="share" id="tb-useprog">Load chords</button>
+      </div>
+      <div class="row">
+        <label class="keylab" title="Bars are separated by | (two chords in a bar share it). Repeat a group with (Am F)x2, a section with |: Am F :| (:|x3 for three times), the previous bar with %. Replaces the chords of the tab; your notes stay.">Or type a chart <input id="tb-chart" type="text" size="34" maxlength="400" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="|: Am | F | C G :|x2 | E7"></label>
+        <button type="button" class="share" id="tb-usechart">Load chart</button>
       </div>
       <div class="row">
         <label class="keylab">Style <select id="tb-style">${STYLES.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
@@ -351,7 +357,7 @@ export function mount(root){
     setRunning(true);
     player = startTab({
       events: tabEvents(tab(), inst), chords: opts.backing ? chordsToPlay(inst) : [], totalSteps: tab().bars.length * STEPS, beat: BEAT, swing: SWINGS.find(x => x.id === opts.swing)?.long ?? 0.5,
-      stepSec: stepSeconds(tab().bpm), loop: opts.loop, metronome: opts.metro,
+      stepSec: stepSeconds(tab().bpm), loop: opts.loop, metronome: opts.metro, strum: getStrum(),
       onStep: step => { playStep = step; if (step >= 0) drawPlayhead(step); else surface.querySelector('.tabplayhead')?.remove(); },
       onEnd: () => { player = null; setRunning(false); },
     });
@@ -451,6 +457,7 @@ export function mount(root){
     catch (e) { window.prompt('Copy this tab', text); }
     setTimeout(() => { msg.textContent = ''; }, 2000);
   };
+  bindStrum(root, 'tb');
   backingCb.checked = opts.backing; metroCb.checked = opts.metro; loopCb.checked = opts.loop;
   backingCb.onchange = () => { opts.backing = backingCb.checked; persist(); };
   metroCb.onchange = () => { opts.metro = metroCb.checked; persist(); };
@@ -485,6 +492,18 @@ export function mount(root){
     const bars = tab().bars.length, passes = bars / templateBarCount(tpl);
     cursor.bar = 0; cursor.at = 0; keySel.value = opts.key = keyValue(k); persist();
     genMsg.textContent = `${bars} bar${bars === 1 ? '' : 's'} of chords loaded (${tpl.name}${passes > 1 ? ' \u00d7 ' + passes : ''})`; render();
+  };
+  $('#tb-usechart').onclick = () => {
+    const chart = expandChart(/** @type {HTMLInputElement} */ ($('#tb-chart')).value);
+    const bad = [...new Set(chart.bars.flat().filter(c => !parseChord(c)))];
+    if (!chart.bars.length || bad.length || chart.problems.length) {
+      genMsg.textContent = !chart.bars.length ? 'Type some chords first, for example: Dm7 G7 | Cmaj7' : [bad.length ? `Couldn\u2019t read ${bad.map(b => '\u201c' + b + '\u201d').join(', ')}.` : '', ...chart.problems.map(p => p[0].toUpperCase() + p.slice(1) + '.')].filter(Boolean).join(' ');
+      return;
+    }
+    cancelPending(); stopPlay();
+    commit(withChords(tab(), chart.bars, 1));
+    cursor.bar = 0; cursor.at = 0;
+    genMsg.textContent = `${tab().bars.length} bar${tab().bars.length === 1 ? '' : 's'} of chords loaded from the chart`; render();
   };
   function generate(){
     cancelPending(); stopPlay();

@@ -272,6 +272,13 @@ for (const [label, text] of EXAMPLES) {
   assert(text('Giant Steps', 11).startsWith('Bmaj7 D7 Gmaj7 Bb7 Ebmaj7 Am7 D7 Gmaj7 Bb7 Ebmaj7 F#7 Bmaj7'), `Giant Steps: ${text('Giant Steps', 11).slice(0, 70)}`);
   assert(bars('Blues for Alice', 5).slice(0, 4).join(' | ') === 'Fmaj7 | Em7b5 A7b9 | Dm7 G7 | Cm7 F7' && templateBars(get('Blues for Alice')).length === 12, 'Blues for Alice: Fmaj7, Em7b5 A7b9, Dm7 G7, Cm7 F7 ... (12 bars)');
   assert(text('Autumn Leaves', 7) === 'Am7 D7 Gmaj7 Cmaj7 F#m7b5 B7 Em' && text('12-bar blues', 9) === 'A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7' && text('Minor blues', 9, 'minor') === 'Am7 Am7 Am7 Am7 Dm7 Dm7 Am7 Am7 F7 E7 Am7 E7', 'Autumn Leaves in G, the twelve-bar blues in A and the minor blues in A');
+  // standard changes of well-known tunes and songs, checked against published charts (see NOTES / THIRD_PARTY_NOTICES)
+  assert(text('Blue Bossa', 0, 'minor') === 'Cm7 Cm7 Fm7 Fm7 Dm7b5 G7 Cm7 Cm7 Ebm7 Ab7 Dbmaj7 Dbmaj7 Dm7b5 G7 Cm7 Cm7', `Blue Bossa: ${text('Blue Bossa', 0, 'minor')}`);
+  assert(text('Girl from Ipanema', 5) === 'Fmaj7 Fmaj7 G7 G7 Gm7 Gb7 Fmaj7 Fmaj7', 'Girl from Ipanema A section: Fmaj7 G7 Gm7 Gb7');
+  assert(text('Fly Me', 0) === 'Am7 Dm7 G7 Cmaj7 Fmaj7 Bm7b5 E7 Am7', 'Fly Me to the Moon opens Am7 Dm7 G7 Cmaj7 Fmaj7 Bm7b5 E7 Am7');
+  assert(text('Hotel California', 11, 'minor') === 'Bm F# A E G D Em F#', 'Hotel California verse: Bm F# A E G D Em F#');
+  assert(text('House of the Rising', 9, 'minor') === 'Am C D F Am C E E', 'House of the Rising Sun: Am C D F Am C E E');
+  assert(text("Knockin'", 7) === 'G D Am Am G D C C' && text('Hey Joe', 4) === 'C G D A E' && text('Sweet Home', 2) === 'D C G G' && text('Hallelujah', 0) === 'C Am C Am F G C G', "Knockin' on Heaven's Door, Hey Joe (C G D A E), Sweet Home Alabama, Hallelujah");
   // the key a progression is played in
   const k = (prefix, chosen) => keyForTemplate(get(prefix), chosen);
   assert(k('12-bar blues', '9:minor').t === 9 && k('12-bar blues', '9:minor').mode === 'major', 'a blues picked in A minor is a blues in A (the tonic of the chosen key, the progression\'s own mode)');

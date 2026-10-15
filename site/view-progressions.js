@@ -8,7 +8,9 @@ import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
 import { startProgression, playNotes } from './player.js';
 import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
-import { playbackFold, openWhereRoom } from './playback-ui.js';
+import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
+import { getStrum } from './strum.js';
+import { expandChart } from './chart.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
@@ -28,6 +30,7 @@ export function mount(root){
         <label class="keylab" title="The key the chords are analysed in. Auto works it out from the chords; pick a key to set it yourself - and to play a loaded progression in that key.">Key <select id="pr-key"></select></label>
         <label class="keylab">Load <select id="pr-libprog" aria-label="Load an example or common progression"></select></label>
       </div>
+      <p class="hint">Repeats: <code>(Am F)x2</code> plays a group twice, <code>|: Am F :|</code> a repeat (<code>:|x3</code> three times), <code>%</code> the previous bar.</p>
       <p id="pr-err" class="err" hidden></p>
     </section>
     <div class="stickybar" role="group" aria-label="Playback">
@@ -92,14 +95,17 @@ export function mount(root){
     if(keySel.value!==state.key){state.key='auto';keySel.value='auto';}
   }
   function render(){
-    const toks=state.text.split(/[\s,|]+/).filter(t=>t&&!/^[-–—.:]+$/.test(t));
+    const chart=expandChart(state.text), toks=chart.bars.flat();
     const bad=[]; parsed=[];
     toks.forEach(t=>{const c=parseChord(t); if(c) parsed.push(c); else bad.push(t);});
-    if(bad.length){err.hidden=false;err.textContent=`Couldn’t read ${bad.map(b=>'“'+b+'”').join(', ')}. Use chord names like Am7, F#m7b5, Bb7 or G/B.`;}
+    const msgs=[];
+    if(bad.length) msgs.push(`Couldn’t read ${[...new Set(bad)].map(b=>'“'+b+'”').join(', ')}. Use chord names like Am7, F#m7b5, Bb7 or G/B.`);
+    msgs.push(...chart.problems.map(p=>p[0].toUpperCase()+p.slice(1)+'.'));
+    if(msgs.length){err.hidden=false;err.textContent=msgs.join(' ');}
     else err.hidden=true;
     const detected=parsed.length?detectKey(parsed):null;
     buildKeySelect(detected);
-    if(!parsed.length){strip.innerHTML='';detail.innerHTML='<p class="empty">Type some chords above, separated by spaces. For example: Dm7 G7 Cmaj7</p>';return;}
+    if(!parsed.length){strip.innerHTML='';detail.innerHTML='<p class="empty">Type some chords above, separated by spaces. For example: Dm7 G7 Cmaj7. Repeat with (Am F)x2 or |: Am F :|.</p>';return;}
     if(state.key==='auto') key=detected; else {const [t,mode]=state.key.split(':');key={t:+t,mode};}
     if(state.sel>=parsed.length) state.sel=0;
     sugs=parsed.map(c=>suggest(c,key));
@@ -255,10 +261,11 @@ export function mount(root){
     if(player){ stopPlayback(); return; }
     if(!parsed.length) return;
     setRunning(true);
-    player=startProgression({chords:chordsToPlay(),bpm:state.bpm,beats:state.beats,loop:state.loop,metronome:state.metro,
+    player=startProgression({chords:chordsToPlay(),bpm:state.bpm,beats:state.beats,loop:state.loop,metronome:state.metro,strum:getStrum(),
       onChord:i=>{ playIdx=i; markPlaying(); if(i>=0&&i!==state.sel){ state.sel=i; strip.querySelectorAll('.chip').forEach((b,k)=>b.setAttribute('aria-pressed',String(k===i))); renderDetail(); } },
       onEnd:()=>{ player=null; setRunning(false); }});
   };
+  bindStrum(root,'pr');
   bpmIn.onchange=()=>{ state.bpm=clampBpm(bpmIn.value); bpmIn.value=state.bpm; save(); };
   beatsSel.onchange=()=>{ state.beats=clampBeats(beatsSel.value); save(); };
   loopCb.onchange=()=>{ state.loop=loopCb.checked; save(); };

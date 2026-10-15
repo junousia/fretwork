@@ -12,7 +12,7 @@ const CACHE = 'fretwork-shell-v2';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'app.js', 'music.js', 'positions.js', 'chord-features.js', 'board.js', 'audio.js', 'progressions.js', 'instrument.js', 'voicings.js', 'share.js', 'transport.js', 'player.js', 'arpeggio.js', 'identify.js', 'tab.js', 'tab-view.js', 'tab-share.js', 'solo.js', 'sound.js', 'string-dsp.js',
-  'playback-ui.js', 'view-progressions.js', 'view-scales.js', 'view-chords.js', 'view-identify.js', 'view-compose.js',
+  'playback-ui.js', 'strum.js', 'chart.js', 'view-progressions.js', 'view-scales.js', 'view-chords.js', 'view-identify.js', 'view-compose.js',
   'data/voicings.json',
   'fonts/familjen-grotesk-latin-wght-normal.woff2', 'fonts/familjen-grotesk-latin-ext-wght-normal.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

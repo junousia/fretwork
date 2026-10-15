@@ -36,7 +36,7 @@ export function progressionText(template,key){
  * @typedef {{name:string, group:string, mode:'major'|'minor', degrees:string[], bars?:string[][], home?:number}} ProgressionTemplate
  */
 /** The order the groups are listed in. */
-export const PROGRESSION_GROUPS=['Common','Blues','Jazz','Classics'];
+export const PROGRESSION_GROUPS=['Common','Blues','Jazz','Classics','Songs'];
 /** @type {ProgressionTemplate[]} */
 export const PROGRESSION_LIBRARY=[
   {name:'I–IV–V (three-chord rock)',group:'Common',mode:'major',degrees:['I','IV','V']},
@@ -62,6 +62,15 @@ export const PROGRESSION_LIBRARY=[
   {name:'Confirmation',group:'Classics',mode:'major',home:5,degrees:[],bars:[['Imaj7'], ['viiø7', 'III7'], ['vi7', 'II7'], ['v7', 'I7'], ['i7', 'IV7'], ['iiiø7', 'VI7'], ['II7'], ['V7'], ['Imaj7'], ['viiø7', 'III7'], ['vi7', 'II7'], ['v7', 'I7'], ['i7', 'IV7'], ['iiiø7', 'VI7'], ['ii7', 'V7'], ['Imaj7'], ['v7'], ['I7'], ['IVmaj7'], ['IVmaj7'], ['bvii7'], ['bIII7'], ['bVImaj7'], ['ii7', 'V7'], ['Imaj7'], ['viiø7', 'III7'], ['vi7', 'II7'], ['v7', 'I7'], ['i7', 'IV7'], ['iiiø7', 'VI7'], ['ii7', 'V7'], ['Imaj7']]},
   {name:'Blues for Alice (jazz blues)',group:'Classics',mode:'major',home:5,degrees:[],bars:[['Imaj7'], ['viiø7', 'III7b9'], ['vi7', 'II7'], ['v7', 'I7'], ['IV7'], ['iv7', 'bVII7'], ['iii7', 'VI7'], ['biii7', 'bVI7'], ['ii7'], ['V7'], ['Imaj7', 'vi7'], ['ii7', 'V7']]},
   {name:'Summertime',group:'Classics',mode:'minor',home:7,degrees:[],bars:[['i', 'V7'], ['i', 'V7'], ['i', 'V7'], ['i', 'I7'], ['iv'], ['iv'], ['iiø7'], ['V7'], ['i'], ['i'], ['i'], ['iv7', 'bVII7'], ['bIIImaj7', 'bVI7'], ['iiø7', 'V7'], ['i'], ['iiø7', 'V7']]},
+  {name:'Blue Bossa',group:'Classics',mode:'minor',home:0,degrees:['i7','i7','iv7','iv7','iiø7','V7','i7','i7','biii7','bVI7','bIImaj7','bIImaj7','iiø7','V7','i7','i7']},
+  {name:'Girl from Ipanema (A section)',group:'Classics',mode:'major',home:5,degrees:['Imaj7','Imaj7','II7','II7','ii7','bII7','Imaj7','Imaj7']},
+  {name:'Fly Me to the Moon (first 8 bars)',group:'Classics',mode:'major',home:0,degrees:['vi7','ii7','V7','Imaj7','IVmaj7','viiø7','III7','vi7']},
+  {name:'Hotel California (verse)',group:'Songs',mode:'minor',home:11,degrees:['i','V','bVII','IV','bVI','bIII','iv','V']},
+  {name:'House of the Rising Sun',group:'Songs',mode:'minor',home:9,degrees:['i','bIII','IV','bVI','i','bIII','V','V']},
+  {name:"Knockin' on Heaven's Door",group:'Songs',mode:'major',home:7,degrees:['I','V','ii','ii','I','V','IV','IV']},
+  {name:'Hey Joe',group:'Songs',mode:'major',home:4,degrees:['bVI','bIII','bVII','IV','I']},
+  {name:'Sweet Home Alabama',group:'Songs',mode:'major',home:2,degrees:['I','bVII','IV','IV']},
+  {name:'Hallelujah (verse)',group:'Songs',mode:'major',home:0,degrees:['I','vi','I','vi','IV','V','I','V']},
 ];
 /** The chords of each bar of a progression. @param {ProgressionTemplate} t @returns {string[][]} */
 export const templateBars=t=>t.bars||t.degrees.map(d=>[d]);
