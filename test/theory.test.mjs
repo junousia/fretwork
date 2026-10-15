@@ -2,6 +2,7 @@ import fs from 'fs';
 import { CHORDS, parseChord, detectKey, suggest, keyName, spell, chordFlats, TUNING, SCALES } from '../site/music.js';
 import { FEATURE_GROUPS, chordFeatures } from '../site/chord-features.js';
 import { getPositions, positionFrets } from '../site/positions.js';
+import { PROGRESSION_LIBRARY, PROGRESSION_GROUPS, progressionText, barChords, keyForTemplate, templateBars, libraryOptions } from '../site/progressions.js';
 import { board } from '../site/board.js';
 
 let failures = 0;
@@ -223,6 +224,62 @@ for (const [label, text] of EXAMPLES) {
     const top = sugs[0];
     console.log(`  ${c.name.padEnd(8)} -> ${top ? top.s.name : 'no match'}  [${sugs.map(x=>x.s.short).join(', ')}]`);
   });
+}
+
+// --- key detection ("Auto" in Progressions): a twelve-bar blues is in the key of its I chord, not a fourth above it
+{
+  const key = text => detectKey(text.split(' ').map(parseChord));
+  const NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const blues = PROGRESSION_LIBRARY.find(p => p.name.startsWith('12-bar blues'));
+  for (let t = 0; t < 12; t++) {
+    const k = key(progressionText(blues, { t, mode: /** @type {'major'} */ ('major') }));
+    assert(k.t === t && k.mode === 'major', `a twelve-bar blues in ${NAMES[t]} is detected as ${NAMES[t]} (got ${keyName(k)})`);
+  }
+  assert(keyName(key('A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7')) === 'A major', 'the twelve-bar blues in A is A, not D major');
+  assert(keyName(key('A9 D9 E9')) === 'A major' && keyName(key('E7 A7 B7 A7')) === 'E major' && keyName(key('E7 A7 D7 A7')) === 'A major', 'quick blues shapes (7th and 9th chords, starting on the V) find the I');
+  assert(keyName(key('E7 A7 D7 G7 C7')) === 'C major', 'a cycle of dominants is not a blues (the usual scoring decides)');
+  assert(keyName(key('Am7 Am7 Dm7 Am7 F7 E7 Am7')) === 'A minor', 'a minor blues stays minor');
+  // every progression of the library, built in every key of its own mode, is detected in that key
+  const expect = [['I–V–vi–IV', 'major'], ['I–vi–IV–V', 'major'], ['ii–V–I (jazz)', 'major'], ['I–vi–ii–V', 'major'], ['Canon', 'major'], ['I–IV–V', 'major'],
+    ['i–iv–v', 'minor'], ['i–iv–V7', 'minor'], ['Andalusian', 'minor'], ['i–bVI', 'minor'], ['ii°–V7–i', 'minor']];
+  for (const [prefix, mode] of expect) {
+    const tpl = PROGRESSION_LIBRARY.find(p => p.name.startsWith(prefix));
+    let bad = '';
+    for (let t = 0; t < 12; t++) { const k = key(progressionText(tpl, { t, mode: /** @type {'major'|'minor'} */ (mode) })); if (k.t !== t || k.mode !== mode) bad += ` ${NAMES[t]}:${keyName(k)}`; }
+    assert(!bad, `"${tpl.name}" is detected in the key it was built in, in all 12 keys${bad ? ' - wrong:' + bad : ''}`);
+  }
+}
+
+// --- the progression library
+{
+  const NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const names = PROGRESSION_LIBRARY.map(t => t.name);
+  assert(new Set(names).size === names.length, 'every progression has its own name');
+  assert(PROGRESSION_LIBRARY.every(t => PROGRESSION_GROUPS.includes(t.group) && (t.mode === 'major' || t.mode === 'minor') && t.degrees.length > 0), 'every progression has a known group, a mode and chords');
+  assert(PROGRESSION_GROUPS.every(g => PROGRESSION_LIBRARY.some(t => t.group === g)), 'every group has progressions');
+  assert(PROGRESSION_LIBRARY.every(t => !t.bars || t.bars.flat().join() === t.degrees.join()), 'a progression given bar by bar lists the same chords as its flat list');
+  let bad = [];
+  for (const t of PROGRESSION_LIBRARY) for (let tn = 0; tn < 12; tn++) for (const mode of /** @type {('major'|'minor')[]} */ (['major', 'minor'])) for (const c of progressionText(t, { t: tn, mode }).split(' ')) if (!parseChord(c) || /##|bb[A-G]|b#|#b/.test(c)) bad.push(`${t.name}@${NAMES[tn]}:${c}`);
+  assert(!bad.length, `every chord of every progression, in every key, is readable and spelled sanely ${bad.slice(0, 4)}`);
+  const get = prefix => PROGRESSION_LIBRARY.find(t => t.name.startsWith(prefix));
+  /** @param {string} m @returns {'major'|'minor'} */
+  const md = m => (m === 'minor' ? 'minor' : 'major');
+  const text = (prefix, tn, mode = 'major') => progressionText(get(prefix), { t: tn, mode: md(mode) });
+  const bars = (prefix, tn, mode = 'major') => barChords(get(prefix), { t: tn, mode: md(mode) }).map(b => b.join(' '));
+  // the changes of well-known tunes, as on the lead sheets
+  assert(bars('Rhythm changes', 10).slice(0, 4).join(' | ') === 'Bb6 Gm7 | Cm7 F7 | Bb6 Gm7 | Cm7 F7' && bars('Rhythm changes', 10).slice(16, 20).join(' | ') === 'D7 | D7 | G7 | G7' && templateBars(get('Rhythm changes')).length === 32, 'rhythm changes in Bb: I-vi-ii-V, then the bridge D7 G7 C7 F7 (32 bars)');
+  assert(bars('All the Things You Are', 8).slice(0, 7).join(' | ') === 'Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | G7 | Cmaj7' && templateBars(get('All the Things You Are')).length === 36, 'All the Things You Are opens Fm7 Bbm7 Eb7 Abmaj7 Dbmaj7 G7 Cmaj7 in Ab (36 bars)');
+  assert(text('Giant Steps', 11).startsWith('Bmaj7 D7 Gmaj7 Bb7 Ebmaj7 Am7 D7 Gmaj7 Bb7 Ebmaj7 F#7 Bmaj7'), `Giant Steps: ${text('Giant Steps', 11).slice(0, 70)}`);
+  assert(bars('Blues for Alice', 5).slice(0, 4).join(' | ') === 'Fmaj7 | Em7b5 A7b9 | Dm7 G7 | Cm7 F7' && templateBars(get('Blues for Alice')).length === 12, 'Blues for Alice: Fmaj7, Em7b5 A7b9, Dm7 G7, Cm7 F7 ... (12 bars)');
+  assert(text('Autumn Leaves', 7) === 'Am7 D7 Gmaj7 Cmaj7 F#m7b5 B7 Em' && text('12-bar blues', 9) === 'A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7' && text('Minor blues', 9, 'minor') === 'Am7 Am7 Am7 Am7 Dm7 Dm7 Am7 Am7 F7 E7 Am7 E7', 'Autumn Leaves in G, the twelve-bar blues in A and the minor blues in A');
+  // the key a progression is played in
+  const k = (prefix, chosen) => keyForTemplate(get(prefix), chosen);
+  assert(k('12-bar blues', '9:minor').t === 9 && k('12-bar blues', '9:minor').mode === 'major', 'a blues picked in A minor is a blues in A (the tonic of the chosen key, the progression\'s own mode)');
+  assert(k('ii–V–I (jazz)', 'auto').t === 0 && k('i–iv–v', 'auto').t === 9 && k('i–iv–v', 'auto').mode === 'minor', 'with no key chosen: C for a major progression, A for a minor one');
+  assert(k('Giant Steps', 'auto').t === 11 && k('Rhythm changes', 'auto').t === 10 && k('Autumn Leaves', 'auto').t === 7, 'a classic with no key chosen is played in the key it is known in');
+  assert(k('Giant Steps', '4:major').t === 4, 'a chosen key overrides the classic\'s usual one');
+  const html = libraryOptions(String);
+  assert(PROGRESSION_GROUPS.every(g => html.includes(`<optgroup label="${g}">`)) && (html.match(/<option value="\d+">/g) || []).length === PROGRESSION_LIBRARY.length, 'the Load menu lists every progression, grouped');
 }
 
 if (failures > 0) {

@@ -16,7 +16,7 @@ no framework, no build step, no accounts, no tracking.
 
 | Page | What it is for |
 | --- | --- |
-| **Progressions** | Type a chord progression (or load a common one in any key). Each chord gets the scales that fit it, ranked for the key, laid out on the neck with chord tones and safe landing notes marked. Play it with the voicings you chose, or copy a link. |
+| **Progressions** | Type a chord progression, or load one - common progressions, blues, jazz and a few classics - in any key (one Key menu sets the analysis key and transposes what you loaded). Each chord gets the scales that fit it, ranked for the key, laid out on the neck with chord tones and safe landing notes marked. Play it with the voicings you chose, or copy a link. |
 | **Scales** | Pick a scale and a root, isolate one of its positions, and see its arpeggios inside the position. |
 | **Chords** | Pick a root and a chord type, see every voicing (finger numbers, barres) and every chord tone on the neck. A chord builder narrows the list as you toggle minor, 7, maj7, sus4, 9, b5 ... |
 | **Identify** | Mark notes on the fretboard and get every chord that fits, best first, with slash chords and omitted tones. |

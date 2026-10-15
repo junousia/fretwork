@@ -147,8 +147,27 @@ export function suggest(chord,key){
 }
 
 /* Key detection */
+/**
+ * The tonic of a blues: three or more dominant-type chords (7, 9, 13 ...) whose roots are only the I, IV and V of one note, with the I
+ * chord leading (the first chord, else the most frequent), as in the twelve-bar blues A7 D7 E7. Scoring chords by the notes they share with a
+ * scale reads such a progression as the V7 / I7 / IV key a fourth or fifth away (the 12-bar blues in A came out as "D major"), so the blues
+ * pattern is recognised first. Returns the pitch class of the I, or null if the chords are not a blues.
+ * @param {Chord[]} chords @returns {number|null}
+ */
+function bluesTonic(chords){
+  if(chords.length<3||!chords.every(c=>isDominantish(c.iv))) return null;
+  const roots=chords.map(c=>c.root), distinct=[...new Set(roots)];
+  if(distinct.length<2) return null;
+  const fits=(/** @type {number} */ r)=>roots.every(x=>[r,(r+5)%12,(r+7)%12].includes(x));
+  if(fits(roots[0])) return roots[0];
+  const count=(/** @type {number} */ r)=>roots.filter(x=>x===r).length;
+  const cands=distinct.filter(fits).sort((a,b)=>count(b)-count(a));
+  return cands.length&&count(cands[0])>=roots.length*0.4 ? cands[0] : null;
+}
 /** Best-fitting key for a list of chords. @param {Chord[]} chords @returns {{t:number, mode:'major'|'minor', sc:number}|null} */
 export function detectKey(chords){
+  const blues=bluesTonic(chords);
+  if(blues!==null) return {t:blues,mode:'major',sc:100};
   let best=null;
   for(let t=0;t<12;t++) for(const mode of /** @type {('major'|'minor')[]} */ (['major','minor'])){
     const set=new Set((mode==='major'?MAJ:MIN).map(x=>(x+t)%12)), lead=(t+11)%12;

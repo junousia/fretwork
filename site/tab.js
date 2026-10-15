@@ -130,14 +130,18 @@ export const MIN_AUTO_BARS = 8;
 export const repeatsFor = (len, repeat) => (repeat === 'auto' ? Math.max(1, Math.ceil(MIN_AUTO_BARS / Math.max(1, len))) : Math.max(1, Math.floor(+repeat) || 1));
 
 /**
- * Lay a chord progression into the tab, one chord per bar, repeated (at most MAX_BARS bars). Notes already in a bar
- * stay in it; chords, scale and position choices are replaced.
- * @param {Tab} tab @param {string[]} names @param {string|number} [repeat] 'auto' or a count @returns {Tab}
+ * Lay a chord progression into the tab, repeated (at most MAX_BARS bars). Each entry is one bar: a chord name, or the chord names of a bar
+ * with more than one, spread evenly across it. Notes already in a bar stay in it; chords, scale and position choices are replaced.
+ * @param {Tab} tab @param {(string|string[])[]} bars @param {string|number} [repeat] 'auto' or a count @returns {Tab}
  */
-export function withChords(tab, names, repeat = 'auto') {
-  if (!names.length) return tab;
-  const n = Math.min(MAX_BARS, names.length * repeatsFor(names.length, repeat));
-  return { ...tab, bars: Array.from({ length: n }, (_, i) => ({ chords: [{ at: 0, name: names[i % names.length] }], notes: tab.bars[i]?.notes || [] })) };
+export function withChords(tab, bars, repeat = 'auto') {
+  if (!bars.length) return tab;
+  const list = bars.map(b => (Array.isArray(b) ? b : [b]).filter(Boolean));
+  const n = Math.min(MAX_BARS, list.length * repeatsFor(list.length, repeat));
+  return { ...tab, bars: Array.from({ length: n }, (_, i) => {
+    const names = list[i % list.length];
+    return { chords: names.map((name, k) => ({ at: Math.floor((k * STEPS) / names.length), name })), notes: tab.bars[i]?.notes || [] };
+  }) };
 }
 
 /** @param {Tab} tab @param {number} [index] insert before this bar (default: at the end) @returns {Tab} */

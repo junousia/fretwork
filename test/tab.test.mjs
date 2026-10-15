@@ -270,6 +270,9 @@ assert(tabToText(x, UKE.midi).split('\n').filter(l => /\|$/.test(l)).length === 
   assert(withChords(base, ['A7', 'D7', 'E7'], 4).bars.length === 12 && withChords(base, ['A7', 'D7', 'E7'], 8).bars.length === 24, 'an explicit count repeats it that many times');
   assert(withChords(base, ['A', 'B'], 99).bars.length === MAX_BARS && withChords(base, ['C'], 'auto').bars.length === 8, `a long repeat is cut at ${MAX_BARS} bars`);
   assert(withChords(base, [], 4) === base, 'no chords changes nothing');
+  const two = withChords(base, [['A7', 'D7'], 'E7', ['Am', 'Dm', 'E7']], 1);
+  assert(two.bars.length === 3 && two.bars[0].chords.map(c => c.at + c.name).join() === '0A7,24D7' && two.bars[1].chords.map(c => c.at + c.name).join() === '0E7' && two.bars[2].chords.map(c => c.at + c.name).join() === '0Am,16Dm,32E7', 'bars with more than one chord spread them evenly across the bar');
+  assert(withChords(base, [['A7', ''], ['', '']], 1).bars.map(b => b.chords.length).join() === '1,0', 'empty chord names are skipped');
   assert(withChords({ ...base, title: 'x', bpm: 77 }, ['C', 'G'], 2).title === 'x' && withChords({ ...base, bpm: 77 }, ['C', 'G'], 2).bpm === 77, 'title and tempo are kept');
 }
 

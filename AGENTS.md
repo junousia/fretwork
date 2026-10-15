@@ -305,6 +305,16 @@ mount and on `hashchange` via `openShared`: it pushes the shared tab onto the un
 user's own), applies the setup/generator settings, and tidies the long hash away. `app.js` applies the setup
 before the views mount, like Progressions links.
 
+### The progression library and the Key menu
+
+`PROGRESSION_LIBRARY` (progressions.js) holds templates written as degrees (`ii7 V7 Imaj7`): `group` (Common / Blues / Jazz / Classics),
+`mode` (the key mode they end up in), optional `bars` (chords per bar when a bar has two), optional `home` (the usual tonic of a classic).
+`keyForTemplate(template, chosen)` is the one rule for both pages: the TONIC of the chosen key (or `home`, else C / A) with the template's own mode,
+so the Key menu always shows the key the progression is really in; changing the Key menu while a progression is loaded and unedited re-applies it
+(transposes). Jazz and Classics spell Eb / Ab / Bb flat whatever the key. The Classics' degrees came from the Weimar Jazz Database's chord_changes
+(script in the maintainer's notes); the tests check the openings against the well-known lead-sheet changes. `detectKey` recognises a blues first
+(`bluesTonic`: 3+ dominant chords, roots only I / IV / V of one note) because chord-vs-scale scoring read a 12-bar blues in A as D major.
+
 ### Calibration against real solos (2026-10-14)
 
 The generator's defaults were tuned against the Weimar Jazz Database (435 solos in 4/4; chord tones = 1-3-5-7 of the chord in effect).
