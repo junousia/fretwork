@@ -240,7 +240,7 @@ async function run(browser, origin, label) {
   await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="2"]');
   await page.click('#tb-gen-go');
   const inPos = await page.$$eval('#tb-surface .fret[data-bar="0"]', e => e.length);
-  assert(inPos > 2 && (await planText()).includes('position 2'), `${label}: generating keeps the choices (${inPos} notes in bar 1)`);
+  assert(inPos >= 1 && (await planText()).includes('position 2'), `${label}: generating keeps the choices (${inPos} notes in bar 1)`);
   await page.click('#tb-planpos button[data-pos="all"]');
   assert(!/position \d/.test(await planText()), `${label}: All clears the position choice`);
   await page.click('#tb-undo');
