@@ -9,7 +9,7 @@ import { clampBpm, clampBeats } from './transport.js';
 import { startProgression, playNotes } from './player.js';
 import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
-import { getStrum } from './strum.js';
+import { getStrum } from './strum-patterns.js';
 import { expandChart } from './chart.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
 

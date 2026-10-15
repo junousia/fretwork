@@ -3,7 +3,7 @@ import { getInstrument, getSetup, applySetup, onInstrumentChange } from './instr
 import { encodeTabLink, decodeTabLink } from './tab-share.js';
 import { tabOf } from './share.js';
 import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
-import { getStrum } from './strum.js';
+import { getStrum } from './strum-patterns.js';
 import { expandChart } from './chart.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, libraryOptions, keyForTemplate, keyValue, barChords } from './progressions.js';

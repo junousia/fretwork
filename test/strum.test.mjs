@@ -1,5 +1,5 @@
 // Strum patterns: where the hits fall over chords of different lengths and what each hit plays.
-import { STRUMS, strumHits, hitNotes, strumById } from '../site/strum.js';
+import { STRUMS, strumHits, hitNotes, strumById } from '../site/strum-patterns.js';
 
 let failures = 0;
 const assert = (c, m) => { if (!c) { console.log(`FAIL: ${m}`); failures++; } };

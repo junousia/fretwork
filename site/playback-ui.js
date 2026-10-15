@@ -1,4 +1,4 @@
-import { STRUMS, getStrum, setStrum } from './strum.js';
+import { STRUMS, getStrum, setStrum } from './strum-patterns.js';
 // The "Tempo and playback" controls shared by the pages that play things (Progressions, Compose), so they look and
 // read the same everywhere: the same fold, the same first three controls in the same order (Tempo, Loop, Click),
 // then anything specific to the page. Element ids are `<prefix>-bpm`, `<prefix>-loop`, `<prefix>-metro`.

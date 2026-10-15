@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.1 - 2026-10-15
+
+### Fixed
+- The strumming module moved to a new file name (`strum-patterns.js`): the CDN in front of the public site had cached a "not found" for the first name
+  during the 2.3.0 deployment, which would have broken the page for visitors until it expired.
+
 ## 2.3.0 - 2026-10-15
 
 ### Added
