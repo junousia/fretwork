@@ -59,7 +59,7 @@ async function composePage(opts) {
   await page.waitForSelector('#tb-surface .tabhit');
   await page.evaluate(() => { document.querySelectorAll('#tb-gen, #tb-more').forEach(d => { /** @type {any} */ (d).open = true; }); });
   await page.uncheck('#tb-autoplay');
-  await page.selectOption('#tb-prog', '6'); await page.selectOption('#tb-progkey', '9:major'); await page.click('#tb-useprog');
+  await page.selectOption('#tb-key', '9:major'); await page.selectOption('#tb-prog', { label: '12-bar blues' }); await page.click('#tb-useprog');
   await page.selectOption('#tb-style', 'blues'); await page.selectOption('#tb-feel', 'shuffle'); await page.selectOption('#tb-evolve', 'arc');
   await page.selectOption('#tb-density', 'medium'); await page.selectOption('#tb-gentech', 'some');
   await page.fill('#tb-seed', '4242'); await page.dispatchEvent('#tb-seed', 'change');

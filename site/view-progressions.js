@@ -2,7 +2,7 @@ import { parseChord, detectKey, suggest, keyName, spell, chordFlats, esc } from 
 import { getPositions, positionFrets } from './positions.js';
 import { board, fitBoard, voicingSpan } from './board.js';
 import { play, chordMidiNotes } from './audio.js';
-import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
+import { PROGRESSION_LIBRARY, progressionText, libraryOptions, keyForTemplate, keyValue } from './progressions.js';
 import { getInstrument, getInstrumentId, getSetup, applySetup, onInstrumentChange } from './instrument.js';
 import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
@@ -13,13 +13,6 @@ import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voi
 
 const STORE_KEY = 'gtr-progressions-v1';
 
-const EXAMPLES=[
-  ['Autumn-style changes','Am7 D7 Gmaj7 Cmaj7 F#m7b5 B7 Em'],
-  ['ii–V–I in C','Dm7 G7 Cmaj7'],
-  ['12-bar blues in A','A7 D7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7'],
-  ['Pop in G','G D Em C'],
-  ['Minor groove','Am7 Dm7 Am7 E7']
-];
 const BLUES_NOTE='Blues sound: the minor 3rd rubs against the chord’s major 3rd on purpose. Bend it up a little.';
 
 export function mount(root){
@@ -32,9 +25,8 @@ export function mount(root){
       <label class="big" for="pr-prog">Chords</label>
       <textarea id="pr-prog" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
       <div class="row">
-        <label class="keylab">Key <select id="pr-key"></select></label>
+        <label class="keylab" title="The key the chords are analysed in. Auto works it out from the chords; pick a key to set it yourself - and to play a loaded progression in that key.">Key <select id="pr-key"></select></label>
         <label class="keylab">Load <select id="pr-libprog" aria-label="Load an example or common progression"></select></label>
-        <label class="keylab" id="pr-libkeylab" hidden>in <select id="pr-libkey"></select></label>
       </div>
       <p id="pr-err" class="err" hidden></p>
     </section>
@@ -53,9 +45,9 @@ export function mount(root){
 
   const prog=root.querySelector('#pr-prog'), keySel=root.querySelector('#pr-key'), strip=root.querySelector('#pr-strip'),
         detail=root.querySelector('#pr-detail'), err=root.querySelector('#pr-err'),
-        libProgSel=root.querySelector('#pr-libprog'), libKeySel=root.querySelector('#pr-libkey'), libKeyLab=root.querySelector('#pr-libkeylab');
+        libProgSel=root.querySelector('#pr-libprog');
 
-  const state={text:EXAMPLES[0][1],key:'auto',labels:'notes',sel:0,pick:{},pos:{},vo:{},bpm:90,beats:4,loop:true,metro:false};
+  const state={text:'Am7 D7 Gmaj7 Cmaj7 F#m7b5 B7 Em',key:'auto',labels:'notes',sel:0,pick:{},pos:{},vo:{},bpm:90,beats:4,loop:true,metro:false};
   try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(saved) Object.assign(state,{text:saved.text??state.text,key:saved.key||'auto',labels:saved.labels||'notes',pos:saved.pos||{},vo:saved.vo||{},bpm:clampBpm(saved.bpm??90),beats:clampBeats(saved.beats),loop:saved.loop!==false,metro:!!saved.metro});}catch(e){}
   // A shared link (#progressions?c=...) wins over the saved state.
   function applyShared(sh){ state.text=sh.text; state.key=sh.key||'auto'; state.pick=sh.pick||{}; state.pos=sh.pos||{}; state.vo=sh.vo||{}; state.sel=0; }
@@ -78,24 +70,19 @@ export function mount(root){
   // Tempo and playback options start folded on phones, open where there is room.
   openWhereRoom(root.querySelector('#pr-opts'));
 
-  // One menu for both the fixed examples and the common progressions (which are
-  // transposed into the key chosen next to it).
-  libProgSel.innerHTML='<option value="">Choose\u2026</option>'
-    +`<optgroup label="Examples">${EXAMPLES.map(([label],i)=>`<option value="e${i}">${esc(label)}</option>`).join('')}</optgroup>`
-    +`<optgroup label="Common progressions">${PROGRESSION_LIBRARY.map((p,i)=>`<option value="p${i}">${esc(p.name)}</option>`).join('')}</optgroup>`;
-  let libKeyHtml='';
-  for(const mode of /** @type {('major'|'minor')[]} */ (['major','minor'])) for(let t=0;t<12;t++){const k={t,mode};libKeyHtml+=`<option value="${t}:${mode}">${esc(keyName(k))}</option>`;}
-  libKeySel.innerHTML=libKeyHtml; libKeySel.value='0:major';
+  // One menu of progressions (common ones, blues, jazz, classics). They are written as degrees and played in the key chosen in the Key
+  // menu (the tonic of that key, with the progression's own mode); picking a key while one is loaded transposes it.
+  libProgSel.innerHTML=libraryOptions(esc);
+  let loadedText=null; // the text of the loaded progression, until you edit it
   function applyLibrary(){
-    const v=libProgSel.value; libKeyLab.hidden=!v.startsWith('p');
+    const v=libProgSel.value;
     if(!v) return;
-    let text;
-    if(v[0]==='e') text=EXAMPLES[+v.slice(1)][1];
-    else { const tpl=PROGRESSION_LIBRARY[+v.slice(1)]; const [t,mode]=libKeySel.value.split(':'); text=progressionText(tpl,{t:+t,mode}); }
+    const tpl=PROGRESSION_LIBRARY[+v], k=keyForTemplate(tpl,state.key);
+    state.key=keyValue(k);
+    const text=progressionText(tpl,k); loadedText=text;
     stopPlayback();prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();
   }
   libProgSel.addEventListener('change',applyLibrary);
-  libKeySel.addEventListener('change',applyLibrary);
 
   let parsed=[], key=null, sugs=[];
   function buildKeySelect(detected){
@@ -242,8 +229,8 @@ export function mount(root){
   }
 
   let deb;
-  prog.addEventListener('input',()=>{clearTimeout(deb);libProgSel.value=''; libKeyLab.hidden=true; deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
-  keySel.addEventListener('change',()=>{state.key=keySel.value;save();render();});
+  prog.addEventListener('input',()=>{clearTimeout(deb);libProgSel.value=''; loadedText=null; deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
+  keySel.addEventListener('change',()=>{state.key=keySel.value; if(libProgSel.value&&loadedText!==null&&prog.value===loadedText&&state.key!=='auto') applyLibrary(); else {save();render();}});
   document.addEventListener('keydown',e=>{
     if(root.hidden) return;
     if(/^(TEXTAREA|SELECT|INPUT)$/.test(document.activeElement.tagName)||!parsed.length) return;

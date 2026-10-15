@@ -170,7 +170,7 @@ async function run(browser, origin, label) {
   assert(await page.isVisible('#tb-gen-go') && await page.isVisible('#tb-play') && await page.isVisible('#tb-gen-new'), `${label}: Play, Generate and Another one are all in the top toolbar`);
   const ys = await page.$$eval('#tb-play, #tb-gen-go, #tb-gen-new', e => e.map(x => Math.round(x.getBoundingClientRect().top)));
   assert(ys.every(y => Math.abs(y - ys[0]) < 3), `${label}: and on the same row (${ys})`);
-  await page.selectOption('#tb-prog', '4'); await page.selectOption('#tb-progkey', '0:major');
+  await page.selectOption('#tb-key', '0:major'); await page.selectOption('#tb-prog', { label: 'ii–V–I (jazz)' });
   await page.click('#tb-useprog');
   assert((await page.$$('#tb-surface .tabchord')).length === 9 && (await page.textContent('#tb-genmsg')).includes('9 bars'), `${label}: ii-V-I loads as nine bars with Auto repeat (${await page.textContent('#tb-genmsg')})`);
   await page.selectOption('#tb-repeat', '8'); await page.click('#tb-useprog');
@@ -183,7 +183,7 @@ async function run(browser, origin, label) {
   assert((await page.textContent('#tb-play')).includes('Stop'), `${label}: with "Play it straight after generating" on, Generate starts playing`);
   await page.click('#tb-play'); await page.uncheck('#tb-autoplay');
   // solo generator: load a 12-bar blues, generate, same seed twice is identical, Another one differs, Undo restores
-  await page.selectOption('#tb-prog', '6'); await page.selectOption('#tb-progkey', '9:major'); await page.click('#tb-useprog');
+  await page.selectOption('#tb-key', '9:major'); await page.selectOption('#tb-prog', { label: '12-bar blues' }); await page.click('#tb-useprog');
   assert((await page.$$eval('#tb-chords .chip b', e => e.map(x => x.textContent))).join() === 'A7,D7,E7', `${label}: the progression's chords are gathered (A7 D7 E7)`);
   await page.selectOption('#tb-style', 'blues'); await page.fill('#tb-seed', '4242'); await page.dispatchEvent('#tb-seed', 'change');
   const beforeGen = await frets();
@@ -484,13 +484,21 @@ async function run(browser, origin, label) {
   await pp.goto(origin + '#chords', { waitUntil: 'networkidle' });
   assert(await pp.$eval('#ch-builder', d => !d.open), `${label}: phone starts with the chord builder folded`);
   await ph.close();
-  // the Load menu holds both the examples and the common progressions
+  // one Load menu of grouped progressions, played in the key chosen in the one Key menu
   await page.click('a[data-tab="progressions"]');
-  await page.selectOption('#pr-libprog', 'e1');
-  assert((await page.inputValue('#pr-prog')) === 'Dm7 G7 Cmaj7', `${label}: choosing an example loads it`);
-  assert(await page.isHidden('#pr-libkey'), `${label}: the key picker is only for common progressions`);
-  await page.selectOption('#pr-libprog', 'p0');
-  assert(await page.isVisible('#pr-libkey'), `${label}: common progressions get a key picker`);
+  await page.selectOption('#pr-libprog', { label: 'ii–V–I (jazz)' });
+  assert((await page.inputValue('#pr-prog')) === 'Dm7 G7 Cmaj7', `${label}: choosing a progression with no key chosen plays it in C (${await page.inputValue('#pr-prog')})`);
+  assert((await page.inputValue('#pr-key')) === '0:major', `${label}: and the Key menu then shows the key it was played in`);
+  await page.selectOption('#pr-key', '7:major');
+  assert((await page.inputValue('#pr-prog')) === 'Am7 D7 Gmaj7', `${label}: picking another key transposes the loaded progression (${await page.inputValue('#pr-prog')})`);
+  await page.selectOption('#pr-key', '9:minor'); await page.selectOption('#pr-libprog', { label: '12-bar blues' });
+  await page.waitForFunction(() => /^A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7$/.test(/** @type {HTMLTextAreaElement} */ (document.querySelector('#pr-prog')).value), null, { timeout: 3000 });
+  assert((await page.inputValue('#pr-key')) === '9:major' && (await page.textContent('#pr-key option[value="9:major"]')).includes('A major'), `${label}: a twelve-bar blues "in A minor" is a blues in A, and the Key menu says A major`);
+  await page.selectOption('#pr-key', 'auto'); await page.selectOption('#pr-libprog', { label: 'Giant Steps' });
+  assert((await page.inputValue('#pr-prog')).startsWith('Bmaj7 D7 Gmaj7 Bb7 Ebmaj7'), `${label}: a classic is written the way it is on the lead sheet (${(await page.inputValue('#pr-prog')).slice(0, 40)})`);
+  const groups = await page.$$eval('#pr-libprog optgroup', g => g.map(x => x.label));
+  assert(groups.join() === 'Common,Blues,Jazz,Classics' && (await page.$$('#pr-libkey')).length === 0, `${label}: the Load menu is grouped (${groups}) and there is no second key menu`);
+  await page.selectOption('#pr-key', '0:major'); assert((await page.inputValue('#pr-prog')).startsWith('Cmaj7 Eb7 Abmaj7'), `${label}: Giant Steps transposes to C`);
   await page.fill('#pr-prog', 'Dm7 G7 Cmaj7'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
   await page.check('#lefty-toggle', { force: true }).catch(() => {});
   await page.uncheck('#lefty-toggle'); await page.selectOption('#capo-select', '0'); await page.selectOption('#tuning-select', 'standard');

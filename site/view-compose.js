@@ -4,7 +4,8 @@ import { encodeTabLink, decodeTabLink } from './tab-share.js';
 import { tabOf } from './share.js';
 import { playbackFold, openWhereRoom } from './playback-ui.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
-import { PROGRESSION_LIBRARY, progressionText } from './progressions.js';
+import { PROGRESSION_LIBRARY, libraryOptions, keyForTemplate, keyValue, barChords } from './progressions.js';
+import { templateBars } from './progressions.js';
 import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES, TENSIONS } from './solo.js';
 import { SWINGS } from './transport.js';
 import { keyName, spell, suggest, SC } from './music.js';
@@ -46,7 +47,6 @@ export function mount(root){
       <p class="hint">Name the chords in the tab (or load a progression), then press Generate above. It replaces the notes - Undo brings yours back.</p>
       <div class="row">
         <label class="keylab">Load <select id="tb-prog" aria-label="Load a progression"></select></label>
-        <label class="keylab">in <select id="tb-progkey"></select></label>
         <label class="keylab" title="How many times to play the progression: Auto repeats it until there are at least 8 bars">Repeat <select id="tb-repeat"><option value="auto">Auto</option>${[1, 2, 3, 4, 6, 8].map(n => `<option value="${n}">\u00d7${n}</option>`).join('')}</select></label>
         <button type="button" class="share" id="tb-useprog">Load chords</button>
       </div>
@@ -57,7 +57,7 @@ export function mount(root){
         <label class="keylab">Feel <select id="tb-feel">${FEELS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="How much the line leans on chord tones. Real jazz solos land on a chord tone on only about half of their strong beats; the textbook rule would be nearly all of them.">Chord tones <select id="tb-tension">${TENSIONS.map(x => `<option value="${x.id}">${x.name}</option>`).join('')}</select></label>
         <label class="keylab" title="Hammer-ons, pull-offs, slides, bends and vibrato">Techniques <select id="tb-gentech"><option value="off">Off</option><option value="some">Some</option><option value="lots">Lots</option></select></label>
-        <label class="keylab">Key <select id="tb-key"></select></label>
+        <label class="keylab" title="The key the solo is written in. Auto works it out from the chords; pick a key to set it yourself - and to load a progression in that key.">Key <select id="tb-key"></select></label>
         <label class="keylab">Seed <input id="tb-seed" type="number" min="1" max="999999" step="1" inputmode="numeric"></label>
       </div>
       <div class="row">
@@ -456,11 +456,10 @@ export function mount(root){
   metroCb.onchange = () => { opts.metro = metroCb.checked; persist(); };
   loopCb.onchange = () => { opts.loop = loopCb.checked; persist(); };
   // --- solo generator ---
-  const progSel = $('#tb-prog'), progKey = $('#tb-progkey'), styleSel = $('#tb-style'), densSel = $('#tb-density'), keySel = $('#tb-key'), seedIn = $('#tb-seed'), genMsg = $('#tb-genmsg');
-  progSel.innerHTML = PROGRESSION_LIBRARY.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join('');
+  const progSel = $('#tb-prog'), styleSel = $('#tb-style'), densSel = $('#tb-density'), keySel = $('#tb-key'), seedIn = $('#tb-seed'), genMsg = $('#tb-genmsg');
+  progSel.innerHTML = libraryOptions(esc);
   let keyHtml = '';
   for (const mode of /** @type {('major'|'minor')[]} */ (['major', 'minor'])) for (let t = 0; t < 12; t++) keyHtml += `<option value="${t}:${mode}">${esc(keyName({ t, mode }))}</option>`;
-  progKey.innerHTML = keyHtml; progKey.value = '9:minor';
   keySel.innerHTML = `<option value="auto">Auto (from the chords)</option>${keyHtml}`;
   const feelSel = $('#tb-feel'), swingSel = $('#tb-swing');
   const evSel = $('#tb-evolve'); evSel.value = opts.evolve; evSel.onchange = () => { opts.evolve = evSel.value; persist(); };
@@ -474,17 +473,18 @@ export function mount(root){
   densSel.onchange = () => { opts.density = densSel.value; persist(); };
   keySel.onchange = () => { opts.key = keySel.value; persist(); render(); };
   seedIn.onchange = () => { const v = Math.round(+seedIn.value); opts.seed = v >= 1 && v <= 999999 ? v : opts.seed; seedIn.value = String(opts.seed); persist(); };
+  const templateBarCount = tpl => templateBars(tpl).length;
   const repeatSel = $('#tb-repeat'), autoCb = $('#tb-autoplay');
   repeatSel.value = String(opts.repeat); repeatSel.onchange = () => { opts.repeat = repeatSel.value === 'auto' ? 'auto' : +repeatSel.value; persist(); };
   autoCb.checked = opts.autoplay; autoCb.onchange = () => { opts.autoplay = autoCb.checked; persist(); };
   $('#tb-useprog').onclick = () => {
     cancelPending(); stopPlay();
-    const [t, mode] = progKey.value.split(':');
-    const names = progressionText(PROGRESSION_LIBRARY[+progSel.value], { t: +t, mode: /** @type {'major'|'minor'} */ (mode) }).split(' ');
-    commit(withChords(tab(), names, opts.repeat));
-    const bars = tab().bars.length;
-    cursor.bar = 0; cursor.at = 0; keySel.value = opts.key = progKey.value; persist();
-    genMsg.textContent = `${bars} bar${bars === 1 ? '' : 's'} of chords loaded (${names.length} chord${names.length === 1 ? '' : 's'} \u00d7 ${bars / names.length})`; render();
+    const tpl = PROGRESSION_LIBRARY[+progSel.value]; if (!tpl) return;
+    const k = keyForTemplate(tpl, opts.key);
+    commit(withChords(tab(), barChords(tpl, k), opts.repeat));
+    const bars = tab().bars.length, passes = bars / templateBarCount(tpl);
+    cursor.bar = 0; cursor.at = 0; keySel.value = opts.key = keyValue(k); persist();
+    genMsg.textContent = `${bars} bar${bars === 1 ? '' : 's'} of chords loaded (${tpl.name}${passes > 1 ? ' \u00d7 ' + passes : ''})`; render();
   };
   function generate(){
     cancelPending(); stopPlay();

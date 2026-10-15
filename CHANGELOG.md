@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.2.0 - 2026-10-15
+
+### Fixed
+- Progressions: "Auto" key detection read a twelve-bar blues (all dominant 7th chords on the I, IV and V) as the key a fourth above - the
+  blues in A came out as "D major", C as "F", E as "A", G as "C". The blues pattern is now recognised first and the key is the I chord (A major).
+  The order of the suggested scales and the "In key" badges, which depend on the key, are right again (which scales are offered for a chord never
+  depended on it). Tests cover all twelve keys, the 7th / 9th / starting-on-the-V variants, a minor blues, and that every progression in the
+  library is still detected in the key it was built in.
+
+### Changed
+- Progressions and Compose have **one Key menu** instead of two. It is the key the chords are analysed in (Auto works it out from the chords) and
+  the key a loaded progression is played in: pick a progression and it is played in the chosen key (the tonic of that key with the progression's own
+  mode - a blues "in A minor" is a blues in A) and the menu shows that key; pick another key and the loaded progression is transposed. With Auto
+  chosen, a progression is played in C (A for a minor one), or in the key a classic is known in.
+- The old fixed examples are now progressions like the rest, so they transpose too. **One grouped Load menu**: Common, Blues (12-bar, quick-change,
+  minor), Jazz (ii-V-I, turnaround, minor ii-V-i, Autumn Leaves) and **Classics**.
+
+### Added
+- **Classics** in the Load menu, written as degrees so they can be played in any key: Rhythm changes (I Got Rhythm), All the Things You Are, Giant
+  Steps, Confirmation, Blues for Alice and Summertime, with the chords of each bar (two to a bar where the tune has two) and lead-sheet spelling
+  (Bb, Eb, Ab). Their changes were taken from the Weimar Jazz Database's transcriptions and checked against the well-known lead-sheet changes in tests.
+  In Compose they are laid out bar by bar, with two chords per bar where the tune has them.
+
 ## 2.1.0 - 2026-10-14
 
 ### Changed
