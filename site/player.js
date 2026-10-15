@@ -4,7 +4,7 @@
 // the page is busy; the UI is told which chord is current via onChord().
 import { audioContext, note, mtof } from './audio.js';
 import { eventsAtBeat, swung } from './transport.js';
-import { strumHits, hitNotes, strumById } from './strum.js';
+import { strumHits, hitNotes, strumById } from './strum-patterns.js';
 
 const LOOKAHEAD = 0.25, TICK_MS = 25;
 
@@ -24,7 +24,7 @@ export function playNotes(notes, step = 0.18) {
   notes.forEach((m, i) => note(mtof(m), t + i * step, 0.7, 0.15));
 }
 
-// opts: {chords: [{midi:[...]}], strum (pattern id, see strum.js), bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
+// opts: {chords: [{midi:[...]}], strum (pattern id, see strum-patterns.js), bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
 // returns {stop()}.
 export function startProgression(opts) {
   const ac = audioContext();
@@ -67,7 +67,7 @@ export function startProgression(opts) {
 
 // Plays a tab: its notes on the sixteenth-note grid, optionally the bar chords
 // strummed on beat 1 and a click on every beat. opts: {events:[{step,dur,midi}],
-// chords:[{step,midi:[...]}], strum (pattern id, see strum.js), totalSteps, stepSec, beat (steps per beat), loop, metronome, swing (share of the beat
+// chords:[{step,midi:[...]}], strum (pattern id, see strum-patterns.js), totalSteps, stepSec, beat (steps per beat), loop, metronome, swing (share of the beat
 // given to the first eighth, 0.5 = straight), onStep(step|-1), onEnd()}.
 // Returns {stop()}.
 export function startTab(opts) {
