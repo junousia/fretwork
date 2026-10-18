@@ -83,6 +83,22 @@ async function run(browser, origin, label) {
   await page.waitForSelector('#tb-surface .tabhit');
   const frets = () => page.$$eval('#tb-surface .fret', e => e.map(x => `${x.textContent}@${x.dataset.bar}.${x.dataset.at}.${x.dataset.s}`).join(' '));
   assert((await frets()) === '', `${label}: the tab starts empty`);
+  // the settings tray: closed with a summary of what is set, the tab is within the first screen, buttons stand in for short selects
+  const tray = ['#tb-t-play', '#tb-t-gen', '#tb-t-share'];
+  assert((await Promise.all(tray.map(t => page.getAttribute(t, 'aria-expanded')))).every(v => v === 'false') && (await page.$$eval('.tray', e => e.every(x => x.hidden))), `${label}: the Compose settings start closed`);
+  assert((await page.textContent('#tb-s-play')).includes('90 BPM') && (await page.textContent('#tb-s-gen')).includes('Follow the chords'), `${label}: and say what is set (${await page.textContent('#tb-s-play')} / ${await page.textContent('#tb-s-gen')})`);
+  const tabTop = await page.$eval('#tb-surface', e => e.getBoundingClientRect().top);
+  assert(tabTop < 560, `${label}: the tab starts high on the page (${Math.round(tabTop)} px from the top)`);
+  await page.click('#tb-t-gen');
+  assert(await page.isVisible('#tb-p-gen') && (await page.getAttribute('#tb-t-gen', 'aria-expanded')) === 'true' && !(await page.isVisible('#tb-evolve')), `${label}: the Generator panel opens, with the rarely used settings still folded away`);
+  await page.click('#tb-p-gen .seg button[data-value="busy"]');
+  assert((await page.inputValue('#tb-density')) === 'busy' && (await page.textContent('#tb-s-gen')).includes('Busy'), `${label}: Density is a row of buttons that drive the setting and the summary`);
+  await page.click('#tb-p-gen .seg button[data-value="medium"]');
+  await page.focus('#tb-chart'); await page.keyboard.press('Escape');
+  assert(!(await page.isVisible('#tb-p-gen')) && (await page.evaluate(() => document.activeElement?.id)) === 'tb-t-gen', `${label}: Escape closes the panel and returns to its button`);
+  for (const t of tray) await page.click(t);
+  assert((await page.$$eval('.tray', e => e.every(x => !x.hidden))), `${label}: all three panels can be open at once`);
+  await page.click('#tb-more > summary');
   await page.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="5"]');
   await page.keyboard.press('3'); await page.waitForTimeout(800);
   await page.keyboard.press('5'); await page.waitForTimeout(800);
@@ -258,7 +274,7 @@ async function run(browser, origin, label) {
   assert((await page.textContent('#tb-msg')) === 'Link copied', `${label}: it says the link was copied`);
   const friend = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
   const fp = await friend.newPage();
-  await fp.goto(origin, { waitUntil: 'networkidle' }); await fp.click('a[data-tab="compose"]'); await fp.waitForSelector('#tb-surface .tabhit');
+  await fp.goto(origin, { waitUntil: 'networkidle' }); await fp.click('a[data-tab="compose"]'); await fp.waitForSelector('#tb-surface .tabhit'); await fp.click('#tb-t-share');
   await fp.click('#tb-surface .tabhit[data-bar="0"][data-at="0"][data-s="3"]'); await fp.keyboard.press('9'); await fp.waitForTimeout(800); // the friend has a tab of their own
   const own = await fp.$$eval('#tb-surface .fret', e => e.map(x => x.textContent).join());
   await fp.goto(origin + new URL(sharedUrl).hash, { waitUntil: 'networkidle' });
@@ -497,11 +513,17 @@ async function run(browser, origin, label) {
   await pp.click('#tb-gen-go'); await pp.waitForTimeout(300);
   assert((await pp.$$('#tb-surface .fret')).length > 0, `${label}: Generate works from the pinned bar`);
   await pp.goto(origin + '#scales', { waitUntil: 'networkidle' });
-  // Progressions and Compose play the same way: the same "Tempo and playback" fold with Tempo, Loop, Click first, Play pinned on both
+  // Progressions and Compose play the same way: the same "Playback" settings with Tempo, Loop, Click first, Play pinned on both
   {
-    const optsOf = async hash => { await pp.goto(origin + hash, { waitUntil: 'networkidle' }); return pp.evaluate(() => { const d = /** @type {HTMLDetailsElement} */ (document.querySelector('.view:not([hidden]) details[id$="-opts"]')); return { summary: d.querySelector('summary').textContent.trim(), controls: [...d.querySelectorAll('.transport > *')].slice(0, 3).map(x => x.textContent.trim().replace(/\s+/g, ' ')), open: d.open }; }); };
+    const optsOf = async hash => { await pp.goto(origin + hash, { waitUntil: 'networkidle' }); return pp.evaluate(() => {
+      // Progressions: a fold; Compose: a panel opened from the settings tray
+      const view = /** @type {HTMLElement} */ (document.querySelector('.view:not([hidden])'));
+      const d = /** @type {HTMLElement} */ (view.querySelector('details[id$="-opts"], section[id$="-p-play"]'));
+      const label = d.tagName === 'DETAILS' ? d.querySelector('summary')?.textContent : view.querySelector(`[aria-controls="${d.id}"] b`)?.textContent;
+      return { summary: (label || '').trim(), controls: [...d.querySelectorAll('.transport > *')].slice(0, 3).map(x => (x.textContent || '').trim().replace(/\s+/g, ' ')), open: d.tagName === 'DETAILS' ? /** @type {HTMLDetailsElement} */ (d).open : !d.hidden };
+    }); };
     const pr = await optsOf('#progressions'), cp = await optsOf('#compose');
-    assert(pr.summary === 'Tempo and playback' && pr.summary === cp.summary, `${label}: both pages call their playback settings "Tempo and playback"`);
+    assert(pr.summary === 'Playback' && pr.summary === cp.summary, `${label}: both pages call their playback settings "Playback"`);
     assert(JSON.stringify(pr.controls) === JSON.stringify(cp.controls) && pr.controls.join('|') === 'Tempo BPM|Loop|Click', `${label}: and start with the same controls in the same order (${pr.controls.join(' | ')})`);
     assert(!pr.open && !cp.open, `${label}: and both are folded on a phone`);
     const defaults = async hash => { await pp.goto(origin + hash, { waitUntil: 'networkidle' }); return pp.evaluate(() => ({ loop: /** @type {HTMLInputElement} */ (document.querySelector('.view:not([hidden]) input[id$="-loop"]')).checked, click: /** @type {HTMLInputElement} */ (document.querySelector('.view:not([hidden]) input[id$="-metro"]')).checked })); };

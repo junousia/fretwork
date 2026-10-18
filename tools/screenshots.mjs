@@ -57,7 +57,7 @@ const shot = async (page, name, opts = {}) => { await page.waitForTimeout(250); 
 async function composePage(opts) {
   const { ctx, page } = await open('#compose', opts);
   await page.waitForSelector('#tb-surface .tabhit');
-  await page.evaluate(() => { document.querySelectorAll('#tb-gen, #tb-more').forEach(d => { /** @type {any} */ (d).open = true; }); });
+  await page.evaluate(() => { for (const id of ['#tb-p-gen', '#tb-p-share']) /** @type {any} */ (document.querySelector(id)).hidden = false; /** @type {any} */ (document.querySelector('#tb-more')).open = true; });
   await page.uncheck('#tb-autoplay');
   await page.selectOption('#tb-key', '9:major'); await page.selectOption('#tb-prog', { label: '12-bar blues' }); await page.click('#tb-useprog');
   await page.selectOption('#tb-style', 'blues'); await page.selectOption('#tb-feel', 'shuffle'); await page.selectOption('#tb-evolve', 'arc');
@@ -65,7 +65,7 @@ async function composePage(opts) {
   await page.fill('#tb-seed', '4242'); await page.dispatchEvent('#tb-seed', 'change');
   await page.fill('#tb-title', 'Twelve-bar blues in A'); await page.press('#tb-title', 'Tab');
   await page.click('#tb-gen-go');
-  await page.evaluate(() => { document.querySelectorAll('#tb-gen, #tb-more').forEach(d => { /** @type {any} */ (d).open = false; }); });
+  await page.evaluate(() => { for (const id of ['#tb-p-gen', '#tb-p-share']) /** @type {any} */ (document.querySelector(id)).hidden = true; /** @type {any} */ (document.querySelector('#tb-more')).open = false; });
   return { ctx, page };
 }
 {
