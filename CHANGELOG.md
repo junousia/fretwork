@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.1 - 2026-10-18
+
+### Changed
+- **Scales in the key** lists only the key's own scales - the ones that start on the key's tonic (A minor, A minor pentatonic and A harmonic minor in
+  A minor) - best fit to the chord first. Rotations such as D Dorian or G major pentatonic are no longer listed there; the chord's own list has the
+  scales that start on the chord. Choosing a row now always means "play the key's scale over this chord".
+
 ## 2.4.0 - 2026-10-18
 
 ### Changed

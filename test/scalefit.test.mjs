@@ -40,13 +40,11 @@ for (const key of keys) for (const chord of chords) {
   assert(cs.map(f => f.s.id).sort().join() === want.join(), `${where}: chord scales are exactly the scales on the chord's root that reach the cut-off`);
   assert(cs.every(f => f.root === chord.root && f.score >= MIN_FIT && f.score <= 1 + 1e-9), `${where}: chord scales start on the chord's root and score between the cut-off and 1`);
   assert(cs.every((f, i) => i === 0 || cs[i - 1].score + 1e-12 >= f.score), `${where}: chord scales are ranked best first`);
-  assert(ik.every(f => f.abs.every(p => K.has(p)) && f.score >= MIN_FIT), `${where}: every scale in the key uses only the key's material and reaches the cut-off`);
-  assert(new Set(ik.map(setKey)).size === ik.length, `${where}: scales with the same notes are listed once`);
+  assert(ik.every(f => f.root === key.t && f.abs.every(p => K.has(p)) && f.score >= MIN_FIT), `${where}: every scale in the key starts on the tonic, uses only the key's material and reaches the cut-off`);
   assert(ik.every((f, i) => i === 0 || ik[i - 1].score + 1e-12 >= f.score), `${where}: scales in the key are ranked best first`);
-  // nothing in the key was left out: every note set a scale of the table makes on any root, inside the material and fitting well enough
-  const sets = new Set();
-  for (const s of SCALES) for (let root = 0; root < 12; root++) { const f = fitOf(chord, s, root, K); if (f.inKey === 1 && f.score >= MIN_FIT) sets.add(setKey(f)); }
-  assert(sets.size === ik.length && ik.every(f => sets.has(setKey(f))), `${where}: the scales in the key are all the fitting note sets inside the key's material`);
+  // nothing was left out: every scale of the table on the tonic that stays inside the material and fits well enough is listed
+  const wantKey = SCALES.filter(sc => { const f = fitOf(chord, sc, key.t, K); return f.inKey === 1 && f.score >= MIN_FIT; }).map(sc => sc.id).sort();
+  assert(ik.map(f => f.s.id).sort().join() === wantKey.join(), `${where}: the scales in the key are all the fitting scales on the tonic inside the key's material`);
   // cover is 1 exactly when the scale holds every chord note
   for (const f of cs) assert([...X].every(p => f.abs.includes(p)) === (f.cover === 1), `${where}: ${f.s.id}: cover is 1 only when every chord note is in the scale`);
 }
@@ -68,8 +66,8 @@ for (const key of keys.slice(0, 6)) for (const chord of chords.slice(0, 80)) for
 {
   const dm7 = parseChord('Dm7'), key = { t: 9, mode: /** @type {'minor'} */ ('minor') };
   const bare = scalesInKey(dm7, key, [dm7]), rich = scalesInKey(dm7, key, [dm7, parseChord('E7')]);
-  assert(rich.length >= bare.length && bare.every(f => rich.some(g => setKey(g) === setKey(f))), 'a progression that borrows notes only widens the scales in the key');
-  assert(bare.some(f => f.abs.length === 5 && f.root === 9) || scalesInKey(dm7, key, [dm7]).some(f => [...f.abs].sort((a, b) => a - b).join() === '0,2,4,7,9'), 'the key\'s own pentatonic is offered over a chord it only partly covers');
+  assert(rich.length >= bare.length && bare.every(f => rich.some(g => g.s.id === f.s.id)), 'a progression that borrows notes only widens the scales in the key');
+  assert(bare.some(f => f.s.id === 'minpent' && f.root === 9), 'the key\'s own pentatonic is offered over a chord it only partly covers');
 }
 
 // stored choices

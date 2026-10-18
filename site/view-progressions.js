@@ -216,7 +216,7 @@ export function mount(root){
       });
       h+='</div>';
     };
-    section('Scales in the key','Built from the notes of '+keyName(key)+' (and any note the chords of this progression borrow), ranked by how well they fit '+c.name+'.',groups.inKey);
+    section('Scales in the key','The scales of '+keyName(key)+' itself (from '+spell(key.t,chordFlats(c,key))+', using only its notes and any the chords borrow), ranked by how well they fit '+c.name+'.',groups.inKey);
     section('Scales for '+c.name,'Scales starting on '+spell(c.root,flats)+', ranked by how well they describe the chord and how much of the key they stay in.',groups.chord);
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
