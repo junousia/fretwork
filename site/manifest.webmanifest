@@ -21,6 +21,7 @@
     { "name": "Scales", "url": "./#scales" },
     { "name": "Chords", "url": "./#chords" },
     { "name": "Identify a chord", "url": "./#identify" },
+    { "name": "Listen to a note", "url": "./#listen" },
     { "name": "Compose a solo", "url": "./#compose" }
   ]
 }

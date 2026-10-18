@@ -191,6 +191,22 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .scope{display:block;width:100%;height:34px;color:var(--accent);margin:0 0 6px}
 .scope[hidden]{display:none}
 .bn.lit{opacity:1;stroke:#fff;stroke-width:3;filter:drop-shadow(0 0 6px #fff)}
+.listen{text-align:center;margin:10px 0 4px}
+.lsnote{display:flex;justify-content:center;align-items:baseline;gap:2px;line-height:1}
+.lsname{font-size:clamp(4rem,14vw,7rem);font-weight:700}
+.lsoct{font-size:clamp(1.6rem,5vw,2.6rem);color:var(--muted);font-weight:600}
+.lsmeter{position:relative;height:18px;max-width:520px;margin:12px auto 6px;border:1.5px solid var(--line);border-radius:99px;background:var(--panel)}
+.lsmeter .zone{position:absolute;top:0;bottom:0;left:calc(50% - 5%);width:10%;background:var(--line);opacity:.55}
+.lsmeter.ok .zone{background:var(--accent);opacity:.7}
+.lsmeter .needle{position:absolute;top:-4px;bottom:-4px;width:4px;margin-left:-2px;border-radius:2px;background:var(--ink);left:50%;transition:left .12s linear}
+.lsmeter.ok .needle{background:var(--accent)}
+.lsdetail{margin:4px 0;font-weight:600}
+.lsstring{margin:0;color:var(--muted);min-height:1.4em}
+.listenneck .bn,.listenneck .bn+text{opacity:0}
+.listenneck .bn.lit,.listenneck .bn.lit+text{opacity:1}
+h2.lssub{font-size:1.05rem;letter-spacing:0;margin:30px 0 6px}
+.lshist{display:flex;flex-wrap:wrap;gap:6px;min-height:2rem}
+.lsh{min-width:0;padding:4px 10px;cursor:default}
 .edittools{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:10px 0 6px}
 .edittools .keylab{flex-wrap:wrap}
 .edittools .seg{max-width:100%;overflow-x:auto}
