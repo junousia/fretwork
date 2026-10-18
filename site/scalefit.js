@@ -7,9 +7,8 @@
 //           the fifth is the b9 or b13 colour of a dominant chord and is not counted.
 //   fit   = cover x (1 - clash / scale size)      0..1
 // Two lists come out of it, both ranked by fit and cut at MIN_FIT:
-//   scalesInKey   - every scale, on any root, whose notes all belong to the key's material, ranked by how well it fits the chord;
-//                   scales with the same notes are one entry, named by the rotation that starts on the chord's root, else on the
-//                   key's tonic
+//   scalesInKey   - the key's own scales: those that start on the key's tonic and whose notes all belong to the key's material,
+//                   ranked by how well they fit the chord
 //   chordScales   - scales on the chord's own root, ranked by fit x the share of the scale inside the key's material
 // The key's material is the key's seven notes plus any note the chords of the progression bring with them (the G# of an E7 in A minor,
 // the b7s of a blues): the notes the music actually uses, not only the ones its key signature names.
@@ -77,22 +76,13 @@ export function chordScales(chord, key, chords = [chord]) {
 }
 
 /**
- * Scales whose notes all lie in the key, on any root, best fit to the chord first. Scales with the same notes are one entry.
+ * The key's own scales: scales that start on the key's tonic and whose notes all lie in the key's material (A minor, A minor pentatonic and
+ * A harmonic minor in A minor), best fit to the chord first.
  * @param {{root:number, iv:number[]}} chord @param {Key} key @param {{root:number, iv:number[]}[]} [chords] the whole progression @returns {Fit[]}
  */
 export function scalesInKey(chord, key, chords = [chord]) {
   const K = keyNotes(key, chords);
-  /** @type {Map<string, Fit[]>} */
-  const bySet = new Map();
-  for (const s of SCALES) for (let root = 0; root < 12; root++) {
-    const f = fitOf(chord, s, root, K);
-    if (f.inKey < 1 || f.score < MIN_FIT) continue;
-    const id = [...f.abs].sort((a, b) => a - b).join();
-    bySet.set(id, [...(bySet.get(id) || []), f]);
-  }
-  /** @param {Fit} f */
-  const rank = f => (f.root === chord.root ? 0 : f.root === key.t ? 1 : 2);
-  return [...bySet.values()].map(group => group.sort((a, b) => rank(a) - rank(b) || SCALES.findIndex(x => x.id === a.s.id) - SCALES.findIndex(x => x.id === b.s.id))[0]).sort(byFit);
+  return SCALES.map(s => fitOf(chord, s, key.t, K)).filter(f => f.inKey === 1 && f.score >= MIN_FIT).sort(byFit);
 }
 
 /** The id a chosen scale is stored under: the scale's id, with "@root" when it does not start on the chord's root. @param {string} id @param {number} root @param {number} chordRoot @returns {string} */
