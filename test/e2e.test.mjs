@@ -455,10 +455,15 @@ async function run(browser, origin, label) {
     await page.waitForTimeout(40);
   }
   assert(seen.size >= 3, `${label}: playback highlighted ${seen.size} different chords (expected 3)`);
+  // what is played is drawn: notes of the chord glow on the neck, and the spectrum strip shows while it plays
+  const litSeen = await page.waitForFunction(() => document.querySelectorAll('#pr-detail circle.bn.lit').length > 0, null, { timeout: 4000 }).then(() => true, () => false);
+  assert(litSeen, `${label}: the notes being played glow on the fretboard`);
+  assert(await page.isVisible('#pr-scope'), `${label}: the spectrum strip shows while it plays`);
   await page.click('#pr-run');
   await page.waitForTimeout(300);
   assert((await page.$$('#pr-strip .chip.playing')).length === 0, `${label}: Stop clears the playing highlight`);
   assert((await page.textContent('#pr-run')).includes('Play'), `${label}: Stop turns back into Play`);
+  assert(!(await page.isVisible('#pr-scope')) && (await page.$$('#pr-detail circle.bn.lit')).length === 0, `${label}: and the strip and the glow go away`);
 
   // setup: tuning, capo and left-handed change the neck and travel in share links
   assert(await page.isHidden('#optbar'), `${label}: the setup menu starts collapsed`);

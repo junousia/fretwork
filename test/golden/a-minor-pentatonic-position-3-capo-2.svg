@@ -60,88 +60,88 @@
 <line x1="604" y1="12" x2="604" y2="206" stroke="#C9B8A3" stroke-width="1" stroke-dasharray="2,3"/>
 <circle cx="688" cy="8" r="8" fill="#2A170F"/>
 <text x="688" y="12" text-anchor="middle" font-size="10" font-weight="700" fill="#F5EBDD" font-family="inherit">5</text>
-<circle cx="72" cy="34" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="72" cy="34" r="12.5" class="bn" data-s="0" data-f="1" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="72" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="184" cy="34" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="184" cy="34" r="12.5" class="bn" data-s="0" data-f="3" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="184" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
-<circle cx="352" cy="34" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<circle cx="352" cy="34" r="12.5" class="bn" data-s="0" data-f="6" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
 <text x="352" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">C</text>
-<circle cx="464" cy="34" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
+<circle cx="464" cy="34" r="12.5" class="bn" data-s="0" data-f="8" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
 <text x="464" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit">D</text>
-<circle cx="576" cy="34" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="576" cy="34" r="12.5" class="bn" data-s="0" data-f="10" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="576" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">E</text>
-<circle cx="744" cy="34" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="744" cy="34" r="12.5" class="bn" data-s="0" data-f="13" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="744" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="856" cy="34" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="856" cy="34" r="12.5" class="bn" data-s="0" data-f="15" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="856" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
-<circle cx="72" cy="64" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="72" cy="64" r="12.5" class="bn" data-s="1" data-f="1" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="72" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">D</text>
-<circle cx="184" cy="64" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="184" cy="64" r="12.5" class="bn" data-s="1" data-f="3" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="184" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">E</text>
-<circle cx="352" cy="64" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
+<circle cx="352" cy="64" r="12.5" class="bn" data-s="1" data-f="6" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
 <text x="352" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit">G</text>
-<circle cx="464" cy="64" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1"/>
+<circle cx="464" cy="64" r="12.5" class="bn" data-s="1" data-f="8" fill="#C23B2E" stroke="#2A170F" stroke-width="1"/>
 <text x="464" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit">A</text>
-<circle cx="632" cy="64" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="632" cy="64" r="12.5" class="bn" data-s="1" data-f="11" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="632" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">C</text>
-<circle cx="744" cy="64" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="744" cy="64" r="12.5" class="bn" data-s="1" data-f="13" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="744" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">D</text>
-<circle cx="856" cy="64" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="856" cy="64" r="12.5" class="bn" data-s="1" data-f="15" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="856" y="68" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">E</text>
-<circle cx="24" cy="94" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="24" cy="94" r="12.5" class="bn" data-s="2" data-f="0" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="24" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
-<circle cx="184" cy="94" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="184" cy="94" r="12.5" class="bn" data-s="2" data-f="3" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="184" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">C</text>
-<circle cx="296" cy="94" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
+<circle cx="296" cy="94" r="12.5" class="bn" data-s="2" data-f="5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
 <text x="296" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit">D</text>
-<circle cx="408" cy="94" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<circle cx="408" cy="94" r="12.5" class="bn" data-s="2" data-f="7" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
 <text x="408" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">E</text>
-<circle cx="576" cy="94" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="576" cy="94" r="12.5" class="bn" data-s="2" data-f="10" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="576" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="688" cy="94" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="688" cy="94" r="12.5" class="bn" data-s="2" data-f="12" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="688" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
-<circle cx="856" cy="94" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="856" cy="94" r="12.5" class="bn" data-s="2" data-f="15" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="856" y="98" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">C</text>
-<circle cx="24" cy="124" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="24" cy="124" r="12.5" class="bn" data-s="3" data-f="0" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="24" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">E</text>
-<circle cx="184" cy="124" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="184" cy="124" r="12.5" class="bn" data-s="3" data-f="3" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="184" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="296" cy="124" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1"/>
+<circle cx="296" cy="124" r="12.5" class="bn" data-s="3" data-f="5" fill="#C23B2E" stroke="#2A170F" stroke-width="1"/>
 <text x="296" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit">A</text>
-<circle cx="464" cy="124" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<circle cx="464" cy="124" r="12.5" class="bn" data-s="3" data-f="8" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
 <text x="464" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">C</text>
-<circle cx="576" cy="124" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="576" cy="124" r="12.5" class="bn" data-s="3" data-f="10" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="576" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">D</text>
-<circle cx="688" cy="124" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="688" cy="124" r="12.5" class="bn" data-s="3" data-f="12" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="688" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">E</text>
-<circle cx="856" cy="124" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="856" cy="124" r="12.5" class="bn" data-s="3" data-f="15" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="856" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="72" cy="154" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="72" cy="154" r="12.5" class="bn" data-s="4" data-f="1" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="72" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">C</text>
-<circle cx="184" cy="154" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="184" cy="154" r="12.5" class="bn" data-s="4" data-f="3" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="184" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">D</text>
-<circle cx="296" cy="154" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<circle cx="296" cy="154" r="12.5" class="bn" data-s="4" data-f="5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
 <text x="296" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">E</text>
-<circle cx="464" cy="154" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
+<circle cx="464" cy="154" r="12.5" class="bn" data-s="4" data-f="8" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
 <text x="464" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit">G</text>
-<circle cx="576" cy="154" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="576" cy="154" r="12.5" class="bn" data-s="4" data-f="10" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="576" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
-<circle cx="744" cy="154" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="744" cy="154" r="12.5" class="bn" data-s="4" data-f="13" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="744" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">C</text>
-<circle cx="856" cy="154" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="856" cy="154" r="12.5" class="bn" data-s="4" data-f="15" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="856" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">D</text>
-<circle cx="72" cy="184" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="72" cy="184" r="12.5" class="bn" data-s="5" data-f="1" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="72" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="184" cy="184" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="184" cy="184" r="12.5" class="bn" data-s="5" data-f="3" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="184" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
-<circle cx="352" cy="184" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
+<circle cx="352" cy="184" r="12.5" class="bn" data-s="5" data-f="6" fill="#E3A21A" stroke="#2A170F" stroke-width="1"/>
 <text x="352" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit">C</text>
-<circle cx="464" cy="184" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
+<circle cx="464" cy="184" r="12.5" class="bn" data-s="5" data-f="8" fill="#EDE6D6" stroke="#2A170F" stroke-width="1"/>
 <text x="464" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit">D</text>
-<circle cx="576" cy="184" r="12.5" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="576" cy="184" r="12.5" class="bn" data-s="5" data-f="10" fill="#E3A21A" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="576" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1A00" font-family="inherit" opacity="0.25">E</text>
-<circle cx="744" cy="184" r="12.5" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="744" cy="184" r="12.5" class="bn" data-s="5" data-f="13" fill="#EDE6D6" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="744" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2A1E16" font-family="inherit" opacity="0.25">G</text>
-<circle cx="856" cy="184" r="12.5" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
+<circle cx="856" cy="184" r="12.5" class="bn" data-s="5" data-f="15" fill="#C23B2E" stroke="#2A170F" stroke-width="1" opacity="0.25"/>
 <text x="856" y="188" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFFFFF" font-family="inherit" opacity="0.25">A</text>
 </svg>

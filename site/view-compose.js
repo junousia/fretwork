@@ -4,6 +4,7 @@ import { encodeTabLink, decodeTabLink } from './tab-share.js';
 import { tabOf } from './share.js';
 import { playbackControls, bindStrum, bindTray, segmentSelect } from './playback-ui.js';
 import { getStrum, strumById } from './strum-patterns.js';
+import { lightNotes, clearLit, createScope } from './live.js';
 import { expandChart } from './chart.js';
 import { chordScales, scalesInKey, pickId } from './scalefit.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
@@ -36,6 +37,7 @@ export function mount(root){
       <button type="button" class="share" id="tb-undo" aria-label="Undo"><span aria-hidden="true">\u21B6</span><span class="lbl"> Undo</span></button>
       <button type="button" class="share" id="tb-redo" aria-label="Redo"><span aria-hidden="true">\u21B7</span><span class="lbl"> Redo</span></button>
     </div>
+    <canvas class="scope" id="tb-scope" hidden aria-hidden="true"></canvas>
     <div class="traybar" role="group" aria-label="Settings">
       <button type="button" class="traybtn" id="tb-t-play" aria-expanded="false" aria-controls="tb-p-play"><b>Playback</b><span id="tb-s-play"></span></button>
       <button type="button" class="traybtn" id="tb-t-gen" aria-expanded="false" aria-controls="tb-p-gen"><b>Generator</b><span id="tb-s-gen"></span></button>
@@ -373,12 +375,13 @@ export function mount(root){
     setRunning(true);
     player = startTab({
       events: tabEvents(tab(), inst), chords: opts.backing ? chordsToPlay(inst) : [], totalSteps: tab().bars.length * STEPS, beat: BEAT, swing: SWINGS.find(x => x.id === opts.swing)?.long ?? 0.5,
-      stepSec: stepSeconds(tab().bpm), loop: opts.loop, metronome: opts.metro, strum: getStrum(),
+      stepSec: stepSeconds(tab().bpm), loop: opts.loop, metronome: opts.metro, strum: getStrum(), onNotes: (notes, ms) => lightNotes(planEl, inst, notes, ms),
       onStep: step => { playStep = step; if (step >= 0) drawPlayhead(step); else surface.querySelector('.tabplayhead')?.remove(); },
       onEnd: () => { player = null; setRunning(false); },
     });
   }
-  function setRunning(on){ playBtn.textContent = on ? '■ Stop' : '▶ Play'; playBtn.setAttribute('aria-pressed', String(on)); }
+  const scope = createScope(/** @type {HTMLCanvasElement} */ ($('#tb-scope')));
+  function setRunning(on){ playBtn.textContent = on ? '■ Stop' : '▶ Play'; playBtn.setAttribute('aria-pressed', String(on)); if (on) scope.start(); else { scope.stop(); clearLit(planEl); } }
 
   // --- PDF: the browser prints a sheet built from the same tab (Save as PDF in the print dialog) ---
   /** @type {HTMLElement|null} */ let sheet = null;

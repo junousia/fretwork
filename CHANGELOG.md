@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.6.0 - 2026-10-18
+
+### Added
+- **You see what is played.** While Progressions plays, the notes of the chord glow on the fretboard as each strum or picked note sounds (the exact
+  strings and frets of the voicing you chose); on Compose the notes of the solo glow on the "Scale and position" board when it is open.
+- **A spectrum strip** under the play bar on both pages while sound plays, drawn from the app's own output, so it shows what you hear. It is not drawn
+  when the system asks for reduced motion.
+
+### Changed
+- All sound now passes one master output (with an analyser for the strip); fretboard notes carry their string and fret in the SVG.
+
 ## 2.5.0 - 2026-10-18
 
 ### Changed
