@@ -70,17 +70,6 @@ export {};
  */
 
 /**
- * A scale suggested for a chord.
- * @typedef {object} Suggestion
- * @property {Scale} s
- * @property {number[]} abs   its notes as absolute pitch classes
- * @property {boolean} inKey
- * @property {boolean} inHarm
- * @property {boolean} extra  a "blues sound" extra, not strictly compatible
- * @property {number} score
- */
-
-/**
  * The state carried in a share link (all but `text` optional).
  * @typedef {object} ProgressionLink
  * @property {string} text   the chord progression as typed

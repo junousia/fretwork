@@ -5,12 +5,13 @@ import { tabOf } from './share.js';
 import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
 import { getStrum } from './strum-patterns.js';
 import { expandChart } from './chart.js';
+import { chordScales, scalesInKey, pickId } from './scalefit.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingLabel } from './voicings.js';
 import { PROGRESSION_LIBRARY, libraryOptions, keyForTemplate, keyValue, barChords } from './progressions.js';
 import { templateBars } from './progressions.js';
 import { generateSolo, scaleFor, soloContext, STYLES, DENSITIES, FEELS, EVOLVES, TENSIONS } from './solo.js';
 import { SWINGS } from './transport.js';
-import { keyName, spell, suggest, SC } from './music.js';
+import { keyName, spell, SC } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
 import { board, fitBoard } from './board.js';
 import { chordMidiNotes } from './audio.js';
@@ -291,12 +292,17 @@ export function mount(root){
     planSig = sig;
     const [kt, kmode] = opts.key === 'auto' ? [] : opts.key.split(':');
     const ctx = soloContext(tab().bars, opts.style, opts.key === 'auto' ? undefined : { t: +kt, mode: /** @type {'major'|'minor'} */ (kmode) });
-    const eff = scaleFor(opts.style, chord, marker, ctx.key, ctx.dominants), auto = scaleFor(opts.style, chord, undefined, ctx.key, ctx.dominants);
+    const eff = scaleFor(opts.style, chord, marker, ctx.key, ctx.dominants, ctx.chords), auto = scaleFor(opts.style, chord, undefined, ctx.key, ctx.dominants, ctx.chords);
     const scale = SC[eff.scaleId], positions = getPositions(scale.iv, eff.root, inst.tuning);
     const chosen = (marker.positions || []).filter(n => n <= positions.length);
-    const ids = suggest(chord, ctx.key).map(x => x.s.id);
-    for (const x of ['minpent', 'majpent', 'blues']) if (!ids.includes(x)) ids.push(x);
-    const nameOf = (/** @type {string} */ id) => `${spell(chord.root, false)} ${SC[id].name}`;
+    const nameOf = (/** @type {string} */ id, /** @type {number} */ root) => `${spell(root, false)} ${SC[id].name}`;
+    /** @type {Map<string, string>} */
+    const inKeyOpts = new Map(), chordOpts = new Map();
+    for (const f of scalesInKey(chord, ctx.key, ctx.chords)) inKeyOpts.set(pickId(f.s.id, f.root, chord.root), nameOf(f.s.id, f.root));
+    for (const f of chordScales(chord, ctx.key, ctx.chords)) { const k = pickId(f.s.id, f.root, chord.root); if (!inKeyOpts.has(k)) chordOpts.set(k, nameOf(f.s.id, f.root)); }
+    for (const x of ['minpent', 'majpent', 'blues']) if (!inKeyOpts.has(x) && !chordOpts.has(x)) chordOpts.set(x, nameOf(x, chord.root));
+    if (marker.scale && !inKeyOpts.has(marker.scale) && !chordOpts.has(marker.scale)) chordOpts.set(marker.scale, nameOf(eff.scaleId, eff.root));
+    const group = (/** @type {string} */ label, /** @type {Map<string, string>} */ m) => m.size ? `<optgroup label="${label}">${[...m].map(([id, nm]) => `<option value="${id}">${esc(nm)}</option>`).join('')}</optgroup>` : '';
     const where = `${m.name} (bar ${m.bar + 1}, beat ${Math.round((1 + m.at / BEAT) * 100) / 100})`;
     const summary = `Scale and position \u00b7 ${esc(where)}: ${esc(scale.short || scale.name)}${chosen.length ? ', position ' + chosen.join(' + ') : ''}`;
     const chordPcs = chord.iv.map(x => (chord.root + x) % 12);
@@ -310,7 +316,7 @@ export function mount(root){
     }
     planEl.innerHTML = `<details class="fold" id="tb-planfold"${planOpen ? ' open' : ''}><summary>${summary}</summary>
       <div class="row">
-        <label class="keylab">Scale <select id="tb-planscale" aria-label="Scale for ${esc(m.name)}"><option value="">Auto: ${esc(spell(auto.root, false))} ${esc(SC[auto.scaleId].name)}</option>${ids.map(id => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label>
+        <label class="keylab">Scale <select id="tb-planscale" aria-label="Scale for ${esc(m.name)}"><option value="">Auto: ${esc(spell(auto.root, false))} ${esc(SC[auto.scaleId].name)}</option>${group('Scales in the key', inKeyOpts)}${group('Scales for ' + m.name, chordOpts)}</select></label>
         <label class="keylab">Position <div class="seg" id="tb-planpos" role="group" aria-label="Positions to play in">
           <button type="button" data-pos="all" aria-pressed="${!chosen.length}">All</button>${positions.map(p => `<button type="button" data-pos="${p.n}" title="Toggle this position" aria-pressed="${chosen.includes(p.n)}">${p.n}</button>`).join('')}</div></label>
       </div>

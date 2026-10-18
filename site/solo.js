@@ -11,7 +11,8 @@
 //   * repeat a rhythm (and its shape) so the line sounds intentional, vary it
 //     in the middle, and end on the root of the last chord.
 // The same seed always gives the same solo.
-import { SC, CHORDS, parseChord, suggest, detectKey, isDominantish } from './music.js';
+import { SC, CHORDS, parseChord, detectKey, isDominantish } from './music.js';
+import { chordScales, readPick } from './scalefit.js';
 import { getPositions, positionFrets } from './positions.js';
 import { STEPS, BEAT, linkedNext } from './tab.js';
 
@@ -224,14 +225,15 @@ const plain = iv => !iv.includes(5) && !iv.includes(2) && !(iv.includes(6) && iv
 /**
  * Which scale (and root) the generator picks by itself over a chord.
  * @param {string} style @param {{root:number, iv:number[]}} chord @param {Key} key @param {boolean} dominants any chord in the piece is a dominant 7th
+ * @param {{root:number, iv:number[]}[]} chords every chord of the piece (the key's material includes their notes)
  * @returns {{scaleId:string, root:number}}
  */
-function autoScale(style, chord, key, dominants) {
+function autoScale(style, chord, key, dominants, chords) {
   if (style === 'blues') return { scaleId: key.mode === 'minor' || dominants ? 'blues' : 'majblues', root: key.t };
   if (style === 'pent' && plain(chord.iv)) {
     return { scaleId: minorish(chord.iv) || isDominantish(chord.iv) ? 'minpent' : 'majpent', root: chord.root };
   }
-  const best = suggest(/** @type {any} */ (chord), key)[0];
+  const best = chordScales(chord, key, chords)[0];
   return { scaleId: best ? best.s.id : 'minpent', root: chord.root };
 }
 
@@ -260,25 +262,26 @@ export function intensityAt(evolve, bar, bars) {
 
 /**
  * The scale and root played over a chord: the one chosen on its marker, else the automatic choice.
- * @param {string} style @param {{root:number, iv:number[]}} chord @param {{scale?:string}|undefined} pref @param {Key} key @param {boolean} dominants
+ * @param {string} style @param {{root:number, iv:number[]}} chord @param {{scale?:string}|undefined} pref @param {Key} key @param {boolean} dominants @param {{root:number, iv:number[]}[]} [chords] every chord of the piece
  * @returns {{scaleId:string, root:number, auto:boolean}}
  */
-export function scaleFor(style, chord, pref, key, dominants) {
-  if (pref?.scale && SC[pref.scale]) return { scaleId: pref.scale, root: chord.root, auto: false };
-  return { ...autoScale(style, chord, key, dominants), auto: true };
+export function scaleFor(style, chord, pref, key, dominants, chords = [chord]) {
+  const chosen = readPick(pref?.scale, chord.root);
+  if (chosen) return { scaleId: chosen.id, root: chosen.root, auto: false };
+  return { ...autoScale(style, chord, key, dominants, chords), auto: true };
 }
 
 /**
  * The key and whether any chord is a dominant 7th, as the generator will use them.
  * @param {{chords:{name:string}[]}[]} bars @param {string} style @param {Key} [keyOpt]
- * @returns {{key:Key, dominants:boolean}}
+ * @returns {{key:Key, dominants:boolean, chords:{root:number, iv:number[]}[]}}
  */
 export function soloContext(bars, style, keyOpt) {
   const known = bars.flatMap(b => b.chords).map(c => parseChord(c.name)).filter(/** @returns {c is NonNullable<ReturnType<typeof parseChord>>} */ c => !!c);
   // A blues starts on its I chord, so for the blues style that chord is the tonic (key detection can pick the IV or V of a 12-bar).
   const bluesTonic = style === 'blues' && known.length ? { t: known[0].root, mode: /** @type {'major'|'minor'} */ (minorish(known[0].iv) ? 'minor' : 'major') } : null;
   const key = keyOpt || bluesTonic || (known.length ? detectKey(known) : null) || { t: 9, mode: /** @type {'minor'} */ ('minor') };
-  return { key, dominants: known.some(c => isDominantish(c.iv)) };
+  return { key, dominants: known.some(c => isDominantish(c.iv)), chords: known };
 }
 
 /**
@@ -318,7 +321,7 @@ export function generateSolo(o) {
   // --- the chord in effect over every stretch of every bar ---
   const parsed = o.bars.map(b => b.chords.map(c => ({ ...c, chord: parseChord(c.name) })).filter(c => c.chord).sort((x, y) => x.at - y.at));
   const known = parsed.flat().map(c => /** @type {NonNullable<ReturnType<typeof parseChord>>} */ (c.chord));
-  const { key, dominants } = soloContext(o.bars, o.style, o.key);
+  const { key, dominants, chords: allChords } = soloContext(o.bars, o.style, o.key);
   const tonic = { root: key.t, iv: key.mode === 'major' ? CHORDS[''] : CHORDS.m, name: '' };
   /** @typedef {{scale?:string, positions?:number[]}} Pref */
   /** @type {{bar:number, from:number, to:number, chord:{root:number, iv:number[], name:string}, pref:Pref}[]} */
@@ -351,7 +354,7 @@ export function generateSolo(o) {
   segs.forEach((seg, si) => {
     const { bar, chord } = seg;
     const lastSeg = si === segs.length - 1;
-    const { scaleId, root } = scaleFor(o.style, chord, seg.pref, key, dominants);
+    const { scaleId, root } = scaleFor(o.style, chord, seg.pref, key, dominants, allChords);
     const scale = SC[scaleId];
     // --- position: keep it while the scale stays, else the nearest one to the hand ---
     const positions = getPositions(scale.iv, root, o.inst.tuning);

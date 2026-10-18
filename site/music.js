@@ -4,7 +4,6 @@
 /** @typedef {import('./types.js').Scale} Scale */
 /** @typedef {import('./types.js').Chord} Chord */
 /** @typedef {import('./types.js').Key} Key */
-/** @typedef {import('./types.js').Suggestion} Suggestion */
 
 export const SHARP=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const FLAT=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
@@ -81,7 +80,7 @@ export function parseChord(tok){
   return {name:tok, root:pcOf(m[1],m[2]), acc:m[2], iv:iv.slice(), bass, suf};
 }
 
-/* Chord-scale compatibility */
+/* Chord tones: what each note of a chord is (the scale fit itself lives in scalefit.js) */
 /** Classify each chord tone (root/third/.../thirteenth). @param {number[]} iv @returns {[number, string, boolean][]} */
 export function tag(iv){
   /** @param {number} n */
@@ -101,50 +100,8 @@ export function tag(iv){
     return [t,d,hasThird];
   });
 }
-/** Which scale notes clash with a chord (forbid) and which it needs (core/all). @param {number[]} iv @returns {{forbid:Set<number>, core:number[], all:number[]}} */
-export function rules(iv){
-  const tags=tag(iv), f=new Set();
-  for(const [t,d,hasThird] of tags){
-    if(d==='third') f.add(t===3?4:3);
-    if(d==='ninth'){ if(t===2){f.add(1); if(hasThird) f.add(3);} else f.add(2); }
-    if(d==='eleventh') f.add(t===5?6:5);
-    if(d==='thirteenth') f.add(t===9?8:9);
-    if(d==='fifth'&&(t===6||t===8)) f.add(7);
-    if(d==='seventh'){ if(t===10) f.add(11); else if(t===11) f.add(10); else f.add(10); }
-  }
-  iv.forEach(t=>f.delete(t));
-  const core=tags.filter(([,d])=>['root','third','sus','fifth'].includes(d)).map(x=>x[0]);
-  return {forbid:f, core, all:iv};
-}
-/** @param {Scale|{iv:number[]}} scale @param {{forbid:Set<number>, core:number[], all:number[]}} r @returns {boolean} */
-export function compatible(scale,r){
-  const set=new Set(scale.iv);
-  for(const x of r.forbid) if(set.has(x)) return false;
-  const need=scale.iv.length<=6?r.core:r.all;
-  return need.every(x=>set.has(x));
-}
 /** @param {number[]} iv @returns {boolean} */
 export function isDominantish(iv){return iv.includes(4)&&iv.includes(7)&&iv.includes(10);}
-
-/** The scales that fit a chord in a key, best first. @param {Chord} chord @param {Key} key @returns {Suggestion[]} */
-export function suggest(chord,key){
-  const r=rules(chord.iv), out=[];
-  const keySet=new Set((key.mode==='major'?MAJ:MIN).map(x=>(x+key.t)%12));
-  const harm=new Set([0,2,3,5,7,8,11].map(x=>(x+key.t)%12));
-  for(const s of SCALES){
-    let extra=false;
-    if(!compatible(s,r)){
-      if((s.id==='minpent'||s.id==='blues'||s.id==='majblues')&&isDominantish(chord.iv)) extra=true; else continue;
-    }
-    const abs=s.iv.map(x=>(x+chord.root)%12);
-    const inKey=!extra&&abs.every(p=>keySet.has(p));
-    const inHarm=!extra&&!inKey&&key.mode==='minor'&&abs.every(p=>harm.has(p));
-    let score=s.c+(inKey?12:0)+(inHarm?10:0)+(inKey&&s.iv.length===7?2:0)+(extra?-1:0);
-    out.push({s,abs,inKey,inHarm,extra,score});
-  }
-  out.sort((a,b)=>b.score-a.score||b.s.c-a.s.c);
-  return out.slice(0,7);
-}
 
 /* Key detection */
 /**
