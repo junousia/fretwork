@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.5.0 - 2026-10-18
+
+### Changed
+- **Compose is decluttered.** The tab used to start below eleven rows of controls; now the top is Play, Generate, Another, Undo and Redo, then a row of three
+  settings buttons - **Playback**, **Generator** and **Share** - each saying what is set ("90 BPM · Loop", "Follow the chords · Medium · Gentle arc"),
+  then the editing tools and the tab. The panels start closed, can be open together, and remember what you left open; Escape closes one.
+- The generator panel shows Key, Load (with Repeat), the chart box, Style and Density; Evolve, Feel, Chord tones, Techniques, Seed and "Play it straight
+  after generating" are under "More generator settings". Title, Copy link, Export PDF and Copy as text moved into Share.
+- Short choices (Density, Chord tones, Techniques, Swing) are rows of buttons instead of dropdowns; the dropdown stays underneath as the single source of
+  truth. The playback settings are called "Playback" on both Compose and Progressions. The phone layout no longer scrolls sideways at the Length row.
+- README screenshots regenerated.
+
 ## 2.4.1 - 2026-10-18
 
 ### Changed

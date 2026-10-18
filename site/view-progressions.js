@@ -70,7 +70,7 @@ export function mount(root){
   function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({text:state.text,key:state.key,labels:state.labels,pos:state.pos,vo:state.vo,bpm:state.bpm,beats:state.beats,loop:state.loop,metro:state.metro}));}catch(e){} syncUrl();}
 
   prog.value=state.text;
-  // Tempo and playback options start folded on phones, open where there is room.
+  // Playback options start folded on phones, open where there is room.
   openWhereRoom(root.querySelector('#pr-opts'));
 
   // One menu of progressions (common ones, blues, jazz, classics). They are written as degrees and played in the key chosen in the Key
