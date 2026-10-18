@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.7.0 - 2026-10-18
+
+### Added
+- **Listen**, a new page: press Start, play a note on your guitar, and it shows which note it is (name and octave), how many cents sharp or flat (a
+  tuner needle, green within 5 cents), the frequency, the open string it is closest to, and where on the neck that pitch can be played, for your
+  instrument, tuning and capo. It keeps a short history of the notes you played and, after three different notes, names the chord they make together.
+  The sound is analysed in the browser and never leaves it; the microphone is opened only when you press Start and released when you press Stop, leave
+  the page or hide the tab. Single notes only - a strummed chord is not one pitch.
+- `site/pitch.js`: the pitch detector (the McLeod method) and the note arithmetic (equal temperament, A4 = 440). Tests check it within 2 cents on
+  sines across a guitar's range, within 6-8 cents on the app's own plucked strings (every open string, different points in the note, several sample
+  rates, with noise), that strong overtones do not pull it an octave off, and that silence, noise and very quiet sound give no answer. The browser test
+  plays a recorded A2 through Chromium's fake microphone and checks the page.
+
 ## 2.6.0 - 2026-10-18
 
 ### Added

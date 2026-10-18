@@ -4,6 +4,9 @@ import { chromium } from 'playwright';
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import os from 'os';
+import { renderString } from '../site/string-dsp.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
@@ -579,12 +582,49 @@ async function run(browser, origin, label) {
   await ctx.close();
 }
 
+/** Listen: a real browser with a fake microphone playing a recorded A2 (a plucked string from the app's own voice, as a WAV file). */
+async function listen(origin) {
+  const sr = 48000, note = renderString({ freq: 110, dur: 3, vol: 0.25 }, sr), pcm = Buffer.alloc(44 + note.length * 2);
+  pcm.write('RIFF', 0); pcm.writeUInt32LE(36 + note.length * 2, 4); pcm.write('WAVEfmt ', 8); pcm.writeUInt32LE(16, 16); pcm.writeUInt16LE(1, 20); pcm.writeUInt16LE(1, 22);
+  pcm.writeUInt32LE(sr, 24); pcm.writeUInt32LE(sr * 2, 28); pcm.writeUInt16LE(2, 32); pcm.writeUInt16LE(16, 34); pcm.write('data', 36); pcm.writeUInt32LE(note.length * 2, 40);
+  note.forEach((v, i) => pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), 44 + i * 2));
+  const wav = path.join(os.tmpdir(), `fretwork-a2-${process.pid}.wav`); fs.writeFileSync(wav, pcm);
+  const mic = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-audio-capture=${wav}`, '--autoplay-policy=no-user-gesture-required'] });
+  try {
+    const ctx = await mic.newContext({ permissions: ['microphone'], serviceWorkers: 'block' }), page = await ctx.newPage();
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    await page.goto(origin + '#listen', { waitUntil: 'networkidle' });
+    assert(await page.isVisible('#ls-run') && (await page.getAttribute('a[data-tab="listen"]', 'aria-current')) === 'page', 'listen: the Listen page opens from its link');
+    assert((await page.textContent('#ls-detail')).includes('Press start'), 'listen: it waits until you press start (the microphone is not opened by itself)');
+    await page.click('#ls-run');
+    await page.waitForFunction(() => document.querySelector('#ls-name')?.textContent === 'A', null, { timeout: 8000 }).catch(() => {});
+    const name = await page.textContent('#ls-name'), oct = await page.textContent('#ls-oct'), det = await page.textContent('#ls-detail');
+    assert(name === 'A' && oct === '2', `listen: a recorded A2 is heard as ${name}${oct} (${det})`);
+    assert(/\b1(09|10|11)\.\d Hz/.test(det) && (/in tune/.test(det) || /\d cents/.test(det)), `listen: the frequency and the tuning are shown (${det})`);
+    assert((await page.$$('#ls-board circle.bn.lit')).length > 0, 'listen: the note lights up where it lives on the neck');
+    const lit = await page.$$eval('#ls-board circle.bn.lit', c => c.map(x => `${x.dataset.s}.${x.dataset.f}`));
+    assert(lit.includes('4.0'), `listen: A2 includes the open 5th string (lit: ${lit})`);
+    assert((await page.textContent('#ls-hist')).includes('A2'), 'listen: and it is added to what was heard');
+    assert((await page.textContent('#ls-string')).includes('Closest open string: 5'), `listen: the closest open string is named (${await page.textContent('#ls-string')})`);
+    assert((await page.getAttribute('#ls-run', 'aria-pressed')) === 'true', 'listen: the button says it is listening');
+    await page.click('#ls-run');
+    assert((await page.textContent('#ls-name')) === '\u2013' && (await page.getAttribute('#ls-run', 'aria-pressed')) === 'false', 'listen: Stop ends it and clears the display');
+    await page.click('#ls-run'); await page.waitForFunction(() => document.querySelector('#ls-name')?.textContent === 'A', null, { timeout: 8000 }).catch(() => {});
+    await page.click('a[data-tab="scales"]');
+    await page.waitForFunction(() => document.querySelector('#ls-run')?.getAttribute('aria-pressed') === 'false', null, { timeout: 3000 }).catch(() => {});
+    assert((await page.getAttribute('#ls-run', 'aria-pressed')) === 'false', 'listen: leaving the page stops listening (the microphone is released)');
+    assert(errors.length === 0, `listen: page errors: ${errors.slice(0, 3).join(' | ')}`);
+    await ctx.close();
+  } finally { await mic.close(); fs.rmSync(wav, { force: true }); }
+}
+
 const browser = await chromium.launch();
 const s1 = await serve(8101, '');
 const s2 = await serve(8102, '/fretwork');
 try {
   await run(browser, 'http://localhost:8101/', 'root');
   await run(browser, 'http://localhost:8102/fretwork/', 'subpath');
+  await listen('http://localhost:8101/');
 } finally {
   s1.kill(); s2.kill(); await browser.close();
 }
