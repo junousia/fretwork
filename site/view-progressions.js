@@ -10,6 +10,7 @@ import { startProgression, playNotes } from './player.js';
 import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
 import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
 import { getStrum } from './strum-patterns.js';
+import { lightNotes, clearLit, createScope } from './live.js';
 import { expandChart } from './chart.js';
 import { chordScales, scalesInKey, readPick, pickId } from './scalefit.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
@@ -36,6 +37,7 @@ export function mount(root){
     <div class="stickybar" role="group" aria-label="Playback">
       <button type="button" class="play" id="pr-run">\u25B6 Play progression</button>
     </div>
+    <canvas class="scope" id="pr-scope" hidden aria-hidden="true"></canvas>
     <div class="sharebar" role="group" aria-label="Sharing">
       <button type="button" class="share" id="pr-share">Copy link</button>
       <span class="vometa" id="pr-msg" role="status" aria-live="polite"></span>
@@ -270,14 +272,16 @@ export function mount(root){
     const inst=getInstrument();
     return parsed.map((c,i)=>{ const vc=voicingChoice(i);
       const midi=vc.idx>=0?vc.list[vc.idx].f.map((f,j)=>f>=0?inst.midi[j]+f:null).filter(m=>m!==null):chordMidiNotes(c,inst.audioOffset);
-      return {midi}; });
+      const shape=vc.idx>=0?vc.list[vc.idx].f.map((f,j)=>f>=0?{s:j,f,m:inst.midi[j]+f}:null).filter(x=>x!==null):undefined;
+      return {midi,shape}; });
   }
-  function setRunning(on){ runBtn.textContent=on?'\u25A0 Stop':'\u25B6 Play progression'; runBtn.setAttribute('aria-pressed',String(on)); }
+  const scope=createScope(root.querySelector('#pr-scope'));
+  function setRunning(on){ runBtn.textContent=on?'\u25A0 Stop':'\u25B6 Play progression'; runBtn.setAttribute('aria-pressed',String(on)); if(on) scope.start(); else { scope.stop(); clearLit(detail); } }
   runBtn.onclick=()=>{
     if(player){ stopPlayback(); return; }
     if(!parsed.length) return;
     setRunning(true);
-    player=startProgression({chords:chordsToPlay(),bpm:state.bpm,beats:state.beats,loop:state.loop,metronome:state.metro,strum:getStrum(),
+    player=startProgression({chords:chordsToPlay(),bpm:state.bpm,beats:state.beats,loop:state.loop,metronome:state.metro,strum:getStrum(),onNotes:(notes,ms)=>lightNotes(detail,getInstrument(),notes,ms),
       onChord:i=>{ playIdx=i; markPlaying(); if(i>=0&&i!==state.sel){ state.sel=i; strip.querySelectorAll('.chip').forEach((b,k)=>b.setAttribute('aria-pressed',String(k===i))); renderDetail(); } },
       onEnd:()=>{ player=null; setRunning(false); }});
   };

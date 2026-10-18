@@ -4,7 +4,7 @@
 // Notes reach here through audio.js (`note`), at the times the schedulers in player.js / audio.js give them,
 // so playback timing, tempo, swing and looping are unchanged. If anything goes wrong here, audio.js falls
 // back to the simple synth for that note.
-import { audioContext, setNoteEngine } from './audio.js';
+import { audioContext, setNoteEngine, outputNode } from './audio.js';
 import { renderString } from './string-dsp.js';
 
 /** @type {{id:string, name:string}[]} */
@@ -89,7 +89,7 @@ export function applySound() {
   if (setting !== 'plucked') { setNoteEngine(null); return; }
   setNoteEngine((freq, t, dur, vol, fx) => {
     const ac = audioContext(); if (!ac) return false;
-    if (!engine || engineCtx !== ac) { engine = createStringEngine(ac); engineCtx = ac; }
+    if (!engine || engineCtx !== ac) { engine = createStringEngine(ac, outputNode(ac)); engineCtx = ac; }
     return engine.note(freq, t, dur, vol, fx);
   });
 }

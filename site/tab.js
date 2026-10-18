@@ -222,7 +222,7 @@ export const clearNotes = tab => ({ ...tab, bars: tab.bars.map(b => ({ ...b, not
 
 /**
  * @typedef {object} TabEvent
- * @property {number} step @property {number} dur @property {number} midi @property {number} bar @property {number} at @property {number} s
+ * @property {number} step @property {number} dur @property {number} midi @property {number} bar @property {number} at @property {number} s @property {number} f
  * @property {number} [bend] semitones @property {boolean} [vib]
  * @property {boolean} [soft] the second note of a hammer-on / pull-off: no pick
  * @property {number} [slideTo] MIDI note a slide arrives at, @property {number} [slideAt] steps after the start the glide begins, @property {number} [slideEnd] steps after the start it arrives
@@ -241,7 +241,7 @@ export function tabEvents(tab, inst) {
     b.notes.forEach(n => {
       if (n.s >= inst.midi.length) return; // a string this instrument does not have
       /** @type {TabEvent} */
-      const e = { step: bar * STEPS + n.at, dur: n.len, midi: inst.midi[n.s] + n.f, bar, at: n.at, s: n.s };
+      const e = { step: bar * STEPS + n.at, dur: n.len, midi: inst.midi[n.s] + n.f, bar, at: n.at, s: n.s, f: n.f };
       if (n.bend) e.bend = n.bend;
       if (n.vib) e.vib = true;
       made.set(n, e); out.push(e);

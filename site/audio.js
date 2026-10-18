@@ -37,8 +37,26 @@ export function simpleNote(freq,t,dur,vol,fx){
       lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(t+dur+0.05);
     }
   }
-  o.connect(f);f.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+0.05);
+  o.connect(f);f.connect(g);g.connect(outputNode(ac));o.start(t);o.stop(t+dur+0.05);
 }
+/** @type {{ctx:AudioContext, input:GainNode, analyser:AnalyserNode}|null} */
+let master=null;
+/**
+ * Where every sound of the app goes before the speakers: a gain node that also feeds an analyser, so what is heard can be drawn (scope.js).
+ * @param {BaseAudioContext} ctx @returns {AudioNode}
+ */
+export function outputNode(ctx){
+  if(typeof window==='undefined'||!(ctx instanceof (window.AudioContext||/** @type {any} */ (window).webkitAudioContext))) return ctx.destination; // offline renders (tests) go straight out
+  if(!master||master.ctx!==ctx){
+    const input=ctx.createGain(), analyser=ctx.createAnalyser();
+    analyser.fftSize=2048; analyser.smoothingTimeConstant=0.8;
+    input.connect(analyser); input.connect(ctx.destination);
+    master={ctx:/** @type {AudioContext} */ (ctx),input,analyser};
+  }
+  return master.input;
+}
+/** The analyser on the master output, or null before anything has played. @returns {AnalyserNode|null} */
+export const outputAnalyser=()=>{ const c=audioContext(); if(c) outputNode(c); return master?master.analyser:null; };
 /** MIDI note number to frequency. @type {(m:number) => number} */
 export const mtof=m=>440*Math.pow(2,(m-69)/12);
 // The shared AudioContext (created on first use, from a user gesture).

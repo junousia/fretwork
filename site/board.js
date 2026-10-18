@@ -94,7 +94,7 @@ export function board(chord,sug,mode,flats,opts={}){
     if(inVoicing&&opts.fingerLabels&&opts.voicing) label=opts.voicing.g[s]>0?String(opts.voicing.g[s]):spell(pc,flats);
     const outside=bright?!bright[s].has(f):(dim&&(f<dim.s||f>dim.e));
     const op=outside?' opacity="0.25"':'';
-    g+=`<circle cx="${x}" cy="${y}" r="12.5" fill="${fill}" stroke="#2A170F" stroke-width="1"${op}/>`;
+    g+=`<circle cx="${x}" cy="${y}" r="12.5" class="bn" data-s="${s}" data-f="${f}" fill="${fill}" stroke="#2A170F" stroke-width="1"${op}/>`;
     g+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="${label.length>2?10:11.5}" font-weight="600" fill="${tc}" font-family="inherit"${op}>${esc(label)}</text>`;
   }
   // Click targets for entering notes (the Identify tab): one transparent cell per

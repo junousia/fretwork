@@ -2,9 +2,11 @@
 // grid, optionally looping, with an optional metronome click. Scheduling uses
 // the Web Audio clock with a short look-ahead, so timing stays steady even if
 // the page is busy; the UI is told which chord is current via onChord().
-import { audioContext, note, mtof } from './audio.js';
+import { audioContext, note, mtof, outputNode } from './audio.js';
 import { eventsAtBeat, swung } from './transport.js';
 import { strumHits, hitNotes, strumById } from './strum-patterns.js';
+
+/** @typedef {{midi:number, s?:number, f?:number}} LitNote a note that sounds, with its string and fret when they are known */
 
 const LOOKAHEAD = 0.25, TICK_MS = 25;
 
@@ -13,7 +15,7 @@ function click(ac, t, accent) {
   o.type = 'square'; o.frequency.value = accent ? 1500 : 1000;
   g.gain.setValueAtTime(accent ? 0.12 : 0.07, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
-  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.05);
+  o.connect(g); g.connect(outputNode(ac)); o.start(t); o.stop(t + 0.05);
 }
 
 // Play a list of MIDI notes one after another (an arpeggio or run).
@@ -24,7 +26,7 @@ export function playNotes(notes, step = 0.18) {
   notes.forEach((m, i) => note(mtof(m), t + i * step, 0.7, 0.15));
 }
 
-// opts: {chords: [{midi:[...]}], strum (pattern id, see strum-patterns.js), bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
+// opts: {chords: [{midi:[...], shape?:[{s,f,m}]}], onNotes(notes, ms) (the notes that sound now, for drawing), strum (pattern id, see strum-patterns.js), bpm, beats, loop, metronome, onChord(i|-1), onEnd()}
 // returns {stop()}.
 export function startProgression(opts) {
   const ac = audioContext();
@@ -52,8 +54,16 @@ export function startProgression(opts) {
         if (ev.type === 'click') click(ac, at, ev.accent);
         else {
           const pat = strumById(opts.strum || 'single');
-          for (const h of strumHits(pat.id, opts.beats)) for (const n of hitNotes(h, opts.chords[ev.index].midi, 0.03, pat.spread)) note(mtof(n.midi), at + h.at * beat + n.dt, Math.min(3, Math.max(0.1, h.len * beat)), 0.11 * n.vol);
+          const chord = opts.chords[ev.index];
           setTimeout(() => { if (!stopped) opts.onChord(ev.index); }, Math.max(0, (at - ac.currentTime) * 1000));
+          for (const h of strumHits(pat.id, opts.beats)) {
+            const ns = hitNotes(h, chord.midi, 0.03, pat.spread), ring = Math.min(3, Math.max(0.1, h.len * beat));
+            for (const n of ns) note(mtof(n.midi), at + h.at * beat + n.dt, ring, 0.11 * n.vol);
+            if (opts.onNotes) {
+              const lit = ns.map(n => { const sh = (chord.shape || []).find(x => x.m === n.midi); return sh ? { midi: n.midi, s: sh.s, f: sh.f } : { midi: n.midi }; });
+              setTimeout(() => { if (!stopped) opts.onNotes(lit, ring * 1000); }, Math.max(0, (at + h.at * beat - ac.currentTime) * 1000));
+            }
+          }
         }
       }
       next++;
@@ -74,7 +84,7 @@ export function startTab(opts) {
   const ac = audioContext();
   if (!ac || !opts.totalSteps) return { stop() {} };
   const { stepSec, totalSteps } = opts, beat = opts.beat || 12, long = opts.swing || 0.5;
-  /** @type {Map<number, {dur:number, midi:number, bend?:number, vib?:boolean, soft?:boolean, skip?:boolean, slideTo?:number, slideAt?:number, slideEnd?:number}[]>} */
+  /** @type {Map<number, {dur:number, midi:number, s?:number, f?:number, bend?:number, vib?:boolean, soft?:boolean, skip?:boolean, slideTo?:number, slideAt?:number, slideEnd?:number}[]>} */
   const byStep = new Map();
   for (const e of opts.events) byStep.set(e.step, [...(byStep.get(e.step) || []), e]);
   const chordAt = new Map(opts.chords.map(c => [c.step, c.midi]));
@@ -111,6 +121,7 @@ export function startTab(opts) {
         if (e.vib) fx.vib = true;
         if (e.slideTo !== undefined) { fx.slideTo = mtof(e.slideTo); fx.slideStart = (e.slideAt || 0) * stepSec; fx.slideEnd = (e.slideEnd || 0) * stepSec; }
         note(mtof(e.midi), at + start, Math.max(0.12, Math.min(3, dur)), e.soft ? 0.1 : 0.16, fx);
+        if (opts.onNotes) setTimeout(() => { if (!stopped) opts.onNotes([{ midi: e.midi, s: e.s, f: e.f }], Math.max(0.12, Math.min(3, dur)) * 1000); }, Math.max(0, (at + start - ac.currentTime) * 1000));
       }
       setTimeout(() => { if (!stopped) opts.onStep(step); }, Math.max(0, (at - ac.currentTime) * 1000));
       next++;
