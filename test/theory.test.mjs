@@ -1,5 +1,6 @@
 import fs from 'fs';
-import { CHORDS, parseChord, detectKey, suggest, keyName, spell, chordFlats, TUNING, SCALES } from '../site/music.js';
+import { chordScales } from '../site/scalefit.js';
+import { CHORDS, parseChord, detectKey, keyName, spell, chordFlats, TUNING, SCALES } from '../site/music.js';
 import { FEATURE_GROUPS, chordFeatures } from '../site/chord-features.js';
 import { getPositions, positionFrets } from '../site/positions.js';
 import { PROGRESSION_LIBRARY, PROGRESSION_GROUPS, progressionText, barChords, keyForTemplate, templateBars, libraryOptions } from '../site/progressions.js';
@@ -219,7 +220,7 @@ for (const [label, text] of EXAMPLES) {
   console.log(`\n=== ${label} (${text}) ===`);
   console.log(`Key: ${keyName(key)}`);
   parsed.forEach(c => {
-    const sugs = suggest(c, key);
+    const sugs = chordScales(c, key, parsed);
     const flats = chordFlats(c, key);
     const top = sugs[0];
     console.log(`  ${c.name.padEnd(8)} -> ${top ? top.s.name : 'no match'}  [${sugs.map(x=>x.s.short).join(', ')}]`);

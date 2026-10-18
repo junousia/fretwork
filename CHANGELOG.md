@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.4.0 - 2026-10-18
+
+### Changed
+- **Scale suggestions are calculated, not looked up.** Progressions used to list, for each chord, the scales on the chord's own root that a hand-written
+  table called compatible - so A minor pentatonic never showed up over Dm7 in A minor, although it is the obvious scale for it. Now a chord, a scale and a
+  key are all just sets of the 12 notes, and a scale is judged by two counts: how many of the chord's notes it contains, and how many of its notes sit
+  a semitone above the chord's third or seventh (the classic "avoid note"). Fit = cover x (1 - rubs / scale size), and a scale must reach 60% to be listed.
+- The detail view has **two lists**: **Scales in the key** - every scale, on any root, made only of the key's notes (plus any note the chords of the
+  progression borrow, such as the G# of an E7 in A minor), best fit to this chord first, scales with the same notes listed once - and **Scales for the chord**,
+  the scales that start on the chord's root, ranked by fit and by how much of the key they stay in. Each row says how well it fits.
+- Compose's per-chord scale menu has the same two groups, a choice can be a scale that does not start on the chord's root (it is remembered in the link),
+  and the generator's own choice over a chord uses the same ranking.
+- The old "Blues sound" badge became a note on any scale whose minor 3rd rubs against a major chord.
+
+### Added
+- `site/scalefit.js` (the model) with tests that check the definition by brute force for every chord type in every key, that the answers move with a
+  transposition, that lists are ranked and cut at the threshold, and that nothing that fits is left out.
+
 ## 2.3.1 - 2026-10-15
 
 ### Fixed

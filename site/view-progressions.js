@@ -1,4 +1,4 @@
-import { parseChord, detectKey, suggest, keyName, spell, chordFlats, esc } from './music.js';
+import { parseChord, detectKey, BLUES_NOTE, keyName, spell, chordFlats, esc } from './music.js';
 import { getPositions, positionFrets } from './positions.js';
 import { board, fitBoard, voicingSpan } from './board.js';
 import { play, chordMidiNotes } from './audio.js';
@@ -11,11 +11,11 @@ import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpe
 import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
 import { getStrum } from './strum-patterns.js';
 import { expandChart } from './chart.js';
+import { chordScales, scalesInKey, readPick, pickId } from './scalefit.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
 
 const STORE_KEY = 'gtr-progressions-v1';
 
-const BLUES_NOTE='Blues sound: the minor 3rd rubs against the chord’s major 3rd on purpose. Bend it up a little.';
 
 export function mount(root){
   root.innerHTML = `
@@ -108,7 +108,7 @@ export function mount(root){
     if(!parsed.length){strip.innerHTML='';detail.innerHTML='<p class="empty">Type some chords above, separated by spaces. For example: Dm7 G7 Cmaj7. Repeat with (Am F)x2 or |: Am F :|.</p>';return;}
     if(state.key==='auto') key=detected; else {const [t,mode]=state.key.split(':');key={t:+t,mode};}
     if(state.sel>=parsed.length) state.sel=0;
-    sugs=parsed.map(c=>suggest(c,key));
+    sugs=parsed.map(c=>({inKey:scalesInKey(c,key,parsed),chord:chordScales(c,key,parsed)}));
     strip.innerHTML=parsed.map((c,i)=>{
       const p=pickFor(i);
       const vc=voicingChoice(i);
@@ -121,7 +121,7 @@ export function mount(root){
   // Selected scale position(s) + chosen scale for chord i, or null.
   function posInfo(i){
     const c=parsed[i], cur=pickFor(i); if(!cur) return null;
-    const inst=getInstrument(), positions=getPositions(cur.s.iv,c.root,inst.tuning), posKey=`${c.name}|${cur.s.id}`;
+    const inst=getInstrument(), positions=getPositions(cur.s.iv,cur.root,inst.tuning), posKey=`${c.name}|${pickId(cur.s.id,cur.root,c.root)}`;
     let pCur=state.pos[posKey]??'all';
     if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
     else if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
@@ -138,7 +138,7 @@ export function mount(root){
     let lo=99,hi=0;
     for(const n of (Array.isArray(pCur)?pCur:[pCur])){
       const k=positions.findIndex(p=>p.n===n);
-      positionFrets(positions,k,cur.s.iv,c.root,inst.tuning,inst.midi).forEach(set=>set.forEach(f=>{lo=Math.min(lo,f);hi=Math.max(hi,f);}));
+      positionFrets(positions,k,cur.s.iv,cur.root,inst.tuning,inst.midi).forEach(set=>set.forEach(f=>{lo=Math.min(lo,f);hi=Math.max(hi,f);}));
     }
     const mid=(lo+hi)/2; let best=0,bd=1e9;
     list.forEach((v,k)=>{ const fs=v.f.filter(f=>f>0), vm=fs.length?(Math.min(...fs)+Math.max(...fs))/2:0, d=Math.abs(vm-mid); if(d<bd){bd=d;best=k;} });
@@ -148,32 +148,39 @@ export function mount(root){
   function positionForVoicing(info,v){
     let best=info.positions[0].n,bc=-1;
     info.positions.forEach((p,k)=>{
-      const sets=positionFrets(info.positions,k,info.cur.s.iv,info.c.root,info.inst.tuning,info.inst.midi);
+      const sets=positionFrets(info.positions,k,info.cur.s.iv,info.cur.root,info.inst.tuning,info.inst.midi);
       const hit=v.f.filter((f,j)=>f>=0&&sets[j].has(f)).length;
       if(hit>bc){bc=hit;best=p.n;}
     });
     return best;
   }
-  function pickFor(i){const list=sugs[i]; if(!list||!list.length) return null; const id=state.pick[i]; return list.find(x=>x.s.id===id)||list[0];}
+  function pickFor(i){
+    const g=sugs[i]; if(!g) return null;
+    const all=[...g.chord,...g.inKey]; if(!all.length) return null;
+    const pk=readPick(state.pick[i],parsed[i].root);
+    return (pk&&all.find(x=>x.s.id===pk.id&&x.root===pk.root))||all[0];
+  }
   let refit=()=>{};
   root.addEventListener('fw-shown',()=>refit());
   function renderDetail(){
-    const i=state.sel, c=parsed[i], list=sugs[i], cur=pickFor(i), flats=chordFlats(c,key);
+    const i=state.sel, c=parsed[i], groups=sugs[i], cur=pickFor(i), flats=chordFlats(c,key);
     const tones=c.iv.map(x=>spell(c.root+x,flats)).join(' ');
     let h=`<div class="chordhead"><h2>${esc(c.name)}</h2><p>Chord tones ${esc(tones)}, in ${esc(keyName(key))}</p></div>`;
     if(!cur){detail.innerHTML=h+'<p class="empty">No scale in the list fits this chord cleanly.</p>';return;}
     const inst=getInstrument();
-    const positions=getPositions(cur.s.iv,c.root,inst.tuning);
-    const posKey=`${c.name}|${cur.s.id}`;
+    const positions=getPositions(cur.s.iv,cur.root,inst.tuning);
+    const posKey=`${c.name}|${pickId(cur.s.id,cur.root,c.root)}`;
     let pCur=state.pos[posKey]??'all';
     if(Array.isArray(pCur)){ pCur=pCur.filter(n=>positions.some(p=>p.n===n)); if(!pCur.length) pCur='all'; }
     else if(pCur!=='all'&&!positions.some(p=>p.n===pCur)) pCur='all';
+    // the board draws a scale from the chord it is given: when the scale starts elsewhere than the chord (A minor pentatonic over Dm7) it is drawn from the scale's root
+    const boardChord=cur.root===c.root?c:{...c,root:cur.root,iv:c.iv.map(x=>((c.root+x-cur.root)%12+12)%12)};
     const boardOpts={tuning:inst.tuning,stringWidths:inst.stringWidths,leftHanded:inst.leftHanded,capo:inst.capo};
     let runNotes=null; // MIDI list: the actual notes of the selected position(s)
     if(pCur!=='all'){
       const idxs=(Array.isArray(pCur)?pCur:[pCur]).map(n=>positions.findIndex(p=>p.n===n));
       boardOpts.dimRange={s:Math.min(...idxs.map(i=>positions[i].s)),e:Math.max(...idxs.map(i=>positions[i].e))};
-      const sets=idxs.map(i=>positionFrets(positions,i,cur.s.iv,c.root,inst.tuning,inst.midi));
+      const sets=idxs.map(i=>positionFrets(positions,i,cur.s.iv,cur.root,inst.tuning,inst.midi));
       boardOpts.brightSets=inst.tuning.map((_,j)=>{ const set=new Set();
         for(const s of sets) s[j].forEach(f=>set.add(f));
         return set;
@@ -183,7 +190,7 @@ export function mount(root){
     const vc=voicingChoice(i), vo=vc.idx>=0?vc.list[vc.idx]:null;
     if(vo) boardOpts.voicingRing=vo;
     const voRow=vo?`<h3 class="vh">Voicings <span class="hint">tap one to use it here and in the playback</span></h3>${voicingGallery(vc.list,vc.idx,{id:'pr-voseg',mirror:inst.leftHanded})}`:'';
-    h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(c.root,flats))} ${esc(cur.s.name)}</div>
+    h+=`<div class="boardbar"><div class="scaletitle">${esc(spell(cur.root,flats))} ${esc(cur.s.name)}</div>
       <div class="controls"><div class="seg" role="group" aria-label="Fretboard labels">
         <button type="button" data-l="notes" aria-pressed="${state.labels==='notes'}">Note names</button>
         <button type="button" data-l="intervals" aria-pressed="${state.labels==='intervals'}">Intervals</button></div>
@@ -192,16 +199,25 @@ export function mount(root){
       <div class="row"><label class="keylab">Position <div class="seg" id="pr-posseg" role="group" aria-label="Fretboard position">${['all',...positions.map(p=>p.n)].map(p=>
         `<button type="button" data-pos="${p}" title="${p==='all'?'Whole neck':'Toggle this position'}" aria-pressed="${p==='all'?pCur==='all':(Array.isArray(pCur)?pCur.includes(p):pCur===p)}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
       ${voRow}
-      <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(c,cur,state.labels,flats,boardOpts)}</div>
+      <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(boardChord,cur,state.labels,flats,boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone, safe landing note</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
-      <h3>Scales that fit ${esc(c.name)}</h3><div class="scales">`;
-    list.forEach(x=>{
-      const badge=x.extra?'<span class="badge alt">Blues sound</span>':x.inKey?'<span class="badge">In key</span>':x.inHarm?'<span class="badge">In key, harmonic minor</span>':'';
-      h+=`<button type="button" class="srow" data-id="${x.s.id}" aria-pressed="${x.s.id===cur.s.id}">
-        <div class="top"><span class="nm">${esc(spell(c.root,flats))} ${esc(x.s.name)}</span>${badge}<span class="notes">${esc(x.abs.map(p=>spell(p,flats)).join(' '))}</span></div>
-        <div class="ds">${esc(x.extra?BLUES_NOTE:x.s.d)}</div></button>`;
-    });
-    h+='</div>';
+      `;
+    /** @param {string} title @param {string} note @param {any[]} list */
+    const section=(title,note,list)=>{
+      h+=`<h3>${esc(title)}</h3><p class="hint">${esc(note)}</p><div class="scales">`;
+      if(!list.length) h+='<p class="empty">Nothing here fits this chord well enough.</p>';
+      list.forEach(x=>{
+        const pk=pickId(x.s.id,x.root,c.root), cover=Math.round(x.cover*100);
+        const badge=x.inKey===1?'<span class="badge">In key</span>':'';
+        const blue=x.blue.length?` ${BLUES_NOTE}`:'';
+        h+=`<button type="button" class="srow" data-id="${pk}" aria-pressed="${x.s.id===cur.s.id&&x.root===cur.root}">
+          <div class="top"><span class="nm">${esc(spell(x.root,flats))} ${esc(x.s.name)}</span>${badge}<span class="notes">${esc(x.abs.map(p=>spell(p,flats)).join(' '))}</span></div>
+          <div class="ds">${esc(x.s.d)}${esc(blue)} <span class="fit">Fit ${Math.round(x.score*100)}% (${cover}% of the chord’s notes).</span></div></button>`;
+      });
+      h+='</div>';
+    };
+    section('Scales in the key','Built from the notes of '+keyName(key)+' (and any note the chords of this progression borrow), ranked by how well they fit '+c.name+'.',groups.inKey);
+    section('Scales for '+c.name,'Scales starting on '+spell(c.root,flats)+', ranked by how well they describe the chord and how much of the key they stay in.',groups.chord);
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
     const span=boardOpts.dimRange||(vo?voicingSpan(vo):null);
@@ -231,7 +247,7 @@ export function mount(root){
     const chordPcs=c.iv.map(x=>(c.root+x)%12);
     const arpSets=boardOpts.brightSets?arpeggioInSets(boardOpts.brightSets,inst,chordPcs):(vo?arpeggioAround(vo,inst,chordPcs):null);
     if(arpSets&&arpeggioNotes(arpSets,inst).length) arpBtn.onclick=()=>playNotes(upAndDown(arpeggioNotes(arpSets,inst))); else arpBtn.disabled=true;
-    detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset,runNotes,vo?vo.f.map((f,j)=>f>=0?inst.midi[j]+f:null).filter(m=>m!==null):null);
+    detail.querySelector('#pr-play').onclick=()=>play(c,cur.s,getInstrument().audioOffset,runNotes,vo?vo.f.map((f,j)=>f>=0?inst.midi[j]+f:null).filter(m=>m!==null):null,cur.root);
   }
 
   let deb;

@@ -5,7 +5,8 @@
 // root, and the same seed gives the same solo.
 import { generateSolo, STYLES, DENSITIES, FEELS, RHYTHMS, FINALS, EVOLVES, TENSIONS, intensityAt, strengthOf } from '../site/solo.js';
 import { linkedNext, tabEvents, emptyTab, putNote } from '../site/tab.js';
-import { parseChord, suggest } from '../site/music.js';
+import { parseChord } from '../site/music.js';
+import { chordScales } from '../site/scalefit.js';
 import { FAMILIES } from '../site/instrument.js';
 import { STEPS, MAX_FRET } from '../site/tab.js';
 
@@ -273,7 +274,8 @@ assert(sp < me && me < bu && sp >= 2 && sp <= 5 && bu >= 6.5, `notes per bar: sp
   const pe = run(PROGS.pop, std, 'pent', 'medium', 5);
   assert(pe.info.map(s => s.scaleId).join() === 'majpent,majpent,minpent,majpent,majpent,majpent,majpent,majpent', 'pentatonic style: major pentatonic on major chords, minor on minor chords');
   const fo = run(PROGS.jazz, std, 'follow', 'medium', 5);
-  const want = PROGS.jazz.map(b => suggest(parseChord(b.chords[0].name), fo.key)[0].s.id).join();
+  const jazzChords = PROGS.jazz.map(b => parseChord(b.chords[0].name));
+  const want = jazzChords.map(c => chordScales(c, fo.key, jazzChords)[0].s.id).join();
   assert(fo.info.map(s => s.scaleId).join() === want && fo.info[0].scaleId === 'dorian' && fo.info[1].scaleId === 'mixolydian', `follow style plays the scale the Progressions tab ranks first for each chord: ${fo.info.map(s => s.scaleId)}`);
   const mid = run(PROGS.mid, std, 'follow', 'medium', 5);
   assert(mid.info.filter(s => s.bar === 0).length === 2 && mid.info.filter(s => s.bar === 0).map(s => s.chord).join() === 'Dm7,G7', 'a chord change in the middle of a bar makes two stretches');

@@ -399,6 +399,16 @@ async function run(browser, origin, label) {
   assert(picked === '2', `${label}: the shared voicing choice is restored (${picked})`);
   await other.close();
 
+  // two scale lists: the key's scales on any root, and the chord's own; a scale that does not start on the chord's root can be chosen
+  await page.fill('#pr-prog', 'Am7 Dm7 E7'); await page.waitForFunction(() => document.querySelector('#pr-strip .chip:nth-child(2) b')?.textContent === 'Dm7');
+  await page.selectOption('#pr-key', '9:minor'); await page.click('#pr-strip .chip[data-i="1"]'); await page.waitForSelector('#pr-detail .chordhead h2');
+  const heads = await page.$$eval('#pr-detail h3', h => h.map(x => x.textContent));
+  assert(heads.includes('Scales in the key') && heads.includes('Scales for Dm7'), `${label}: the detail has the two scale lists (${heads})`);
+  const keyRows = await page.$$eval('#pr-detail .srow .nm', e => e.map(x => x.textContent));
+  assert(keyRows.some(t => t.startsWith('A ') && t.includes('Minor pent')), `${label}: A minor pentatonic is offered over Dm7 in A minor (${keyRows.slice(0, 6)})`);
+  await page.click('#pr-detail .srow[data-id$="@9"]');
+  assert((await page.textContent('#pr-detail .scaletitle')).startsWith('A '), `${label}: choosing it draws the scale from A (${await page.textContent('#pr-detail .scaletitle')})`);
+  await page.selectOption('#pr-key', 'auto'); await page.click('#pr-strip .chip[data-i="0"]');
   // typed repeats: a group x2 and a |: :| section are written out
   await page.fill('#pr-prog', '(Am F)x2 C'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 5);
   await page.fill('#pr-prog', '|: Dm7 G7 :|x3 Cmaj7'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 7);

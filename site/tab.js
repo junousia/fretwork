@@ -2,7 +2,7 @@
 // of notes on a sixteenth-note grid. Editing functions never mutate; they return
 // a new Tab, so undo/redo is just a stack of snapshots. The tab view, the editor,
 // playback, the solo generator and (later) PDF export all read this one shape.
-import { SC } from './music.js';
+import { readPick } from './scalefit.js';
 
 /** @typedef {import('./types.js').Tab} Tab */
 /** @typedef {import('./types.js').TabBar} TabBar */
@@ -188,7 +188,7 @@ export function setChordPlan(tab, bar, at, patch) {
     const c = b.chords.find(x => x.at === at); if (!c) return b;
     /** @type {TabChord} */ const next = { at: c.at, name: c.name };
     let scale = c.scale, positions = c.positions;
-    if (patch.scale !== undefined) { const ns = patch.scale && SC[patch.scale] ? patch.scale : undefined; if (ns !== scale) { scale = ns; positions = undefined; } }
+    if (patch.scale !== undefined) { const ns = patch.scale && readPick(patch.scale, 0) ? patch.scale : undefined; if (ns !== scale) { scale = ns; positions = undefined; } }
     if (patch.positions !== undefined) positions = [...new Set(patch.positions.filter(n => Number.isInteger(n) && n >= 1 && n <= 12))].sort((x, y) => x - y).slice(0, 8);
     if (scale) next.scale = scale;
     if (positions && positions.length) next.positions = positions;

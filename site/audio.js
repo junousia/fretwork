@@ -53,11 +53,11 @@ export function chordMidiNotes(chord,offset=0){
   const base=40+offset+((chord.root-4+12)%12);
   return [...new Set(chord.iv)].map(x=>base+(x>0&&x<3?x+12:x)).sort((a,b)=>a-b);
 }
-/** Strum a chord then play a run. @param {{root:number, iv:number[]}} chord @param {{iv:number[]}} scale @param {number} [offset] register offset in semitones @param {number[]|null} [run] explicit MIDI run (else the scale) @param {number[]|null} [chordMidi] explicit MIDI notes of a voicing */
-export function play(chord,scale,offset=0,run=null,chordMidi=null){
+/** Strum a chord then play a run. @param {{root:number, iv:number[]}} chord @param {{iv:number[]}} scale @param {number} [offset] register offset in semitones @param {number[]|null} [run] explicit MIDI run (else the scale) @param {number[]|null} [chordMidi] explicit MIDI notes of a voicing @param {number} [scaleRoot] pitch class the scale starts on (default: the chord root) */
+export function play(chord,scale,offset=0,run=null,chordMidi=null,scaleRoot=chord.root){
   const ctx=audioContext();
   if(!ctx) return;
-  const base=40+offset+((chord.root-4+12)%12); let t=ctx.currentTime+0.05;
+  const base=40+offset+((scaleRoot-4+12)%12); let t=ctx.currentTime+0.05;
   // chordMidi: the real fretted notes of a chosen voicing (low string first)
   const voicing=chordMidi?[...chordMidi].sort((a,b)=>a-b):chordMidiNotes(chord,offset);
   voicing.forEach((m,i)=>note(mtof(m),t+i*0.03,1.8,0.11));
