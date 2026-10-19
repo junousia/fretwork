@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.1 - 2026-10-19
+
+### Added
+- **A Clear button on every page.** Progressions: Clear empties the chord box and the scale and voicing choices made for it, and pressing it again ("Undo
+  clear") brings them back. Scales: Clear drops the position, arpeggio and the chord picked in the scale. Chords: Clear drops the voicing, the arpeggio shape
+  and the builder filters. Compose: "Clear all" gives a blank four-bar tab (keeping the title and tempo) and Undo brings everything back. Identify and
+  Listen already had one. The buttons are greyed out when there is nothing to clear.
+
 ## 2.8.0 - 2026-10-19
 
 ### Added

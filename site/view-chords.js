@@ -142,7 +142,8 @@ export function mount(root){
           <button type="button" data-l="notes" aria-pressed="${state.labels === 'notes'}">Note names</button>
           <button type="button" data-l="intervals" aria-pressed="${state.labels === 'intervals'}">Intervals</button>${vo ? `
           <button type="button" data-l="fingers" aria-pressed="${state.labels === 'fingers'}">Fingers</button>` : ''}</div>
-          <button type="button" class="play" id="ch-play">\u25B6 Play chord</button></div></div>
+          <button type="button" class="play" id="ch-play">\u25B6 Play chord</button>
+          <button type="button" class="share" id="ch-clear" title="Clear the voicing, the arpeggio shape and the builder filters"${state.voicing === 'all' && !state.arp && !state.builder.length ? ' disabled' : ''}>Clear</button></div></div>
       ${voRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, state.labels === 'fingers' ? 'notes' : state.labels, false, boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone</span></div>
@@ -166,6 +167,7 @@ export function mount(root){
       if(state.voicing !== 'all' && state.labels === 'notes') state.labels = 'fingers';
       save(); render();
     });
+    detail.querySelector('#ch-clear').onclick = () => { state.voicing = 'all'; state.arp = false; state.builder = []; if(state.labels === 'fingers') state.labels = 'notes'; save(); render(); };
     const fb = detail.querySelector('#ch-builder'); if(fb) fb.addEventListener('toggle', () => { builderOpen = fb.open; });
     const span = boardOpts.brightSets ? setsSpan(boardOpts.brightSets) : vo ? voicingSpan(vo) : null;
     refit = () => fitBoard(detail.querySelector('.board'), span, inst.leftHanded); refit();

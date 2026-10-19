@@ -18,7 +18,7 @@ import { board, fitBoard } from './board.js';
 import { chordMidiNotes } from './audio.js';
 import { startTab } from './player.js';
 import * as T0 from './tab.js';
-import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, setChordPlan, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, noteAt, noteCovering, tabEvents,
+import { emptyTab, putNote, removeNote, setLength, addBar, removeBar, putChord, setChordPlan, chordAt, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, clearAll, noteAt, noteCovering, tabEvents,
   stepSeconds, normalizeTab, createHistory, tabToText, withChords, STEPS, BEAT, MAX_FRET, LENGTHS, LENGTH_NAMES, TRIPLET_OF, gridFor, setTechnique, linkedNext, BENDS, BEND_NAMES } from './tab.js';
 import { tabSvg, barsPerRowFor, stepPos } from './tab-view.js';
 
@@ -99,6 +99,7 @@ export function mount(root){
       <button type="button" class="share" id="tb-addbar">Add bar</button>
       <button type="button" class="share" id="tb-delbar">Delete bar</button>
       <button type="button" class="share" id="tb-clear">Clear notes</button>
+      <button type="button" class="share" id="tb-clearall" title="Remove the notes and the chords and start with a blank tab (Undo brings it back)">Clear all</button>
     </div>
     <div id="tb-chords" class="chordsum"></div>
     <div id="tb-plan" class="plansum"></div>
@@ -470,6 +471,7 @@ export function mount(root){
   $('#tb-addbar').onclick = () => { cancelPending(); commit(addBar(tab(), cursor.bar + 1)); cursor.bar += 1; cursor.at = 0; render(true); };
   $('#tb-delbar').onclick = () => { cancelPending(); commit(removeBar(tab(), cursor.bar)); render(); };
   $('#tb-clear').onclick = () => { cancelPending(); commit(clearNotes(tab())); render(); };
+  $('#tb-clearall').onclick = () => { cancelPending(); stopPlay(); commit(clearAll(tab())); cursor.bar = 0; cursor.at = 0; genMsg.textContent = ''; render(); };
   $('#tb-copy').onclick = async () => {
     const text = tabToText(tab(), getInstrument().midi);
     try { await navigator.clipboard.writeText(text); msg.textContent = 'Copied'; }

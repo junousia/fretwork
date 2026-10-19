@@ -1,7 +1,7 @@
 // The tab model: editing rules, pitch, validation of untrusted data, undo/redo,
 // and the plain-text export.
 import * as T from '../site/tab.js';
-import { setChordPlan, emptyTab, addBar, removeBar, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes,
+import { setChordPlan, emptyTab, addBar, removeBar, chordTimeline, chordsUsed, setVoicing, setBpm, clearNotes, clearAll,
   tabEvents, stepSeconds, normalizeTab, createHistory, stringNames, tabToText, withChords, repeatsFor, STEPS, BEAT, MAX_BARS, LENGTHS, TRIPLET_OF, gridFor } from '../site/tab.js';
 import { swung, SWINGS } from '../site/transport.js';
 
@@ -96,6 +96,8 @@ assert(putChord(t, 0, 0, '  Am7  ').bars[0].chords[0].name === 'Am7', 'chord nam
   assert(junk?.bars[0].chords.length === 1 && junk.bars[0].chords[0].name === 'Dm' && junk.voicings?.G === 2, 'bad chord markers and voicings are dropped');
 }
 assert(setBpm(t, 9999).bpm === 220 && setBpm(t, 1).bpm === 40 && setBpm(t, 'x').bpm === 90, 'tempo is clamped');
+{ const full = setBpm(addBar(addBar(addBar(addBar(addBar(putChord(putNote(emptyTab(), 0, 0, 1, 3, 12), 0, 0, 'C'), 4), 4), 4), 4), 4), 123); const c0 = clearAll({ ...full, title: 'Mine' });
+  assert(c0.bars.length === 4 && c0.bars.every(b => !b.notes.length && !b.chords.length) && c0.title === 'Mine' && c0.bpm === 123, 'clear all: a blank four-bar tab that keeps the title and the tempo'); }
 assert(clearNotes(putChord(t, 0, 0, 'C')).bars[0].notes.length === 0 && clearNotes(putChord(t, 0, 0, 'C')).bars[0].chords[0].name === 'C', 'clear keeps the chords');
 
 // --- pitch: low E fret 3 is G2 (43); open top string is E4 (64); capo shifts everything
