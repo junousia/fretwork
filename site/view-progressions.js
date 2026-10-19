@@ -30,6 +30,7 @@ export function mount(root){
       <div class="row">
         <label class="keylab" title="The key the chords are analysed in. Auto works it out from the chords; pick a key to set it yourself - and to play a loaded progression in that key.">Key <select id="pr-key"></select></label>
         <label class="keylab">Load <select id="pr-libprog" aria-label="Load an example or common progression"></select></label>
+        <button type="button" class="share" id="pr-clear" title="Remove all the chords and start again (press again to bring them back)">Clear</button>
       </div>
       <p class="hint">Repeats: <code>(Am F)x2</code> plays a group twice, <code>|: Am F :|</code> a repeat (<code>:|x3</code> three times), <code>%</code> the previous bar.</p>
       <p id="pr-err" class="err" hidden></p>
@@ -88,6 +89,15 @@ export function mount(root){
     stopPlayback();prog.value=text;state.text=text;state.sel=0;state.pick={};save();render();
   }
   libProgSel.addEventListener('change',applyLibrary);
+  // Clear empties the chord box (and the scale and voicing choices made for it); pressing it again brings the chords back
+  const clearBtn=root.querySelector('#pr-clear'); let cleared=null;
+  function syncClear(){ clearBtn.textContent=cleared?'Undo clear':'Clear'; clearBtn.disabled=!cleared&&!state.text.trim(); }
+  clearBtn.onclick=()=>{
+    stopPlayback();
+    if(cleared){ Object.assign(state,cleared); cleared=null; prog.value=state.text; }
+    else { cleared={text:state.text,pick:state.pick,pos:state.pos,vo:state.vo,sel:state.sel}; Object.assign(state,{text:'',pick:{},pos:{},vo:{},sel:0}); prog.value=''; libProgSel.value=''; loadedText=null; }
+    save(); render(); if(!cleared) return; prog.focus();
+  };
 
   let parsed=[], key=null, sugs=[];
   function buildKeySelect(detected){
@@ -97,6 +107,7 @@ export function mount(root){
     if(keySel.value!==state.key){state.key='auto';keySel.value='auto';}
   }
   function render(){
+    syncClear();
     const chart=expandChart(state.text), toks=chart.bars.flat();
     const bad=[]; parsed=[];
     toks.forEach(t=>{const c=parseChord(t); if(c) parsed.push(c); else bad.push(t);});
@@ -254,7 +265,7 @@ export function mount(root){
   }
 
   let deb;
-  prog.addEventListener('input',()=>{clearTimeout(deb);libProgSel.value=''; loadedText=null; deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
+  prog.addEventListener('input',()=>{cleared=null; clearTimeout(deb);libProgSel.value=''; loadedText=null; deb=setTimeout(()=>{stopPlayback();state.text=prog.value;state.pick={};save();render();},250);});
   keySel.addEventListener('change',()=>{state.key=keySel.value; if(libProgSel.value&&loadedText!==null&&prog.value===loadedText&&state.key!=='auto') applyLibrary(); else {save();render();}});
   document.addEventListener('keydown',e=>{
     if(root.hidden) return;

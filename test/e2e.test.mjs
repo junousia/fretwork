@@ -132,6 +132,10 @@ async function run(browser, origin, label) {
   const before = await frets();
   await page.reload({ waitUntil: 'networkidle' }); await page.click('a[data-tab="compose"]');
   assert((await frets()) === before, `${label}: the tab is still there after a reload`);
+  await page.click('#tb-clearall');
+  assert((await frets()) === '' && (await page.$$('#tb-surface .tabbarline')).length >= 1 && (await page.$$('#tb-surface .tabchord')).length === 0, `${label}: Clear all gives a blank tab`);
+  await page.click('#tb-undo');
+  assert((await frets()) === before, `${label}: and Undo brings the whole tab back`);
   await page.click('#tb-play');
   await page.waitForSelector('#tb-surface .tabplayhead', { timeout: 3000 });
   assert((await page.textContent('#tb-play')).includes('Stop'), `${label}: Play turns into Stop and a playhead runs`);
@@ -436,8 +440,16 @@ async function run(browser, origin, label) {
   assert(!!am, `${label}: A minor pentatonic makes the chord Am`);
   await am.click();
   assert((await page.getAttribute('#sc-chords .chip[data-cr="9"][data-cs="m"]', 'aria-pressed')) === 'true' && (await page.textContent('#sc-tochord')).includes('Am'), `${label}: tapping a chord of the scale picks it`);
+  assert(!(await page.isDisabled('#sc-clear')), `${label}: Clear on Scales is on while a chord is picked`);
+  await page.click('#sc-clear');
+  assert((await page.$$('#sc-tochord')).length === 0 && await page.isDisabled('#sc-clear'), `${label}: and it puts the chord, arpeggio and position back to nothing`);
+  await page.click('#sc-chords .chip[data-cr="9"][data-cs="m"]');
   await page.click('#sc-tochord'); await page.waitForSelector('#view-chords:not([hidden]) #ch-detail h2');
   assert((await page.textContent('#ch-detail h2')).startsWith('A ') && (await page.$$('#ch-scales a')).length >= 3, `${label}: the link opens Chords on Am with a list of the scales that fit it`);
+  await page.click('#ch-voseg button[data-vo="1"]');
+  assert(!(await page.isDisabled('#ch-clear')), `${label}: Clear on Chords is on once a voicing is chosen`);
+  await page.click('#ch-clear');
+  assert(await page.isDisabled('#ch-clear'), `${label}: and it clears the voicing`);
   const firstScale = await page.textContent('#ch-scales a b');
   await page.click('#ch-scales a');
   await page.waitForSelector('#view-scales:not([hidden]) #sc-detail h2');
@@ -446,6 +458,11 @@ async function run(browser, origin, label) {
   assert((await page.textContent('#ch-detail h2')).startsWith('A '), `${label}: Back returns to the chord`);
   await page.click('a[data-tab="progressions"]'); await page.waitForSelector('#view-progressions:not([hidden]) #pr-strip .chip');
   assert((await page.inputValue('#pr-prog')) === 'Am7 Dm7 E7', `${label}: and the progression is as it was left`);
+  // Clear on Progressions empties the chord box, and pressing it again brings the chords back
+  await page.click('#pr-clear');
+  assert((await page.inputValue('#pr-prog')) === '' && (await page.$$('#pr-strip .chip')).length === 0 && (await page.textContent('#pr-clear')) === 'Undo clear', `${label}: Clear empties the chord box and offers to undo`);
+  await page.click('#pr-clear'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
+  assert((await page.inputValue('#pr-prog')) === 'Am7 Dm7 E7' && (await page.textContent('#pr-clear')) === 'Clear', `${label}: and pressing it again brings the chords back`);
   await page.selectOption('#pr-key', 'auto'); await page.click('#pr-strip .chip[data-i="0"]');
   // typed repeats: a group x2 and a |: :| section are written out
   await page.fill('#pr-prog', '(Am F)x2 C'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 5);

@@ -220,6 +220,9 @@ export const setBpm = (tab, bpm) => ({ ...tab, bpm: Math.min(220, Math.max(40, M
 /** Empty every bar but keep the bar count and chords. @param {Tab} tab @returns {Tab} */
 export const clearNotes = tab => ({ ...tab, bars: tab.bars.map(b => ({ ...b, notes: [] })) });
 
+/** Start over: a blank tab with the default four bars, keeping the title and the tempo. @param {Tab} tab @returns {Tab} */
+export const clearAll = tab => ({ ...emptyTab(), title: tab.title, bpm: tab.bpm });
+
 /**
  * @typedef {object} TabEvent
  * @property {number} step @property {number} dur @property {number} midi @property {number} bar @property {number} at @property {number} s @property {number} f

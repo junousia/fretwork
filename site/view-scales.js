@@ -127,7 +127,8 @@ export function mount(root){
         <div class="controls"><div class="seg" id="sc-labelseg" role="group" aria-label="Fretboard labels">
           <button type="button" data-l="notes" aria-pressed="${state.labels === 'notes'}">Note names</button>
           <button type="button" data-l="intervals" aria-pressed="${state.labels === 'intervals'}">Intervals</button></div>
-          <button type="button" class="play" id="sc-play">\u25B6 Play scale</button></div></div>
+          <button type="button" class="play" id="sc-play">\u25B6 Play scale</button>
+          <button type="button" class="share" id="sc-clear" title="Clear the position, the arpeggio and the chord picked in this scale"${state.position === 'all' && !dc && !cc ? ' disabled' : ''}>Clear</button></div></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="sc-posseg" role="group" aria-label="Fretboard position">${posButtons}</div></label></div>
       ${arpRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, state.labels, false, boardOpts)}</div>
@@ -148,6 +149,7 @@ export function mount(root){
     });
     detail.querySelectorAll('#sc-arpseg button').forEach(b => b.onclick = () => { state.arp = b.dataset.k === 'none' ? null : +b.dataset.k; state.chord = null; save(); render(); });
     detail.querySelectorAll('#sc-chords .chip').forEach(b => b.onclick = () => { const r = +(b.dataset.cr ?? 0), sf = b.dataset.cs ?? ''; state.chord = cc && cc.root === r && cc.suffix === sf ? null : { root: r, suffix: sf }; state.arp = null; render(); });
+    detail.querySelector('#sc-clear').onclick = () => { state.position = 'all'; state.arp = null; state.chord = null; save(); render(); };
     const cclr = detail.querySelector('#sc-chordclear'); if(cclr) cclr.onclick = () => { state.chord = null; render(); };
     const sev = detail.querySelector('#sc-sev'); if(sev) sev.onchange = () => { state.sev = sev.checked; save(); render(); };
     const ap = detail.querySelector('#sc-arpplay'); if(ap) ap.onclick = () => playNotes(upAndDown(arpNotes));
