@@ -17,8 +17,8 @@ no framework, no build step, no accounts, no tracking.
 | Page | What it is for |
 | --- | --- |
 | **Progressions** | Type a chord progression, or load one - common progressions, blues, jazz, classics and well-known songs - in any key; repeats like `(Am F)x2` work in the chord box (one Key menu sets the analysis key and transposes what you loaded). Each chord gets the scales that fit it, ranked for the key, laid out on the neck with chord tones and safe landing notes marked. Play it with the voicings you chose - the notes glow on the neck as they sound - or copy a link. |
-| **Scales** | Pick a scale and a root, isolate one of its positions, and see its arpeggios inside the position. |
-| **Chords** | Pick a root and a chord type, see every voicing (finger numbers, barres) and every chord tone on the neck. A chord builder narrows the list as you toggle minor, 7, maj7, sus4, 9, b5 ... |
+| **Scales** | Pick a scale and a root, isolate one of its positions, and see its arpeggios inside the position and the chords the scale makes. |
+| **Chords** | Pick a root and a chord type, see every voicing (finger numbers, barres) and every chord tone on the neck. A chord builder narrows the list as you toggle minor, 7, maj7, sus4, 9, b5 ... Each chord links to the scales that fit it, and each scale to the chords it makes - the pages open one another. |
 | **Identify** | Mark notes on the fretboard and get every chord that fits, best first, with slash chords and omitted tones. |
 | **Compose** | Write a riff or solo as tab, or let the generator write one over your chords. Play it with a choice of strumming and picking patterns, print it as a PDF, share it as a link. Type a chord chart with repeats to lay out a song. |
 | **Listen** | Play a note on your guitar and see which one it is, how many cents sharp or flat, the open string it is closest to (a tuner), and where on the neck it lives. Uses the microphone, analysed on your device only; single notes, one at a time. |

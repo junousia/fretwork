@@ -12,7 +12,7 @@
 //   chordScales   - scales on the chord's own root, ranked by fit x the share of the scale inside the key's material
 // The key's material is the key's seven notes plus any note the chords of the progression bring with them (the G# of an E7 in A minor,
 // the b7s of a blues): the notes the music actually uses, not only the ones its key signature names.
-import { SCALES, SC, MAJ, MIN, tag } from './music.js';
+import { SCALES, SC, MAJ, MIN, CHORDS, tag } from './music.js';
 
 /** A scale must reach this fit to be listed: the chord keeps at least 60% of its notes after the rub is paid for. */
 export const MIN_FIT = 0.6;
@@ -93,4 +93,28 @@ export function readPick(pick, chordRoot) {
   const m = String(pick ?? '').match(/^([a-z0-9]+)(?:@(\d|1[01]))?$/);
   if (!m || !SC[m[1]]) return null;
   return { id: m[1], root: m[2] === undefined ? chordRoot : +m[2] };
+}
+
+/** The chord types looked for inside a scale, smallest first: triads, then sevenths. A suspended chord is only offered where the scale has no third to make a major or minor one. */
+const TRIAD_TYPES = ['', 'm', 'dim', 'aug'], SUS_TYPES = ['sus2', 'sus4'], SEVENTH_TYPES = ['maj7', '7', 'm7', 'm7b5', 'mmaj7', 'dim7'];
+
+/**
+ * The chords a scale makes: on each of its notes, every triad and seventh chord whose notes all belong to the scale. In a seven-note scale that is its
+ * chords stacked in thirds (C D E F G A B: C Dm Em F G Am Bdim and the sevenths), in a pentatonic it is what the five notes allow (A minor pentatonic: Am,
+ * Am7, C, and the suspended chords on D, G and E where there is no third).
+ * @param {number} root pitch class the scale starts on @param {number[]} iv the scale's intervals
+ * @returns {{degree:number, root:number, suffix:string, tones:number[]}[]} in scale order, triads before sevenths
+ */
+export function chordsInScale(root, iv) {
+  const notes = new Set(iv.map(x => (x + root) % 12));
+  const inside = (/** @type {number} */ r, /** @type {string} */ suffix) => CHORDS[suffix].every(t => notes.has((r + t) % 12));
+  /** @type {{degree:number, root:number, suffix:string, tones:number[]}[]} */
+  const out = [];
+  [...iv].sort((a, b) => a - b).forEach((step, degree) => {
+    const r = (root + step) % 12;
+    const triads = TRIAD_TYPES.filter(sf => inside(r, sf));
+    const base = triads.length ? triads : SUS_TYPES.filter(sf => inside(r, sf));
+    for (const sf of [...base, ...SEVENTH_TYPES.filter(sf => inside(r, sf))]) out.push({ degree, root: r, suffix: sf, tones: CHORDS[sf].map(t => (r + t) % 12) });
+  });
+  return out;
 }

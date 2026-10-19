@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.8.0 - 2026-10-19
+
+### Added
+- **Chords and scales are linked.** Every jump is a plain link, so the Back button returns where you came from.
+  - **Progressions:** each chord's detail has "Voicings in Chords" and "<scale> in Scales", which open that chord's voicings, or the scale you chose
+    with the chord's notes marked in it.
+  - **Scales:** a new "Chords from this scale" row lists the chords the scale makes (on each note, every triad and seventh made only of the scale's notes;
+    where the scale has no third, the suspended chords). Tap one to see its tones inside the scale, hear its arpeggio, or open its voicings in Chords. It works
+    for every scale, not only the seven-note ones: A minor pentatonic gives Am, Am7, C and the suspended chords on D and G.
+  - **Chords:** a new "Scales that fit <chord>" row, ranked by the same fit as in Progressions; each is a link that opens the scale in Scales with the chord marked.
+- `chordsInScale` (in `site/scalefit.js`), tested for every scale: the chords use only the scale's notes, are built on its notes, move with a transposition, and in
+  every seven-note scale agree with the stacked-thirds chords the Scales page already computed.
+
 ## 2.7.1 - 2026-10-19
 
 ### Fixed

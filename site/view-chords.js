@@ -1,4 +1,5 @@
-import { CHORDS, SHARP, spell, esc, chordLabel } from './music.js';
+import { CHORDS, SHARP, spell, esc, chordLabel, parseChord, detectKey } from './music.js';
+import { chordScales } from './scalefit.js';
 import { FEATURE_GROUPS, chordFeatures } from './chord-features.js';
 import { board, fitBoard, setsSpan, voicingSpan } from './board.js';
 import { play } from './audio.js';
@@ -129,6 +130,11 @@ export function mount(root){
          ${vo ? `<div class="row"><label class="chk"><input type="checkbox" id="ch-arp"${state.arp ? ' checked' : ''}> Arpeggio shape</label>
           <button type="button" class="share" id="ch-arpplay">Play arpeggio</button></div>` : ''}`
       : (loaded ? `<p class="hint">No stored voicing for this chord in this tuning - the neck shows every chord tone.</p>` : '');
+    // the scales that fit this chord (in the key it points to), each a link that opens the scale with this chord's notes shown in it
+    const parsed = parseChord(name), key = parsed ? detectKey([parsed]) : null;
+    const fits = parsed && key ? chordScales(parsed, key).slice(0, 8) : [];
+    const scalesStrip = fits.length ? `<h3>Scales that fit ${esc(name)}</h3><p class="hint">Open one to see it on the neck with this chord's notes marked.</p><div class="chiprow" id="ch-scales">${fits.map(f =>
+      `<a class="chip lnk" href="#scales?r=${f.root}&s=${f.s.id}&cr=${state.root}&cs=${encodeURIComponent(state.suffix)}" title="${esc(f.s.name)}: fit ${Math.round(f.score * 100)}%"><b>${esc(spell(f.root, false))} ${esc(f.s.short || f.s.name)}</b><span>${Math.round(f.score * 100)}%</span></a>`).join('')}</div>` : '';
     let h = `${builderHtml()}
       <div class="chordhead"><h2>${esc(spell(state.root, false))} ${esc(labelFor(state.suffix))}</h2><p>Tones ${esc(iv.map(x => spell(state.root + x, false)).join(' '))}</p></div>
       <div class="boardbar"><div class="scaletitle">Chord tones on the neck</div>
@@ -140,6 +146,7 @@ export function mount(root){
       ${voRow}
       <div class="board" tabindex="0" aria-label="Fretboard, scroll sideways">${board(chord, sug, state.labels === 'fingers' ? 'notes' : state.labels, false, boardOpts)}</div>
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone</span></div>
+      ${scalesStrip}
       <h3>${state.builder.length ? 'Matching chord types' : 'All chord types'}</h3><div class="scales">`;
     (state.builder.length ? matching(state.builder) : SUFFIXES).forEach(suf => {
       const civ = CHORDS[suf];

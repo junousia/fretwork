@@ -425,8 +425,27 @@ async function run(browser, origin, label) {
   assert(heads.includes('Scales in the key') && heads.includes('Scales for Dm7'), `${label}: the detail has the two scale lists (${heads})`);
   const keyRows = await page.$$eval('#pr-detail .srow .nm', e => e.map(x => x.textContent));
   assert(keyRows.some(t => t.startsWith('A ') && t.includes('Minor pent')), `${label}: A minor pentatonic is offered over Dm7 in A minor (${keyRows.slice(0, 6)})`);
-  await page.click('#pr-detail .srow[data-id$="@9"]');
+  await page.click('#pr-detail .srow[data-id="minpent@9"]');
   assert((await page.textContent('#pr-detail .scaletitle')).startsWith('A '), `${label}: choosing it draws the scale from A (${await page.textContent('#pr-detail .scaletitle')})`);
+  // chords and scales are one flow: Progressions -> Scales (the chord's notes shown in the scale) -> Chords (its voicings) -> the scales that fit it
+  await page.click('#pr-toscales');
+  await page.waitForSelector('#view-scales:not([hidden]) #sc-chords');
+  assert((await page.textContent('#sc-detail h2')).startsWith('A Minor pentatonic') && (await page.$$('#sc-chords .chip')).length >= 4, `${label}: the link opens Scales on the chosen scale with the chords it makes (${await page.textContent('#sc-detail h2')})`);
+  assert((await page.textContent('#sc-tochord')).includes('Dm7') && /#chords\?r=2&s=m7$/.test(await page.getAttribute('#sc-tochord', 'href')), `${label}: and the chord it was opened for is shown in it, with a link to its voicings`);
+  const am = await page.$('#sc-chords .chip[data-cr="9"][data-cs="m"]');
+  assert(!!am, `${label}: A minor pentatonic makes the chord Am`);
+  await am.click();
+  assert((await page.getAttribute('#sc-chords .chip[data-cr="9"][data-cs="m"]', 'aria-pressed')) === 'true' && (await page.textContent('#sc-tochord')).includes('Am'), `${label}: tapping a chord of the scale picks it`);
+  await page.click('#sc-tochord'); await page.waitForSelector('#view-chords:not([hidden]) #ch-detail h2');
+  assert((await page.textContent('#ch-detail h2')).startsWith('A ') && (await page.$$('#ch-scales a')).length >= 3, `${label}: the link opens Chords on Am with a list of the scales that fit it`);
+  const firstScale = await page.textContent('#ch-scales a b');
+  await page.click('#ch-scales a');
+  await page.waitForSelector('#view-scales:not([hidden]) #sc-detail h2');
+  assert(firstScale.includes((await page.textContent('#sc-detail h2')).split(' ')[0]) && (await page.textContent('#sc-tochord')).includes('Am'), `${label}: a scale of that list opens in Scales with the chord marked (${firstScale} -> ${await page.textContent('#sc-detail h2')})`);
+  await page.goBack(); await page.waitForSelector('#view-chords:not([hidden])');
+  assert((await page.textContent('#ch-detail h2')).startsWith('A '), `${label}: Back returns to the chord`);
+  await page.click('a[data-tab="progressions"]'); await page.waitForSelector('#view-progressions:not([hidden]) #pr-strip .chip');
+  assert((await page.inputValue('#pr-prog')) === 'Am7 Dm7 E7', `${label}: and the progression is as it was left`);
   await page.selectOption('#pr-key', 'auto'); await page.click('#pr-strip .chip[data-i="0"]');
   // typed repeats: a group x2 and a |: :| section are written out
   await page.fill('#pr-prog', '(Am F)x2 C'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 5);

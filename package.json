@@ -1,6 +1,6 @@
 {
   "name": "fretwork",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "description": "Scales, chords, chord progressions and solos on the fretboard for guitar and ukulele - with a tab composer and solo generator. Vanilla JS PWA, no build step.",
   "private": true,
   "type": "module",
