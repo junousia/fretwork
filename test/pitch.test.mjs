@@ -57,7 +57,22 @@ for (const midi of [40, 45, 50, 55, 59, 64, 69, 76]) {
 
 // not a note
 assert(detectPitch(new Float32Array(N), SR) === null, 'silence has no pitch');
-assert(detectPitch(sine(220, N).map(x => x * 0.01), SR) === null, 'a very quiet note is ignored');
+assert(detectPitch(sine(220, N).map(x => x * 0.001), SR) === null, 'a note at the noise floor is ignored');
+// what a laptop microphone really delivers: a quiet note on a DC offset with a hiss of its own
+{
+  let sd = 5; const hiss = () => { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; return sd / 4294967296 - 0.5; };
+  for (const [f, amp] of [[82.41, 0.02], [110, 0.01], [196, 0.02], [329.63, 0.03]]) {
+    const x = sine(f).map(v => v * (amp / 0.3) + 0.04 + hiss() * 0.006);
+    const p = detectPitch(x, SR);
+    assert(p && Math.abs(cents(p.freq, f)) < 10, `a quiet ${f} Hz (peak ${amp}) on a DC offset with hiss is found (got ${p && p.freq.toFixed(2)})`);
+  }
+  for (const midi of [40, 45, 52, 59]) {
+    const f = freqOfMidi(midi), note = renderString({ freq: f, dur: 1.5, vol: 0.2 }, SR), at = Math.floor(0.2 * SR);
+    const x = note.slice(at, at + N).map(v => v * 0.08 + 0.03 + hiss() * 0.004);
+    const p = detectPitch(x, SR);
+    assert(p && Math.abs(cents(p.freq, f)) < 8, `a quiet plucked string at ${f.toFixed(1)} Hz on a DC offset is found (got ${p && p.freq.toFixed(2)})`);
+  }
+}
 let seed = 7; const noise = Float32Array.from({ length: N }, () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return (seed / 4294967296 - 0.5) * 0.6; });
 assert(detectPitch(noise, SR) === null, 'white noise has no pitch');
 assert(detectPitch(sine(40, N), SR) === null, 'a tone below the lowest string is ignored');

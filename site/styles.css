@@ -200,6 +200,8 @@ h3{font-size:1.05rem;margin:30px 0 6px}
 .lsmeter.ok .zone{background:var(--accent);opacity:.7}
 .lsmeter .needle{position:absolute;top:-4px;bottom:-4px;width:4px;margin-left:-2px;border-radius:2px;background:var(--ink);left:50%;transition:left .12s linear}
 .lsmeter.ok .needle{background:var(--accent)}
+.lslevel{height:6px;max-width:520px;margin:10px auto 0;border-radius:99px;background:var(--line);overflow:hidden}
+.lslevel i{display:block;height:100%;width:0;background:var(--accent);transition:width .08s linear}
 .lsdetail{margin:4px 0;font-weight:600}
 .lsstring{margin:0;color:var(--muted);min-height:1.4em}
 .listenneck .bn,.listenneck .bn+text{opacity:0}

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.7.1 - 2026-10-19
+
+### Fixed
+- **Listen showed nothing after the microphone was allowed.** The audio context was created only after the permission prompt, and a context made that
+  late can stay suspended, so the page was "listening" to silence. It is now created and resumed inside the click, and the page says so if the browser
+  still holds the audio back.
+- The detector copes with what a laptop microphone really delivers: the DC offset is removed, the quiet-signal gate is lower (0.002 instead of 0.008),
+  the clarity threshold is 0.75 instead of 0.85, a note is shown after two matching readings instead of three, and the microphone's own gain control is on
+  (echo cancelling and noise suppression stay off, they would change the note).
+
+### Added
+- An **input level bar** that moves whenever the microphone is heard, the name of the microphone in use, and plain messages: "Not hearing anything" (with
+  what to check) and "Hearing sound, but no clear note". The browser test now uses a quiet, hissy recording on a DC offset and no autoplay override.
+
 ## 2.7.0 - 2026-10-18
 
 ### Added
