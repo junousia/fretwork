@@ -2,7 +2,8 @@
 // remembering answers: a brute-force reference of the definition, transposition invariance, ordering, the cut-off, and what each
 // list is allowed to contain.
 import { SCALES, CHORDS, parseChord, keyName } from '../site/music.js';
-import { MIN_FIT, keyNotes, chordNotes, guideNotes, fitOf, chordScales, scalesInKey, pickId, readPick } from '../site/scalefit.js';
+import { degreeChord } from '../site/arpeggio.js';
+import { chordsInScale, MIN_FIT, keyNotes, chordNotes, guideNotes, fitOf, chordScales, scalesInKey, pickId, readPick } from '../site/scalefit.js';
 
 let failures = 0;
 const assert = (c, m) => { if (!c) { console.log(`FAIL: ${m}`); failures++; } };
@@ -68,6 +69,27 @@ for (const key of keys.slice(0, 6)) for (const chord of chords.slice(0, 80)) for
   const bare = scalesInKey(dm7, key, [dm7]), rich = scalesInKey(dm7, key, [dm7, parseChord('E7')]);
   assert(rich.length >= bare.length && bare.every(f => rich.some(g => g.s.id === f.s.id)), 'a progression that borrows notes only widens the scales in the key');
   assert(bare.some(f => f.s.id === 'minpent' && f.root === 9), 'the key\'s own pentatonic is offered over a chord it only partly covers');
+}
+
+// the chords a scale makes
+{
+  let n = 0;
+  for (const sc of SCALES) for (let root = 0; root < 12; root += 5) {
+    const list = chordsInScale(root, sc.iv), notes = new Set(sc.iv.map(x => mod(x + root)));
+    n += list.length;
+    assert(list.every(c => c.tones.every(p => notes.has(p)) && c.tones.join() === CHORDS[c.suffix].map(t => mod(c.root + t)).join()), `${sc.id} on ${NAMES[root]}: every chord is made of the scale's notes only`);
+    assert(list.every(c => notes.has(c.root)), `${sc.id} on ${NAMES[root]}: every chord is built on a note of the scale`);
+    assert(list.every(c => !['sus2', 'sus4'].includes(c.suffix) || !list.some(o => o.root === c.root && ['', 'm'].includes(o.suffix))), `${sc.id} on ${NAMES[root]}: a suspended chord appears only where the scale has no major or minor third`);
+    const moved = chordsInScale(mod(root + 3), sc.iv);
+    assert(moved.length === list.length && moved.every((c, i) => c.suffix === list[i].suffix && c.root === mod(list[i].root + 3)), `${sc.id}: the chords move with the scale`);
+    // against the stacked-thirds implementation the Scales page already had: in a seven-note scale each degree's triad and seventh are there
+    if (new Set(sc.iv).size === 7) for (let k = 0; k < 7; k++) for (const sev of [false, true]) {
+      const dc = degreeChord(sc.iv, k, sev);
+      if (!dc || dc.key === null) continue;
+      assert(list.some(c => c.degree === k && c.suffix === dc.key && c.root === mod(root + dc.root)), `${sc.id} on ${NAMES[root]}: degree ${k + 1}${sev ? ' seventh' : ' triad'} (${dc.key || 'major'}) is listed`);
+    }
+  }
+  assert(n > 0, 'scales make chords');
 }
 
 // stored choices

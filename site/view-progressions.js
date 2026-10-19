@@ -198,6 +198,7 @@ export function mount(root){
         <button type="button" data-l="intervals" aria-pressed="${state.labels==='intervals'}">Intervals</button></div>
         <button type="button" class="play" id="pr-play">\u25B6 Play chord and scale</button>
         <button type="button" class="share" id="pr-arpplay" title="The chord tones shown: inside the selected position, else around the chosen voicing">Play arpeggio</button></div></div>
+      <div class="row"><a class="share open" id="pr-tochords" href="#chords?r=${c.root}&s=${encodeURIComponent(c.suf)}">Voicings in Chords</a><a class="share open" id="pr-toscales" href="#scales?r=${cur.root}&s=${cur.s.id}&cr=${c.root}&cs=${encodeURIComponent(c.suf)}">${esc(spell(cur.root,flats))} ${esc(cur.s.short||cur.s.name)} in Scales</a></div>
       <div class="row"><label class="keylab">Position <div class="seg" id="pr-posseg" role="group" aria-label="Fretboard position">${['all',...positions.map(p=>p.n)].map(p=>
         `<button type="button" data-pos="${p}" title="${p==='all'?'Whole neck':'Toggle this position'}" aria-pressed="${p==='all'?pCur==='all':(Array.isArray(pCur)?pCur.includes(p):pCur===p)}">${p==='all'?'All':p}</button>`).join('')}</div></label></div>
       ${voRow}
