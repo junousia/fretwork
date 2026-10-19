@@ -29,10 +29,14 @@ export const freqOfMidi = (midi, a4 = 440) => a4 * Math.pow(2, (midi - 69) / 12)
  * @returns {Pitch|null}
  */
 export function detectPitch(buf, sampleRate, o = {}) {
-  const { minHz = 65, maxHz = 1400, minClarity = 0.85, minRms = 0.008 } = o;
+  const { minHz = 65, maxHz = 1400, minClarity = 0.75, minRms = 0.002 } = o;
   const n = buf.length;
+  // a microphone sits on a small DC offset; it would add a constant to every product below
+  let mean = 0;
+  for (let i = 0; i < n; i++) mean += buf[i];
+  mean /= n;
   let sq = 0;
-  for (let i = 0; i < n; i++) sq += buf[i] * buf[i];
+  for (let i = 0; i < n; i++) sq += (buf[i] - mean) * (buf[i] - mean);
   const rms = Math.sqrt(sq / n);
   if (rms < minRms) return null;
   const minLag = Math.max(2, Math.floor(sampleRate / maxHz)), maxLag = Math.min(Math.floor(sampleRate / minHz), n >> 1);
@@ -41,7 +45,7 @@ export function detectPitch(buf, sampleRate, o = {}) {
   const nsdf = new Float32Array(maxLag + 2);
   for (let t = 0; t <= maxLag + 1 && t + w <= n; t++) {
     let acf = 0, mm = 0;
-    for (let i = 0; i < w; i++) { const x = buf[i], y = buf[i + t]; acf += x * y; mm += x * x + y * y; }
+    for (let i = 0; i < w; i++) { const x = buf[i] - mean, y = buf[i + t] - mean; acf += x * y; mm += x * x + y * y; }
     nsdf[t] = mm > 0 ? (2 * acf) / mm : 0;
   }
   // key maxima: the highest point of each stretch where the function is above zero, after it first dips below

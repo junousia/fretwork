@@ -587,9 +587,10 @@ async function listen(origin) {
   const sr = 48000, note = renderString({ freq: 110, dur: 3, vol: 0.25 }, sr), pcm = Buffer.alloc(44 + note.length * 2);
   pcm.write('RIFF', 0); pcm.writeUInt32LE(36 + note.length * 2, 4); pcm.write('WAVEfmt ', 8); pcm.writeUInt32LE(16, 16); pcm.writeUInt16LE(1, 20); pcm.writeUInt16LE(1, 22);
   pcm.writeUInt32LE(sr, 24); pcm.writeUInt32LE(sr * 2, 28); pcm.writeUInt16LE(2, 32); pcm.writeUInt16LE(16, 34); pcm.write('data', 36); pcm.writeUInt32LE(note.length * 2, 40);
-  note.forEach((v, i) => pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), 44 + i * 2));
+  let hs = 3; // a laptop microphone: quiet, on a DC offset, with a hiss of its own
+  note.forEach((v, i) => { hs = (Math.imul(hs, 1664525) + 1013904223) >>> 0; pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round((v * 0.15 + 0.01 + (hs / 4294967296 - 0.5) * 0.004) * 32767))), 44 + i * 2); });
   const wav = path.join(os.tmpdir(), `fretwork-a2-${process.pid}.wav`); fs.writeFileSync(wav, pcm);
-  const mic = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-audio-capture=${wav}`, '--autoplay-policy=no-user-gesture-required'] });
+  const mic = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-audio-capture=${wav}`] });
   try {
     const ctx = await mic.newContext({ permissions: ['microphone'], serviceWorkers: 'block' }), page = await ctx.newPage();
     const errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -607,6 +608,7 @@ async function listen(origin) {
     assert((await page.textContent('#ls-hist')).includes('A2'), 'listen: and it is added to what was heard');
     assert((await page.textContent('#ls-string')).includes('Closest open string: 5'), `listen: the closest open string is named (${await page.textContent('#ls-string')})`);
     assert((await page.getAttribute('#ls-run', 'aria-pressed')) === 'true', 'listen: the button says it is listening');
+    assert(+(await page.getAttribute('#ls-level', 'aria-valuenow')) > 10, `listen: the input level moves (${await page.getAttribute('#ls-level', 'aria-valuenow')})`);
     await page.click('#ls-run');
     assert((await page.textContent('#ls-name')) === '\u2013' && (await page.getAttribute('#ls-run', 'aria-pressed')) === 'false', 'listen: Stop ends it and clears the display');
     await page.click('#ls-run'); await page.waitForFunction(() => document.querySelector('#ls-name')?.textContent === 'A', null, { timeout: 8000 }).catch(() => {});

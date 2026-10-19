@@ -28,6 +28,7 @@ export function mount(/** @type {HTMLElement} */ root) {
       <div class="lsmeter" id="ls-meter" aria-hidden="true"><i class="zone"></i><i class="needle" id="ls-needle"></i></div>
       <p class="lsdetail" id="ls-detail" aria-hidden="true">Waiting for a note</p>
       <p class="lsstring" id="ls-string" aria-hidden="true"></p>
+      <div class="lslevel" id="ls-level" role="meter" aria-label="Input level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="ls-levelbar"></i></div>
       <p class="sr-only" id="ls-sr" role="status" aria-live="polite"></p>
     </section>
     <div class="board listenneck" id="ls-board" tabindex="0" aria-label="Fretboard showing where the note you are playing can be found, scroll sideways"></div>
@@ -38,7 +39,7 @@ export function mount(/** @type {HTMLElement} */ root) {
 
   const $ = (/** @type {string} */ sel) => /** @type {HTMLElement} */ (root.querySelector(sel));
   const runBtn = $('#ls-run'), msg = $('#ls-msg'), nameEl = $('#ls-name'), octEl = $('#ls-oct'), needle = $('#ls-needle'), meter = $('#ls-meter'),
-    detail = $('#ls-detail'), stringEl = $('#ls-string'), srEl = $('#ls-sr'), neck = $('#ls-board'), hist = $('#ls-hist'), chordEl = $('#ls-chord');
+    level = $('#ls-level'), levelBar = $('#ls-levelbar'), detail = $('#ls-detail'), stringEl = $('#ls-string'), srEl = $('#ls-sr'), neck = $('#ls-board'), hist = $('#ls-hist'), chordEl = $('#ls-chord');
 
   function drawNeck() {
     const inst = getInstrument();
@@ -54,7 +55,7 @@ export function mount(/** @type {HTMLElement} */ root) {
   /** @type {any} */ let timer = 0;
   /** @type {Float32Array<ArrayBuffer>|null} */ let buf = null;
   /** @type {number[]} */ let recent = [];
-  let candidate = -1, count = 0, shown = -1, lastHeard = 0, lastSpoken = 0;
+  let candidate = -1, count = 0, shown = -1, lastHeard = 0, lastSpoken = 0, quietSince = 0;
   /** @type {{midi:number, t:number}[]} */ let heard = [];
 
   const median = (/** @type {number[]} */ a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
@@ -95,27 +96,38 @@ export function mount(/** @type {HTMLElement} */ root) {
     if (root.hidden || document.hidden) { stop('Stopped listening.'); return; }
     analyser.getFloatTimeDomainData(buf);
     const p = detectPitch(buf, analyser.context.sampleRate), now = Date.now();
+    // the input level, always: so it is plain whether the microphone is being heard at all
+    let sum = 0, mean = 0; for (let i = 0; i < buf.length; i++) mean += buf[i]; mean /= buf.length;
+    for (let i = 0; i < buf.length; i++) sum += (buf[i] - mean) * (buf[i] - mean);
+    const rms = Math.sqrt(sum / buf.length), lv = Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-9) + 60) / 54));
+    levelBar.style.width = `${Math.round(lv * 100)}%`; level.setAttribute('aria-valuenow', String(Math.round(lv * 100)));
+    if (rms < 0.0015) { if (!quietSince) quietSince = now; if (now - quietSince > 2500) msg.textContent = 'Not hearing anything. Move closer, raise the microphone volume in your system settings, or check that the right microphone is selected.'; }
+    else { quietSince = 0; if (!p && now - lastHeard > HOLD_MS) msg.textContent = 'Hearing sound, but no clear note. Play one string at a time and let it ring.'; else if (p) msg.textContent = `Listening to ${inputName}.`; }
     if (p) {
       recent.push(p.freq); if (recent.length > 5) recent.shift();
       const f = median(recent), midi = noteFromFreq(f).midi;
       if (midi === candidate) count++; else { candidate = midi; count = 1; recent = [p.freq]; }
       lastHeard = now;
-      if (count >= 3) show(f);
+      if (count >= 2) show(f);
     } else if (now - lastHeard > HOLD_MS) { candidate = -1; count = 0; recent = []; showIdle(); }
   }
 
-  async function start() {
+  let inputName = 'the microphone';
+  /** @param {AudioContext} ac created in the click itself: a context made after the permission prompt can start suspended */
+  async function start(ac) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { msg.textContent = 'This browser cannot reach the microphone here. It needs a secure page (https) or localhost.'; return; }
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      // echo cancelling and noise suppression would shave the note itself; gain control lifts a quiet guitar to a level the detector can use
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     } catch (e) { stream = null; msg.textContent = 'The microphone was not allowed. Allow it in the browser to listen.'; return; }
-    const ac = audioContext();
-    if (!ac) { stop('Audio is not available in this browser.'); return; }
-    source = ac.createMediaStreamSource(stream); analyser = ac.createAnalyser(); analyser.fftSize = 4096;
+    try { await ac.resume(); } catch (e) { /* checked below */ }
+    if (ac.state !== 'running') { stop('The browser is holding the audio back. Press Start again.'); return; }
+    inputName = stream.getAudioTracks()[0]?.label || 'the microphone';
+    source = ac.createMediaStreamSource(stream); analyser = ac.createAnalyser(); analyser.fftSize = 4096; analyser.smoothingTimeConstant = 0;
     source.connect(analyser); // never to the speakers: that would feed back
-    buf = new Float32Array(new ArrayBuffer(analyser.fftSize * 4)); recent = []; candidate = -1; count = 0;
+    buf = new Float32Array(new ArrayBuffer(analyser.fftSize * 4)); recent = []; candidate = -1; count = 0; quietSince = 0;
     timer = setInterval(tick, 50);
-    runBtn.textContent = '■ Stop listening'; runBtn.setAttribute('aria-pressed', 'true'); msg.textContent = 'Listening. Play a single note.';
+    runBtn.textContent = '\u25A0 Stop listening'; runBtn.setAttribute('aria-pressed', 'true'); msg.textContent = `Listening to ${inputName}. Play a single note.`;
     showIdle();
   }
   /** @param {string} [why] */
@@ -123,12 +135,17 @@ export function mount(/** @type {HTMLElement} */ root) {
     clearInterval(timer); timer = 0;
     if (source) { try { source.disconnect(); } catch (e) { /* already */ } source = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    analyser = null; buf = null;
+    analyser = null; buf = null; levelBar.style.width = '0%';
     runBtn.textContent = 'Start listening'; runBtn.setAttribute('aria-pressed', 'false');
     if (why) msg.textContent = why;
     showIdle();
   }
-  runBtn.onclick = () => { if (running()) stop('Stopped listening.'); else void start(); };
+  runBtn.onclick = () => {
+    if (running()) { stop('Stopped listening.'); return; }
+    const ac = audioContext(); // inside the click, so the browser lets it run
+    if (!ac) { msg.textContent = 'Audio is not available in this browser.'; return; }
+    void start(ac);
+  };
   $('#ls-clear').onclick = () => { heard = []; hist.innerHTML = ''; chordEl.textContent = ''; shown = -1; };
   window.addEventListener('hashchange', () => { if (running() && root.hidden) stop('Stopped listening.'); });
   showIdle();
