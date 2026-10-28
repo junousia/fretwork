@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.9.0 - 2026-10-28
+
+### Added
+- **Chord and scale follow you around.** The chord and the scale you last worked with in Progressions, Scales or Chords (kept in one place in the browser)
+  are what the other two pages open on, also when you go there from the menu and not through a link. Clear on Scales drops the chord again.
+- **Identify links the scale too:** each identified chord now has "<best scale> in Scales" beside "Open in Chords", opening the best-fitting scale with the chord marked.
+
+### Changed
+- **Progressions is tidier.** The repeat and bar-line syntax is a fold under the chord box, the Playback settings start closed, and the two scale lists sit
+  side by side on wide screens, six rows each with the rest under "n more" (the chosen scale always stays in view).
+- `AGENTS.md` describes all six pages and the new modules and has a "Releasing" section (gates, files to update, deploy steps, gotchas), and a
+  project skill points to it.
+
 ## 2.8.1 - 2026-10-19
 
 ### Added

@@ -1,8 +1,8 @@
 # Fretwork - Agent Notes
 
 This app is a vanilla-JS, no-build-step, no-framework PWA
-for guitar/ukulele theory and composing, in five pages: Progressions, Scales, Chords, Identify (chord from marked
-notes) and Compose (tab editor + solo generator + PDF / share link). The theory pages render on a shared SVG
+for guitar/ukulele theory and composing, in six pages: Progressions, Scales, Chords, Identify (chord from marked
+notes), Compose (tab editor + solo generator + PDF / share link) and Listen (microphone note finder). The theory pages render on a shared SVG
 fretboard (`board()` in `site/board.js`). Read
 this before touching `getPositions`/`positionFrets`/`board()` - the
 position/box system went through many wrong turns before landing here, and
@@ -14,7 +14,11 @@ All plain ES modules in `site/` (no build). Dependencies point one way (`music.j
 
 | Module | Responsibility |
 | --- | --- |
-| `music.js` | note names, `SCALES`, `CHORDS`, chord parsing, chord-scale ranking, key detection, `spell`/`esc` |
+| `music.js` | note names, `SCALES`, `CHORDS`, chord parsing, chord tones, key detection, `spell`/`esc` |
+| `scalefit.js` | which scales fit a chord, from pitch-class sets (cover, guide-tone rubs, key material): `scalesInKey`, `chordScales`, `chordsInScale`, stored scale picks (`pickId`/`readPick`) |
+| `focus.js` | the chord and scale shared by Progressions, Scales and Chords (localStorage); links between pages are `#scales?r=&s=&cr=&cs=` / `#chords?r=&s=` hashes |
+| `strum-patterns.js` / `chart.js` | strum and picking patterns (pure) / the chord-chart language with repeats (pure) |
+| `pitch.js` / `live.js` | pitch detector (McLeod) and note arithmetic (pure) / glowing notes on a board and the spectrum strip |
 | `positions.js` | `getPositions`/`positionFrets`: the two position models, always an unbroken run by pitch |
 | `chord-features.js` | chord-builder features derived from intervals |
 | `arpeggio.js` | degree chords, arpeggios in positions / around voicings |
@@ -27,7 +31,7 @@ All plain ES modules in `site/` (no build). Dependencies point one way (`music.j
 | `audio.js` / `player.js` / `transport.js` | Web Audio (note routing + the simple synth), playback of progressions and tabs, beat and swing math |
 | `string-dsp.js` / `sound.js` | the plucked-guitar voice (pure DSP, Node-tested) / its playback chain and the Sound setting |
 | `share.js` / `progressions.js` | share-link codec / roman-numeral progression library |
-| `view-*.js`, `app.js`, `sw.js` | the five pages (`view-compose.js` is Compose), routing / lazy mounting, offline service worker |
+| `view-*.js`, `app.js`, `sw.js` | the six pages (`view-compose.js` is Compose, `view-listen.js` is Listen), routing / lazy mounting, offline service worker (every shipped JS file must be in its `SHELL` list - the site test checks) |
 | `types.js` | JSDoc typedefs only (never loaded at runtime) |
 
 **Types:** JSDoc, checked by `npm run typecheck` (`tsc --noEmit`, no build). The engine modules are
@@ -418,3 +422,18 @@ finding a ready-made dataset.
   reach `main` only through reviewed PRs.
 - **Docker:** `Dockerfile` + `nginx.conf` serve `site/` on port 8000 with `Cache-Control: no-store`
   (and gzip for the 150 KB voicing JSON) for self-hosting.
+
+## Releasing
+
+Every change goes through a PR (`main` is protected; required checks `test` and `lighthouse`). The gates, run locally first:
+`npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run test:a11y` (goldens: `UPDATE_GOLDEN=1 node test/golden.test.mjs` only after reading the diff).
+Update `CHANGELOG.md`, `package.json` and `package-lock.json` (the site test requires the newest changelog release to equal the package version) and the
+README when a page changes (`npm run docs:screenshots`). Then: push the branch, open the PR, wait for CI, squash-merge, tag a GitHub release (`gh release create vX.Y.Z`), wait for the
+Pages deploy, and redeploy the homelab copy (`cd /storage2/homelab_runtime/stacks/compose/guitar && HOMELAB_ROOT=/storage2/homelab_runtime docker compose -p homelab_guitar -f compose.yml up -d --build`).
+
+Gotchas learned the hard way:
+- When an agent shell starts the test commands, give them `< /dev/null`: `npm test` once hung for minutes in `sound.test.mjs` with an inherited stdin, and not at all without it.
+- Test servers (ports 8101/8102/8120/8160...) left behind by a killed run make the next run hang: find them with `ss -ltnp` and kill by PID. Never `pkill -f` a pattern that appears in your own command line.
+- After the homelab redeploy, poll `https://fretwork.internal.junou.dev/<file>` until it answers 200 *before* requesting a new file on the public host: Traefik 404s for a moment and Cloudflare caches that 404 for hours.
+- In browser tests wait for the view you navigated to (`#view-x:not([hidden])`) before reading it; hidden views keep stale content that `textContent` still returns.
+- Domain data (chords of tunes, statistics) is checked against real references, not only by tests; see the notices in `THIRD_PARTY_NOTICES.md`.
