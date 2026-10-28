@@ -1,10 +1,20 @@
-import { esc } from './music.js';
+import { esc, CHORDS, detectKey } from './music.js';
+import { chordScales } from './scalefit.js';
 import { board } from './board.js';
 import { play } from './audio.js';
 import { getInstrument, onInstrumentChange } from './instrument.js';
 import { identifyChord, marksToNotes, noteNameIn } from './identify.js';
 
 const FRETS = 15;
+
+/** A link that opens the best-fitting scale for an identified chord in Scales, with the chord marked in it. @param {{root:number, suffix:string}} m @returns {string} */
+function scaleLink(m){
+  if(!(m.suffix in CHORDS)) return '';
+  const chord = { root: m.root, iv: CHORDS[m.suffix] };
+  const key = detectKey([{ ...chord, name: '', acc: '', bass: null, suf: m.suffix }]);
+  const best = key ? chordScales(chord, key)[0] : null;
+  return best ? ` <a href="#scales?r=${best.root}&s=${best.s.id}&cr=${m.root}&cs=${encodeURIComponent(m.suffix)}" class="share open">${esc(noteNameIn(best.root, m.root))} ${esc(best.s.short || best.s.name)} in Scales</a>` : '';
+}
 
 export function mount(root){
   root.innerHTML = `
@@ -49,7 +59,7 @@ export function mount(root){
       <div class="srow match" data-i="${i}"><div class="top"><span class="nm">${esc(m.name)}</span> <span class="lab">${esc(m.label)}${m.bass !== null ? ' · slash chord' : ''}</span>
         <span class="notes">${esc(m.tones.map(t => noteNameIn(t, m.root)).join(' '))}</span></div>
         <div class="ds">${m.exact ? 'Every chord tone is played.' : `Without the ${esc(m.omitted.join(', '))}.`}
-        <a href="#chords?r=${m.root}&s=${encodeURIComponent(m.suffix)}" class="share open">Open in Chords</a></div></div>`).join('')}</div>`;
+        <a href="#chords?r=${m.root}&s=${encodeURIComponent(m.suffix)}" class="share open">Open in Chords</a>${scaleLink(m)}</div></div>`).join('')}</div>`;
 
     body.innerHTML = `
       <div class="boardbar"><div class="scaletitle">${noteNames.length ? esc(noteNames.join(' ')) : 'No notes marked'}</div>

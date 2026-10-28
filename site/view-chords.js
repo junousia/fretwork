@@ -1,5 +1,6 @@
 import { CHORDS, SHARP, spell, esc, chordLabel, parseChord, detectKey } from './music.js';
 import { chordScales } from './scalefit.js';
+import { getFocus, setFocus } from './focus.js';
 import { FEATURE_GROUPS, chordFeatures } from './chord-features.js';
 import { board, fitBoard, setsSpan, voicingSpan } from './board.js';
 import { play } from './audio.js';
@@ -68,6 +69,14 @@ export function mount(root){
     state.root = r; state.suffix = suf; state.voicing = 'all'; state.builder = [];
     return true;
   }
+  // the chord shared with Progressions and Scales
+  function adoptFocus(){
+    const f = getFocus().chord;
+    if(!f || (f.root === state.root && f.suffix === state.suffix)) return false;
+    state.root = f.root; state.suffix = f.suffix; state.voicing = 'all'; state.builder = [];
+    return true;
+  }
+  adoptFocus();
   applyHash();
 
   rootsEl.innerHTML = SHARP.map((n, i) =>
@@ -104,11 +113,12 @@ export function mount(root){
   }
 
   let refit = () => {};
-  root.addEventListener('fw-shown', () => refit());
+  root.addEventListener('fw-shown', () => { if(adoptFocus()) render(); else refit(); });
   function render(){
     rootsEl.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.r === state.root)));
     rootSel.value = String(state.root); typeSel.value = state.suffix;
     const iv = CHORDS[state.suffix] || CHORDS[''];
+    setFocus({ chord: { root: state.root, suffix: state.suffix } });
     const name = spell(state.root, false) + (state.suffix === '' ? '' : state.suffix);
     const chord = { root: state.root, iv, name };
     const sug = { s: { iv, name: labelFor(state.suffix) } };

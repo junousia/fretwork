@@ -1,6 +1,7 @@
 import { SCALES, SHARP, CHORDS, spell, esc, chordLabel } from './music.js';
 import { chordsInScale } from './scalefit.js';
 import { tabOf } from './share.js';
+import { getFocus, setFocus } from './focus.js';
 import { getPositions, positionFrets } from './positions.js';
 import { board, fitBoard } from './board.js';
 import { play } from './audio.js';
@@ -54,6 +55,15 @@ export function mount(root){
     if(Number.isInteger(cr) && cr >= 0 && cr <= 11 && Object.prototype.hasOwnProperty.call(CHORDS, cs)) state.chord = { root: cr, suffix: cs };
     return true;
   }
+  // the chord and scale shared with Progressions and Chords: open on whatever was last worked with there
+  function adoptFocus(){
+    const f = getFocus(); let changed = false;
+    if(f.scale && SCALES.some(x => x.id === f.scale.id) && (f.scale.root !== state.root || f.scale.id !== state.scaleId)){ state.root = f.scale.root; state.scaleId = f.scale.id; state.position = 'all'; state.arp = null; changed = true; }
+    const want = f.chord && f.chord.suffix in CHORDS ? f.chord : null;
+    if(JSON.stringify(want) !== JSON.stringify(state.chord)){ state.chord = want; if(want) state.arp = null; changed = true; }
+    return changed;
+  }
+  adoptFocus();
   applyHash();
   function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 
@@ -71,10 +81,11 @@ export function mount(root){
   scaleSel.onchange = () => { state.scaleId = scaleSel.value; state.chord = null; save(); render(); };
 
   let refit = () => {};
-  root.addEventListener('fw-shown', () => refit());
+  root.addEventListener('fw-shown', () => { if(adoptFocus()) render(); else refit(); });
   function render(){
     rootsEl.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.r === state.root)));
     const scale = SCALES.find(s => s.id === state.scaleId) || SCALES[0];
+    setFocus({ scale: { root: state.root, id: scale.id }, ...(state.chord ? { chord: state.chord } : {}) });
     rootSel.value = String(state.root); scaleSel.value = scale.id;
     const triad = triadFromScale(scale);
     let chord = { root: state.root, iv: triad, name: spell(state.root, false) };
@@ -148,9 +159,9 @@ export function mount(root){
       const v = b.dataset.pos; state.position = v === 'all' ? 'all' : +v; save(); render();
     });
     detail.querySelectorAll('#sc-arpseg button').forEach(b => b.onclick = () => { state.arp = b.dataset.k === 'none' ? null : +b.dataset.k; state.chord = null; save(); render(); });
-    detail.querySelectorAll('#sc-chords .chip').forEach(b => b.onclick = () => { const r = +(b.dataset.cr ?? 0), sf = b.dataset.cs ?? ''; state.chord = cc && cc.root === r && cc.suffix === sf ? null : { root: r, suffix: sf }; state.arp = null; render(); });
-    detail.querySelector('#sc-clear').onclick = () => { state.position = 'all'; state.arp = null; state.chord = null; save(); render(); };
-    const cclr = detail.querySelector('#sc-chordclear'); if(cclr) cclr.onclick = () => { state.chord = null; render(); };
+    detail.querySelectorAll('#sc-chords .chip').forEach(b => b.onclick = () => { const r = +(b.dataset.cr ?? 0), sf = b.dataset.cs ?? ''; state.chord = cc && cc.root === r && cc.suffix === sf ? null : { root: r, suffix: sf }; state.arp = null; setFocus({ chord: state.chord }); render(); });
+    detail.querySelector('#sc-clear').onclick = () => { state.position = 'all'; state.arp = null; state.chord = null; setFocus({ chord: null }); save(); render(); };
+    const cclr = detail.querySelector('#sc-chordclear'); if(cclr) cclr.onclick = () => { state.chord = null; setFocus({ chord: null }); render(); };
     const sev = detail.querySelector('#sc-sev'); if(sev) sev.onchange = () => { state.sev = sev.checked; save(); render(); };
     const ap = detail.querySelector('#sc-arpplay'); if(ap) ap.onclick = () => playNotes(upAndDown(arpNotes));
     refit = () => fitBoard(detail.querySelector('.board'), boardOpts.dimRange, inst.leftHanded); refit();

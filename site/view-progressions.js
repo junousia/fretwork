@@ -8,10 +8,11 @@ import { encodeProgression, decodeProgression, tabOf } from './share.js';
 import { clampBpm, clampBeats } from './transport.js';
 import { startProgression, playNotes } from './player.js';
 import { arpeggioAround, arpeggioInSets, arpeggioNotes, upAndDown } from './arpeggio.js';
-import { playbackFold, openWhereRoom, bindStrum } from './playback-ui.js';
+import { playbackFold, bindStrum } from './playback-ui.js';
 import { getStrum } from './strum-patterns.js';
 import { lightNotes, clearLit, createScope } from './live.js';
 import { expandChart } from './chart.js';
+import { setFocus } from './focus.js';
 import { chordScales, scalesInKey, readPick, pickId } from './scalefit.js';
 import { loadVoicings, getVoicings, voicingDiagram, voicingGallery } from './voicings.js';
 
@@ -32,7 +33,8 @@ export function mount(root){
         <label class="keylab">Load <select id="pr-libprog" aria-label="Load an example or common progression"></select></label>
         <button type="button" class="share" id="pr-clear" title="Remove all the chords and start again (press again to bring them back)">Clear</button>
       </div>
-      <p class="hint">Repeats: <code>(Am F)x2</code> plays a group twice, <code>|: Am F :|</code> a repeat (<code>:|x3</code> three times), <code>%</code> the previous bar.</p>
+      <details class="fold" id="pr-syntax"><summary>Repeats and bar lines</summary>
+        <p class="hint"><code>(Am F)x2</code> plays a group twice, <code>|: Am F :|</code> a repeat (<code>:|x3</code> three times), <code>%</code> the previous bar, <code>|</code> a bar line.</p></details>
       <p id="pr-err" class="err" hidden></p>
     </section>
     <div class="stickybar" role="group" aria-label="Playback">
@@ -74,7 +76,6 @@ export function mount(root){
 
   prog.value=state.text;
   // Playback options start folded on phones, open where there is room.
-  openWhereRoom(root.querySelector('#pr-opts'));
 
   // One menu of progressions (common ones, blues, jazz, classics). They are written as degrees and played in the key chosen in the Key
   // menu (the tonic of that key, with the progression's own mode); picking a key while one is loaded transposes it.
@@ -177,6 +178,7 @@ export function mount(root){
   root.addEventListener('fw-shown',()=>refit());
   function renderDetail(){
     const i=state.sel, c=parsed[i], groups=sugs[i], cur=pickFor(i), flats=chordFlats(c,key);
+    if(cur) setFocus({chord:{root:c.root,suffix:c.suf},scale:{root:cur.root,id:cur.s.id}}); // Scales and Chords open on this chord and scale
     const tones=c.iv.map(x=>spell(c.root+x,flats)).join(' ');
     let h=`<div class="chordhead"><h2>${esc(c.name)}</h2><p>Chord tones ${esc(tones)}, in ${esc(keyName(key))}</p></div>`;
     if(!cur){detail.innerHTML=h+'<p class="empty">No scale in the list fits this chord cleanly.</p>';return;}
@@ -217,21 +219,30 @@ export function mount(root){
       <div class="legend"><span><i style="background:#C23B2E"></i>Root</span><span><i style="background:#E3A21A"></i>Chord tone, safe landing note</span><span><i style="background:#EDE6D6;border:1px solid var(--muted)"></i>Other scale note</span></div>
       `;
     /** @param {string} title @param {string} note @param {any[]} list */
-    const section=(title,note,list)=>{
-      h+=`<h3>${esc(title)}</h3><p class="hint">${esc(note)}</p><div class="scales">`;
-      if(!list.length) h+='<p class="empty">Nothing here fits this chord well enough.</p>';
-      list.forEach(x=>{
-        const pk=pickId(x.s.id,x.root,c.root), cover=Math.round(x.cover*100);
-        const badge=x.inKey===1?'<span class="badge">In key</span>':'';
-        const blue=x.blue.length?` ${BLUES_NOTE}`:'';
-        h+=`<button type="button" class="srow" data-id="${pk}" aria-pressed="${x.s.id===cur.s.id&&x.root===cur.root}">
+    const SHOWN=6;
+    /** @param {any} x */
+    const row=x=>{
+      const pk=pickId(x.s.id,x.root,c.root), cover=Math.round(x.cover*100);
+      const badge=x.inKey===1?'<span class="badge">In key</span>':'';
+      const blue=x.blue.length?` ${BLUES_NOTE}`:'';
+      return `<button type="button" class="srow" data-id="${pk}" aria-pressed="${x.s.id===cur.s.id&&x.root===cur.root}">
           <div class="top"><span class="nm">${esc(spell(x.root,flats))} ${esc(x.s.name)}</span>${badge}<span class="notes">${esc(x.abs.map(p=>spell(p,flats)).join(' '))}</span></div>
           <div class="ds">${esc(x.s.d)}${esc(blue)} <span class="fit">Fit ${Math.round(x.score*100)}% (${cover}% of the chord’s notes).</span></div></button>`;
-      });
-      h+='</div>';
     };
+    /** @param {string} title @param {string} note @param {any[]} list */
+    const section=(title,note,list)=>{
+      // keep a chosen scale in view even when it ranks below the first rows
+      const chosen=list.findIndex(x=>x.s.id===cur.s.id&&x.root===cur.root), open=chosen>=SHOWN;
+      h+=`<div class="scalecol"><h3>${esc(title)}</h3><p class="hint">${esc(note)}</p><div class="scales">`;
+      if(!list.length) h+='<p class="empty">Nothing here fits this chord well enough.</p>';
+      h+=list.slice(0,SHOWN).map(row).join('');
+      if(list.length>SHOWN) h+=`<details class="more"${open?' open':''}><summary>${list.length-SHOWN} more</summary>${list.slice(SHOWN).map(row).join('')}</details>`;
+      h+='</div></div>';
+    };
+    h+='<div class="scalecols">';
     section('Scales in the key','The scales of '+keyName(key)+' itself (from '+spell(key.t,chordFlats(c,key))+', using only its notes and any the chords borrow), ranked by how well they fit '+c.name+'.',groups.inKey);
     section('Scales for '+c.name,'Scales starting on '+spell(c.root,flats)+', ranked by how well they describe the chord and how much of the key they stay in.',groups.chord);
+    h+='</div>';
     detail.innerHTML=h;
     detail.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{state.pick[i]=b.dataset.id;render();});
     const span=boardOpts.dimRange||(vo?voicingSpan(vo):null);

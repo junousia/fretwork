@@ -76,6 +76,8 @@ async function run(browser, origin, label) {
   await page.selectOption('#view-identify select[data-s="0"]', '0'); await page.selectOption('#view-identify select[data-s="1"]', '0');
   await page.selectOption('#view-identify select[data-s="2"]', '0'); await page.selectOption('#view-identify select[data-s="3"]', '2'); await page.selectOption('#view-identify select[data-s="4"]', '2'); await page.selectOption('#view-identify select[data-s="5"]', '0');
   assert((await page.textContent('#id-matches .match .nm')) === 'Em', `${label}: per-string selects work (Em)`);
+  const idScale = await page.textContent('#id-matches .match a.open:nth-of-type(2)');
+  assert(/ in Scales$/.test(idScale) && /^#scales\?r=\d+&s=[a-z0-9]+&cr=4&cs=m$/.test(await page.getAttribute('#id-matches .match a.open:nth-of-type(2)', 'href')), `${label}: Identify also links the best-fitting scale for the chord in Scales (${idScale})`);
   await page.click('#id-matches .match a.open');
   await page.waitForSelector('#view-chords:not([hidden])');
   assert((await page.textContent('#view-chords .chordhead h2')).startsWith('E '), `${label}: Open in Chords selects the chord`);
@@ -432,6 +434,12 @@ async function run(browser, origin, label) {
   await page.click('#pr-detail .srow[data-id="minpent@9"]');
   assert((await page.textContent('#pr-detail .scaletitle')).startsWith('A '), `${label}: choosing it draws the scale from A (${await page.textContent('#pr-detail .scaletitle')})`);
   // chords and scales are one flow: Progressions -> Scales (the chord's notes shown in the scale) -> Chords (its voicings) -> the scales that fit it
+  // the chord and scale picked in Progressions follow you to Scales and Chords through the menu, with no link
+  await page.click('a[data-tab="scales"]'); await page.waitForSelector('#view-scales:not([hidden]) #sc-detail h2'); await page.waitForTimeout(200);
+  assert((await page.textContent('#sc-detail h2')).startsWith('A Minor pentatonic') && (await page.textContent('#sc-tochord')).includes('Dm7'), `${label}: Scales opens on the scale and chord chosen in Progressions (${await page.textContent('#sc-detail h2')}; focus ${await page.evaluate(() => localStorage.getItem('fw-focus'))})`);
+  await page.click('a[data-tab="chords"]'); await page.waitForSelector('#view-chords:not([hidden]) #ch-detail h2'); await page.waitForTimeout(200);
+  assert((await page.textContent('#ch-detail h2')).startsWith('D '), `${label}: and Chords on the same chord (${await page.textContent('#ch-detail h2')})`);
+  await page.click('a[data-tab="progressions"]'); await page.waitForSelector('#view-progressions:not([hidden]) #pr-toscales');
   await page.click('#pr-toscales');
   await page.waitForSelector('#view-scales:not([hidden]) #sc-chords');
   assert((await page.textContent('#sc-detail h2')).startsWith('A Minor pentatonic') && (await page.$$('#sc-chords .chip')).length >= 4, `${label}: the link opens Scales on the chosen scale with the chords it makes (${await page.textContent('#sc-detail h2')})`);
@@ -464,6 +472,8 @@ async function run(browser, origin, label) {
   await page.click('#pr-clear'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 3);
   assert((await page.inputValue('#pr-prog')) === 'Am7 Dm7 E7' && (await page.textContent('#pr-clear')) === 'Clear', `${label}: and pressing it again brings the chords back`);
   await page.selectOption('#pr-key', 'auto'); await page.click('#pr-strip .chip[data-i="0"]');
+  // Playback settings start folded now; open them for the checks below
+  await page.evaluate(() => { /** @type {HTMLDetailsElement} */ (document.querySelector('#pr-opts')).open = true; });
   // typed repeats: a group x2 and a |: :| section are written out
   await page.fill('#pr-prog', '(Am F)x2 C'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 5);
   await page.fill('#pr-prog', '|: Dm7 G7 :|x3 Cmaj7'); await page.waitForFunction(() => document.querySelectorAll('#pr-strip .chip').length === 7);
@@ -631,6 +641,7 @@ async function listen(origin) {
     const ctx = await mic.newContext({ permissions: ['microphone'], serviceWorkers: 'block' }), page = await ctx.newPage();
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto(origin + '#listen', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#ls-run', { timeout: 15000 }).catch(() => {});
     assert(await page.isVisible('#ls-run') && (await page.getAttribute('a[data-tab="listen"]', 'aria-current')) === 'page', 'listen: the Listen page opens from its link');
     assert((await page.textContent('#ls-detail')).includes('Press start'), 'listen: it waits until you press start (the microphone is not opened by itself)');
     await page.click('#ls-run');
